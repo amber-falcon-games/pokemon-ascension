@@ -30,4 +30,4 @@ See [testing](docs/TESTING.md), [Battle Lab](docs/BATTLE_LAB.md), [vision](docs/
 
 ## Boundaries
 
-Proposed upstream: https://github.com/rh-hideout/pokeemerald-expansion. No baseline version is selected yet. Preserve attribution and existing upstream files during integration. This is a private noncommercial fan project, not an official Pokémon product. Do not commit or publicly distribute ROM binaries, copyrighted asset bundles, saves, or secrets. Review rights and upstream terms before any distribution; patches do not remove all IP risk.
+Proposed upstream: https://github.com/rh-hideout/pokeemerald-expansion. Recommended baseline `expansion/1.17.2`, pending owner decision D010. Upstream has no top-level licence (it derives from pret's pokeemerald decompilation); only bundled tools carry their own licences. Preserve attribution and existing upstream files during integration. This is a private noncommercial fan project, not an official Pokémon product. Do not commit or publicly distribute ROM binaries, copyrighted asset bundles, saves, or secrets. Review rights and upstream terms before any distribution; patches do not remove all IP risk.

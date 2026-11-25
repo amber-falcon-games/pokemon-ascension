@@ -1,6 +1,9 @@
 # Testing and Mac quickstart
 
-Status: planned, not verified. Claude must inspect Apple Silicon environment, official upstream macOS instructions, installed Xcode command-line tools, Homebrew dependencies, devkitARM and mGBA. Pin compatible versions; request privileged changes. Document exact setup after testing from fresh checkout. Do not assume native compatibility or hardcode user paths.
+Status: planned, not verified.
+
+Verification environments: Claude may work in a Linux cloud container, which can build the ROM and run the upstream automated tests (`make`, `make check`, using Ubuntu's `gcc-arm-none-eabi`/`libnewlib-arm-none-eabi`). Apple Silicon setup, doctor and play scripts (F002, F005) and all manual playtests must be verified on the owner's Mac, either by the owner following exact instructions or by a local Claude Code session. Every evidence record states which environment produced it.
+ Claude must inspect Apple Silicon environment, official upstream macOS instructions, installed Xcode command-line tools, Homebrew dependencies, devkitARM and mGBA. Pin compatible versions; request privileged changes. Document exact setup after testing from fresh checkout. Do not assume native compatibility or hardcode user paths.
 
 Planned scripts (not yet implemented):
 - ./scripts/setup.sh — idempotent setup; prerequisites and clear failures.
