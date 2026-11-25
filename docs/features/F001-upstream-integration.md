@@ -91,8 +91,10 @@ Before merge to `main`: delete the feature branch. After merge: revert the merge
 ## Evidence and acceptance
 - Investigation commit: this document on `claude/sharp-euler-yfhti2`.
 - Build: see table above (Linux container, 2026-11-25).
-- Tests: see "Upstream test run" below.
+- Tests: `make check` exit 0; 5,429 passed, 0 unexpected failures (details below).
 - Owner approval: pending (D010).
 
 ### Upstream test run
-Pending at time of writing; filled in below.
+Command: `make check -j4` on `expansion/1.17.2` (Linux container, bundled `tools/mgba/mgba-rom-test`). Exit code 0, 874 s.
+Result: TOTAL 5,876 — PASSED 5,429, TO_DO 419 (upstream placeholders), KNOWN_FAILING 19 (upstream-acknowledged), EXPECT_FAILING 9 (includes the two test-runner self-tests "fatalf counts as CRASH" and "Tests resume after CRASH", which crash by design). No unexpected failures.
+Not run here: Mac test runner (`mgba-rom-test-mac`), to be verified in F002/F004.
