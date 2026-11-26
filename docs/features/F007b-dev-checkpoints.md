@@ -1,8 +1,8 @@
 # F007b — Dev checkpoints: jump to set points in the story
-Status: IN_PROGRESS (part 1: CP-START, CP-BALLS, CP-GYM1 done; CP-GYM2–8 next)
+Status: AWAITING_ACCEPTANCE (all 10 checkpoints implemented and tested; owner playtest pending)
 Dependencies: F007 (shares the debug-menu entry work); owner decision D019
 Owner decision IDs: D019
-Branch / commit: `feature/F007b-dev-checkpoints`
+Branch / commit: part 1 `feature/F007b-dev-checkpoints` (PR #8, merged); part 2 `feature/F007b-gym-checkpoints`
 
 ## Objective and scope
 In dev builds, load a named point in the story from the debug menu (R + Start → Checkpoints…), instead of replaying the game or relying on emulator save states. Each checkpoint is data in the repository, so it survives new builds and is shared by everyone.
@@ -63,4 +63,11 @@ Part 1 (2026-11-26, Linux container): `make -j4` exit 0, dev ROM 26,746,968 B. I
 - CP-START: lands at Littleroot's north exit; walking north triggers the neighbour's "Um, hi! … I don't have any Pokémon" scene that leads to Birch's rescue.
 - CP-BALLS: outside Birch's lab; start menu shows POKéDEX and POKéMON; party is Mudkip Lv7; bag has 5 Poké Balls.
 - CP-GYM1: outside Rustboro Gym; party Mudkip Lv15, Taillow Lv13; walking north enters the gym. Story state set: Oldale rival gone, Wally's tutorial done (Petalburg city/gym vars), Petalburg Woods Aqua grunt beaten and Devon researcher gone, Great Ball, 3 Potions, Antidote, +₽2,400. Roxanne fight itself not yet driven headlessly.
-Not yet: automated per-checkpoint tests (with GYM checkpoints), owner playtest.
+
+Part 2 (2026-11-26, Linux container): CP-GYM2–8 added. Story steps traced from the map scripts, each block naming the scripts it mirrors: Rustboro goods theft, Rusturf Tunnel, Devon Corp, Briney's boat (Gym 2); Granite Cave letter, Slateport museum, Route 110 rival, Wally in Mauville, Mach Bike (Gym 3); Meteor Falls, Mt Chimney (Gym 4); Go-Goggles, Petalburg Gym opens (Gym 5); Surf, Weather Institute, Fly, Devon Scope, Fortree Kecleon (Gym 6); Lilycove rival, Mt Pyre, Magma Hideout, Slateport harbor, Aqua Hideout, Lilycove grunts leave (Gym 7); Space Center, Dive, Seafloor Cavern, Sky Pillar, Rayquaza scene, Archie/Maxie leave, Waterfall (Gym 8).
+- Structure: each menu entry = `Ascension_CPState_<CP>` (story steps in order + that checkpoint's team) + warp. Teams live in `Ascension_CPTeam_<CP>` blocks. The debug action calls `NewGameInitData()` first, so a checkpoint replaces the current game.
+- Teams: Gym 2 Marshtomp 19 / Taillow 18 / Geodude 17; Gym 3 Marshtomp 24 / Swellow 23 / Geodude 22 / Kirlia 22; Gym 4 Marshtomp 29 / Swellow 28 / Graveler 27 / Kirlia 27 / Machop 27; Gym 5 Marshtomp 31 / Swellow 30 / Machoke 30 / Graveler 29 / Kirlia 29 / Numel 28; Gym 6 Marshtomp 33 / Swellow 32 / Machoke 32 / Graveler 31 / Gardevoir 31 / Numel 31; Gym 7 Swampert 42 / Swellow 40 / Machoke 40 / Graveler 39 / Gardevoir 40 / Camerupt 40; Gym 8 Swampert 46 / Swellow 44 / Machoke 44 / Graveler 43 / Gardevoir 45 / Camerupt 44. Supplies and money scale with progress.
+- Automated: `make check TESTS=test/ascension/checkpoints.c`: 10/10 PASS (badges, party size, ace species and level, key items, main-path flags per checkpoint).
+- Headless screenshots (gbashot): every GYM2–8 checkpoint lands outside the right gym and walking north enters it (Dewford dark gym, Mauville, Lavaridge, Petalburg, Fortree, Mossdeep, Sootopolis with normal weather and the door open). Leader battles themselves were not driven headlessly.
+- Release exclusion: the checkpoint scripts are wrapped in `#if !defined(RELEASE)` in `data/event_scripts.s`; `arm-none-eabi-nm pokeemerald-release.elf | grep -ci "Ascension_C\|BattleLab"` = 0. Dev ROM cost: 2,628 B of scripts plus menu strings.
+- Not yet: owner playtest (does each feel right; teams to taste).

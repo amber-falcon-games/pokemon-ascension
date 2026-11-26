@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased — F007b dev checkpoints (2026-11-26)
+- Dev builds: R+Start → Checkpoints… jumps to 10 story points (Start, Poké Balls, and outside each of the 8 gyms) with a ready team, items, money and the story state of a normal run. Release builds contain none of it.
+
 ## Unreleased — F007 Battle Lab entry (2026-11-26)
 - Dev builds: L + SELECT on the title screen opens the Battle Lab; LAB-001 (Swampert vs Blaziken, Lv50) runs a real battle and returns to the Lab; Exit soft-resets without saving. Release builds contain no Lab code.
 
