@@ -21,7 +21,18 @@ Ascension_Checkpoint_PokeBalls::
 	lockall
 	call Ascension_Checkpoint_IntroDone
 	call Ascension_Checkpoint_StarterToPokeBalls
+	givemon SPECIES_MUDKIP, 7
 	warp MAP_LITTLEROOT_TOWN, 7, 17
+	waitstate
+	end
+
+@ CP-GYM1: outside Rustboro Gym, before Roxanne (Nosepass Lv15). Team of 2, ace Lv15.
+Ascension_Checkpoint_Gym1::
+	lockall
+	call Ascension_Checkpoint_IntroDone
+	call Ascension_Checkpoint_StarterToPokeBalls
+	call Ascension_Checkpoint_PokeBallsToGym1
+	warp MAP_RUSTBORO_CITY, 27, 20
 	waitstate
 	end
 
@@ -86,7 +97,6 @@ Ascension_Checkpoint_StarterToPokeBalls::
 	setflag FLAG_HIDE_LITTLEROOT_TOWN_MAYS_HOUSE_RIVAL_BEDROOM
 	setflag FLAG_HIDE_LITTLEROOT_TOWN_BRENDANS_HOUSE_RIVAL_BEDROOM
 	setvar VAR_STARTER_MON, 2
-	givemon SPECIES_MUDKIP, 7
 	@ ProfessorBirchsLab: agreed to go and see the rival
 	clearflag FLAG_HIDE_ROUTE_101_BOY
 	@ Route103: rival battle won; OldaleTown visited on the way
@@ -106,4 +116,32 @@ Ascension_Checkpoint_StarterToPokeBalls::
 	setvar VAR_OLDALE_TOWN_STATE, 1
 	setvar VAR_LITTLEROOT_RIVAL_STATE, 4
 	setvar VAR_LITTLEROOT_TOWN_STATE, 3
+	return
+
+@ Oldale rival sent on, Wally's catching tutorial in Petalburg (PetalburgCity_Gym,
+@ PetalburgCity), Team Aqua in Petalburg Woods, arrival in Rustboro.
+Ascension_Checkpoint_PokeBallsToGym1::
+	setvar VAR_OLDALE_RIVAL_STATE, 2
+	setflag FLAG_HIDE_OLDALE_TOWN_RIVAL
+	setflag FLAG_RECEIVED_POTION_OLDALE
+	setflag FLAG_VISITED_PETALBURG_CITY
+	setflag FLAG_HIDE_PETALBURG_CITY_WALLYS_MOM
+	setflag FLAG_HIDE_PETALBURG_CITY_WALLY
+	setflag FLAG_HIDE_PETALBURG_GYM_WALLY
+	setflag FLAG_HIDE_LITTLEROOT_TOWN_BIRCHS_LAB_RIVAL
+	special InitBirchState
+	setvar VAR_PETALBURG_CITY_STATE, 3
+	setvar VAR_PETALBURG_GYM_STATE, 2
+	setvar VAR_PETALBURG_WOODS_STATE, 1
+	setflag FLAG_HIDE_PETALBURG_WOODS_AQUA_GRUNT
+	setflag FLAG_HIDE_PETALBURG_WOODS_DEVON_EMPLOYEE
+	settrainerflag TRAINER_GRUNT_PETALBURG_WOODS
+	setflag FLAG_VISITED_RUSTBORO_CITY
+	@ Team: Mudkip ace at Roxanne's ace level, plus a Route 104 catch two levels below.
+	givemon SPECIES_MUDKIP, 15
+	givemon SPECIES_TAILLOW, 13
+	additem ITEM_GREAT_BALL, 1
+	additem ITEM_POTION, 3
+	additem ITEM_ANTIDOTE, 1
+	addmoney 2400
 	return

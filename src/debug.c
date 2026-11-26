@@ -395,6 +395,7 @@ extern const u8 Debug_CheatStart[];
 // Pokémon Ascension dev checkpoints (F007b): data/scripts/ascension_checkpoints.inc
 extern const u8 Ascension_Checkpoint_Start[];
 extern const u8 Ascension_Checkpoint_PokeBalls[];
+extern const u8 Ascension_Checkpoint_Gym1[];
 extern const u8 Debug_CheatStartFrlg[];
 extern const u8 Debug_HatchAnEgg[];
 extern const u8 PlayersHouse_2F_EventScript_SetWallClock[];
@@ -777,6 +778,7 @@ static const struct DebugMenuOption sDebugMenu_Actions_Checkpoints[] =
 {
     { COMPOUND_STRING("Start (before starter)"), DebugAction_AscensionCheckpoint, Ascension_Checkpoint_Start },
     { COMPOUND_STRING("Poké Balls received"),    DebugAction_AscensionCheckpoint, Ascension_Checkpoint_PokeBalls },
+    { COMPOUND_STRING("Gym 1: Roxanne"),         DebugAction_AscensionCheckpoint, Ascension_Checkpoint_Gym1 },
     { NULL }
 };
 

@@ -1,5 +1,5 @@
 # F007b — Dev checkpoints: jump to set points in the story
-Status: IN_PROGRESS (part 1: CP-START and CP-BALLS done; CP-GYM1–8 next)
+Status: IN_PROGRESS (part 1: CP-START, CP-BALLS, CP-GYM1 done; CP-GYM2–8 next)
 Dependencies: F007 (shares the debug-menu entry work); owner decision D019
 Owner decision IDs: D019
 Branch / commit: `feature/F007b-dev-checkpoints`
@@ -62,4 +62,5 @@ Revert the PR.
 Part 1 (2026-11-26, Linux container): `make -j4` exit 0, dev ROM 26,746,968 B. Implemented as event scripts (`data/scripts/ascension_checkpoints.inc`) called from a new debug-menu submenu, with flags/vars traced from the map scripts. Checked headlessly with gbashot (scripted input, screenshots):
 - CP-START: lands at Littleroot's north exit; walking north triggers the neighbour's "Um, hi! … I don't have any Pokémon" scene that leads to Birch's rescue.
 - CP-BALLS: outside Birch's lab; start menu shows POKéDEX and POKéMON; party is Mudkip Lv7; bag has 5 Poké Balls.
+- CP-GYM1: outside Rustboro Gym; party Mudkip Lv15, Taillow Lv13; walking north enters the gym. Story state set: Oldale rival gone, Wally's tutorial done (Petalburg city/gym vars), Petalburg Woods Aqua grunt beaten and Devon researcher gone, Great Ball, 3 Potions, Antidote, +₽2,400. Roxanne fight itself not yet driven headlessly.
 Not yet: automated per-checkpoint tests (with GYM checkpoints), owner playtest.
