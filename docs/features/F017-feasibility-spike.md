@@ -59,6 +59,18 @@ Platform checkpoint: if any row is a clear "no", the spike reports why and the o
 
 Each runs under Classic and under the prototype, so they can be compared directly.
 
+## Spike findings so far
+- **Step 1, energy costs (done).** Moves spend energy from the HP bar instead of PP. LAB-012 log: Hydro Pump costs 31 of 175, Mud-Slap 5.
+- **Step 2, Exhausted (done).** Triggers at 25% from any cause, and a fixed seed replays identically. In LAB-012 the Hydro Pump user tires itself out and loses to the cheap-move side, so the design tension shows up.
+- **Step 3, timeline (done, `4313e8ab86` and the regen fix).**
+  - **How it works.** Each battler has a clock time for its next action. Each engine round lets only the earliest battler act; the others sit it out through upstream's existing "cannot act this turn" action. After acting, the battler's clock moves on by 1000 × weight ÷ Speed. Weight is 100 for status moves, switches and items; damaging moves add power ÷ 3.
+  - **LAB-011.** Ninjask acted 3 times to Slaking's 2. Heavy moves visibly push the next action back: in LAB-012, Hydro Pump costs 1,700 clock units and Mud-Slap 1,325.
+  - **Engine verdict so far: feasible.** It needs one hook in action selection and no rewrite of the battle loop.
+- **Finding: end-of-turn effects tick every round, and a round is now one action.** Upstream has 56 end-of-turn events: Speed Boost, Leftovers, poison, weather, screens and so on. In LAB-011, Ninjask's Speed Boost fired on Slaking's actions too and doubled its Speed in two rounds.
+  - Energy regen is already fixed: it now follows clock time, at +2% per 1,000 units.
+  - The rest need re-timing: per own action, or per 1,000 units for field effects. That's engineering for F018. It's a known, bounded list, not a blocker.
+- **Known spike shortcuts.** If a battler sits out the round after Hyper Beam, its recharge turn passes anyway; the clock delay stands in for it. Exact ties act together, in classic order.
+
 ## Explicit exclusions
 - Final balance: F019.
 - The polished timeline UI: F018.

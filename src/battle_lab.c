@@ -919,18 +919,30 @@ static void LabLogBattlers(void)
     }
 }
 
-// End of turn in stamina combat: +2% energy for every active battler that did not protect.
+// End of round in stamina combat: +2% energy per 1000 clock units (about one action at Speed
+// 100) for every active battler that did not protect this round. Timeline rounds are single
+// actions, so regen follows clock time, not rounds; fractions carry over.
+#define LAB_REGEN_PERCENT 2
+static EWRAM_DATA u32 sLabRegenAt = 0;
+static EWRAM_DATA u32 sLabRegenCarry[MAX_BATTLERS_COUNT] = {0};
+
 static void LabRegenEnergy(void)
 {
-    u32 battler;
+    u32 battler, elapsed = sLabNow - sLabRegenAt;
+    sLabRegenAt = sLabNow;
     for (battler = 0; battler < gBattlersCount; battler++)
     {
         u32 hp = gBattleMons[battler].hp, maxHp = gBattleMons[battler].maxHP, gain;
         if (hp == 0 || hp >= maxHp || (sLabProtectedThisTurn & (1u << battler)))
+        {
+            sLabRegenCarry[battler] = 0;
             continue;
-        gain = maxHp / 50;
+        }
+        sLabRegenCarry[battler] += maxHp * LAB_REGEN_PERCENT * elapsed;   // units of 1/(100*SCALE) HP
+        gain = sLabRegenCarry[battler] / (100 * LAB_TIMELINE_SCALE);
+        sLabRegenCarry[battler] %= 100 * LAB_TIMELINE_SCALE;
         if (gain == 0)
-            gain = 1;
+            continue;
         hp = (hp + gain < maxHp) ? hp + gain : maxHp;
         gBattleMons[battler].hp = hp;
         BtlController_EmitSetMonData(battler, B_COMM_TO_CONTROLLER, REQUEST_HP_BATTLE, 0, sizeof(gBattleMons[battler].hp), &gBattleMons[battler].hp);
@@ -2157,6 +2169,8 @@ static void Task_BattleLab_StartBattle(u8 taskId)
     sLabEndRequest = LAB_END_NONE;
     sLabProtectedThisTurn = 0;
     sLabNow = 0;
+    sLabRegenAt = 0;
+    memset(sLabRegenCarry, 0, sizeof(sLabRegenCarry));
     sLabRoundPlanned = FALSE;
     sLabTimelineStarted = FALSE;
     gIsDebugBattle = TRUE;   // upstream then keeps the Lab's prebuilt enemy party (battle_main.c)
