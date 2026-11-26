@@ -1057,6 +1057,7 @@ gStdScripts_End::
 
 	.include "data/scripts/config.inc"
 	.include "data/scripts/debug.inc"
+	.include "data/scripts/ascension_checkpoints.inc"  @ Pokémon Ascension dev checkpoints (F007b)
 
 EventScript_WhiteOut::
 	call EverGrandeCity_HallOfFame_EventScript_ResetEliteFour

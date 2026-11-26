@@ -1,30 +1,20 @@
 # Project status
 
-Last updated: 2026-11-26 (Claude session: PR #5 merged; F007 started).
-Current phase: 0 — scaffolding and foundation.
-Current feature: F007 Battle Lab entry (implementation next). F002–F005 DONE (owner verified on Mac 2026-11-26). F006: owner smoke test + `release.sh 0.1.0` pending.
-F000: DONE (owner accepted 2026-11-26).
-Next eligible feature: F007 Battle Lab entry (can start while the owner verifies 0.1.0).
-Last known-good playable build: none (pre-F006 bootstrap exception).
+Last updated: 2026-11-26 12:59 UTC (Claude session: F007b part 1, PR #8).
+Current phase: 0.2.0 Battle Lab track (F007–F013), with F007b dev checkpoints.
+Current feature: F007b dev checkpoints. Part 1 (CP-START, CP-BALLS, CP-GYM1) is in PR #8 on `feature/F007b-dev-checkpoints`; part 2 (CP-GYM2–8 and automated tests) is next.
+Done: F000–F005b. F006: the owner ran the smoke test. Release 0.1.0 has **not** been published: there is no tag or GitHub release, and `release.sh` was probably left waiting at a prompt. F007 is merged (PR #7) and waits for the owner's Battle Lab playtest.
+Next eligible feature: F007b part 2. Then F008, the Battle Lab team builder.
+Last known-good playable build: `main` @ 841465262e (dev). There is no tagged release yet.
 Current engine version: pokeemerald-expansion `expansion/1.17.2` (commit 79dd4369) on `main`.
-Automated tests: on the merged tree (`bfc0553a56`, Linux container) `make -j4` exit 0 and `make check -j4` exit 0: 5,429 passed / 5,876 total, 0 unexpected failures; ROM byte-identical to pristine upstream. Details in docs/features/F001-upstream-integration.md.
-Local Mac environment: unverified. Linux container can build and run tests; Mac scripts (F002, F005) and playtests need the owner's Mac.
-Pending owner decisions: none. OWNER ACTION NEEDED: run the Mac steps below and paste the output back.
-Progress by feature status: DONE 2 (F000, F001); TODO 34 (F002–F035).
-
-## Owner action (Mac)
-```bash
-git clone https://github.com/amber-falcon-games/pokemon-ascension.git   # skip if already cloned
-cd pokemon-ascension && git checkout main && git pull
-./scripts/setup.sh
-./scripts/play.sh
-./scripts/test.sh test/battle/move_effect/dragon_darts.c
-```
-Expected: setup ends with "Ready to build."; play prints the SHA-1 and opens mGBA at the Emerald title screen; the test prints 16 passed. Paste the output back.
-Then, for release 0.1.0: run the smoke test in docs/features/F006-baseline-release.md, put your Emerald dump at `.local/base/emerald.gba`, and run `./scripts/release.sh 0.1.0`.
+Automated tests: CI runs on each PR. F007b was built locally (`make -j8` exit 0); the checkpoints were checked headlessly with gbashot screenshots.
+Local Mac environment: verified by the owner (setup, play, 16 tests passed).
+Pending owner decisions: none.
+Owner actions: (1) finish `./scripts/release.sh` for 0.1.0; (2) playtest the Battle Lab (`./scripts/play.sh --lab`); (3) optionally, try the checkpoints on the PR #8 branch.
 
 ## Session handoff
-- `main` at `879f7eb` (PR #5): release pipeline + macOS GNU make 4.x fix. Owner's first Mac build failed because macOS make 3.81 silently ignores header-generation failures; fixed, awaiting owner retry.
-- Owner dashboard: Ascension Mission Control artifact (https://claude.ai/artifact/TBcNe5AUVsVQBbduRuj2Wv). Update it with ArtifactData at each step (collections data/ascension/{features,actions,activity,state}); run `date -u` before writing timestamps.
-- Owner's Mac session can be messaged (owner granted trusted-device access); it cannot message back, so the owner relays its output.
-- Exact next action: implement F007 per docs/features/F007-battle-lab-entry.md (title L+SELECT entry, Lab shell menu, LAB-001 debug battle returning to the Lab, release exclusion check), on `claude/sharp-euler-yfhti2`.
+- Branches (D021): each feature is on its own `feature/F0xx-*` branch and they stack. `feature/F007b-dev-checkpoints` also carries the session-branch commits: gbashot, D021 and the Done-button convention.
+- Checkpoints: `data/scripts/ascension_checkpoints.inc` (shared steps IntroDone → StarterToPokeBalls → PokeBallsToGym1) and the menu in `src/debug.c` (`sDebugMenu_Actions_Checkpoints`). For each gym, add a `<prev>To<GymN>` step traced from `data/maps/*/scripts.inc`, then a menu row.
+- Screenshots: `tools/ascension/shots/` (gbashot, built with libmgba-dev). Screenshots go only to the dashboard, never into the repo.
+- Owner dashboard: https://claude.ai/artifact/TBcNe5AUVsVQBbduRuj2Wv (ArtifactData collections data/ascension/{features,actions,activity,state,shots}). Run `date -u` before writing timestamps. Check whether the owner pressed Done (`status: done`, `done_by: owner`). Set state to idle at the end of a turn.
+- Exact next action: once PR #8 CI is green, merge it (dev-only tooling). Then F007b part 2: GYM2 Brawly (Makuhita 19) through GYM8 Juan (Kingdra 46). The team grows by one per gym, up to 6, built on the Mudkip line.
