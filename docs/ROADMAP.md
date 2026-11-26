@@ -19,6 +19,7 @@ Work proceeds strictly in this order; the table below keeps dependencies and des
 | F005c | Deep cuts needing map/script edits (Secret Bases, TV, Contests and ribbons, Mail, flavour NPCs, link minigames, Recorded Battle sector). Split from F005b for a faster MVP; must land before F015, which needs the space | F005b |
 | F006 | Baseline playable release 0.1.0, smoke test, resource measurements, release script (D017) — ACTIVE ([spec](features/F006-baseline-release.md)) | F004b,F005b |
 | F007 | Battle Lab entry and debug UI — ACTIVE ([spec](features/F007-battle-lab-entry.md)) | F006 |
+| F007b | Dev checkpoints: story points from the debug menu (D019) ([spec](features/F007b-dev-checkpoints.md)) | F007 |
 | F008 | Both team builders | F007 |
 | F009 | Battle conditions, moves, abilities, items and AI setup | F008 |
 | F010 | Play, edit, restart and exit custom battles | F009 |

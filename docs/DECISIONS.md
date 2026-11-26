@@ -27,6 +27,8 @@ Decided:
 - D016 (2026-11-26) — PP is replaced by energy. Battle order is determined by energy, recovery time (where a move has one) and Speed. Exact costs, regeneration, recovery durations, Speed scaling and anti-stall rules remain open (F017 spike, F018–F019) and need owner approval.
 - D018 (2026-11-26) — owner approved the execution order in ROADMAP.md and continuous work within it. Routine engineering merges when gates pass; gameplay changes wait for owner playtest.
 - D017 (raised 2026-11-26; owner accepted the overall approach 2026-11-26) — release process. Recommendation: deliberate releases. Owner runs `scripts/release.sh X.Y.Z` (or a manual GitHub trigger), which builds `make release`, produces a `.bps` patch against the owner's own Emerald dump, tags `vX.Y.Z` and publishes a GitHub Release with patch and changelog. Not on every merge. The base ROM never leaves the owner's machine, so patch generation runs locally, not in public CI. Semantic versions tied to milestones (0.1.0 at F006).
+- D019 (2026-11-26) — owner: dev checkpoints (F007b) as data files, loaded from the debug menu. Initial set: start of game before choosing a starter (intro done); after the starter and receiving Poké Balls; before each of the 8 gyms with a team ready for that gym (composition, moves, levels, items, money). Owner toggles gyms as beaten with the existing debug Flags menu. Scheduled right after F007.
+- D020 (2026-11-26) — CI: script-only and project Python changes take the quick check path (syntax and unit tests); cancelled, superseded runs no longer report a failure.
 
 To be raised at F015 (not decided): how to recover save space for an expanded move library — see SAVE_COMPATIBILITY.md options S1–S5.
 
