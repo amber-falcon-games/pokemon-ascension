@@ -698,9 +698,19 @@ s32 BattleLab_AutoOpenScenario(void)
     return value - 1;
 }
 
+// Decided once per boot (the first title-screen frame) and latched, so holding B at boot keeps the
+// normal title screen even after B is released. A soft reset (e.g. Lab Exit) clears EWRAM and decides again.
+enum { LAB_AUTO_UNDECIDED, LAB_AUTO_OPEN, LAB_AUTO_SKIP };
+static EWRAM_DATA u8 sLabAutoOpenDecision = LAB_AUTO_UNDECIDED;
+
 bool32 BattleLab_ShouldAutoOpen(void)
 {
-    return BattleLab_AutoOpenScenario() >= 0 && !JOY_HELD(B_BUTTON);   // hold B at boot for the title screen
+    if (sLabAutoOpenDecision == LAB_AUTO_UNDECIDED)
+        sLabAutoOpenDecision = (BattleLab_AutoOpenScenario() >= 0 && !JOY_HELD(B_BUTTON)) ? LAB_AUTO_OPEN : LAB_AUTO_SKIP;
+    if (sLabAutoOpenDecision != LAB_AUTO_OPEN)
+        return FALSE;
+    sLabAutoOpenDecision = LAB_AUTO_SKIP;   // open once; the Lab's Exit soft-resets anyway
+    return TRUE;
 }
 
 static void LabCopyFromBlock(u32 blockIndex, struct LabScenarioRecord *out)
