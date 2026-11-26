@@ -180,3 +180,4 @@
         - [F011 Battle Lab saved scenarios and presets](./features/F011-lab-scenarios.md)
         - [F012 Battle Lab inspection and diagnostics](./features/F012-lab-inspection.md)
         - [F013 Battle Lab acceptance and 0.2.0](./features/F013-lab-acceptance.md)
+        - [F017 Feasibility spike: timeline, energy, more moves](./features/F017-feasibility-spike.md)
