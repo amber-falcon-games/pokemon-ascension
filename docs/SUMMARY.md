@@ -176,3 +176,4 @@
         - [F007b dev checkpoints](./features/F007b-dev-checkpoints.md)
         - [F008 Battle Lab team builders](./features/F008-lab-team-builder.md)
         - [F009 Battle Lab details and rules](./features/F009-lab-battle-setup.md)
+        - [F010 Battle Lab play/restart/exit loop](./features/F010-lab-battle-loop.md)
