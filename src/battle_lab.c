@@ -743,12 +743,9 @@ void BattleLab_LogBattleStart(void)
                 r->fixedSeed ? " (fixed)" : "");
 }
 
-void BattleLab_LogTurnEnd(void)
+static void LabLogBattlers(void)
 {
     u32 battler;
-    if (!sLabInBattleFlag)
-        return;
-    DebugPrintf("LAB turn %d", gBattleResults.battleTurnCounter + 1);
     for (battler = 0; battler < gBattlersCount; battler++)
     {
         const struct BattlePokemon *mon = &gBattleMons[battler];
@@ -756,6 +753,27 @@ void BattleLab_LogTurnEnd(void)
                     IsOnPlayerSide(battler) ? "you" : "foe", battler,
                     GetSpeciesName(mon->species), mon->level, mon->hp, mon->maxHP, mon->status1);
     }
+}
+
+void BattleLab_LogTurnEnd(void)
+{
+    if (!sLabInBattleFlag)
+        return;
+    DebugPrintf("LAB turn %d", gBattleResults.battleTurnCounter + 1);
+    LabLogBattlers();
+}
+
+// Final state, logged by the battle just before it clears its data (battle_main.c hook), so a
+// decisive turn (a knockout, end-of-turn damage) is always in the log even though the battle
+// leaves before the turn-end hook.
+void BattleLab_LogBattleEnd(void)
+{
+    if (!sLabInBattleFlag)
+        return;
+    DebugPrintf("LAB end: %S after %d turn(s)",
+                BattleLab_ResultName(BattleLab_ResultFromOutcome(gBattleOutcome, sLabEndRequest == LAB_END_QUIT, sLabEndRequest == LAB_END_RESTART)),
+                BattleLab_TurnsPlayed(gBattleResults.battleTurnCounter));
+    LabLogBattlers();
 }
 
 bool32 BattleLab_ShouldAutoOpen(void)

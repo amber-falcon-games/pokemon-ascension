@@ -107,10 +107,12 @@ void BattleLab_TrimToWildOpponent(void);
 bool32 BattleLab_IsLabBattle(void);
 bool32 BattleLab_ShouldAutoOpen(void);
 void BattleLab_LogTurnEnd(void);   // F012: per-turn battle log (mGBA log window); no-op outside Lab battles
+void BattleLab_LogBattleEnd(void); // F012: final state before the battle clears its data
 #else
 static inline bool32 BattleLab_IsLabBattle(void) { return FALSE; }
 static inline bool32 BattleLab_ShouldAutoOpen(void) { return FALSE; }
 static inline void BattleLab_LogTurnEnd(void) {}
+static inline void BattleLab_LogBattleEnd(void) {}
 #endif
 
 // Determinism and diagnostics (F012)
