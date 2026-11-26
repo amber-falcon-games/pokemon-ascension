@@ -61,8 +61,13 @@ if [ "$publish" = 1 ]; then
   [ -z "$(git status --porcelain)" ] || die "There are uncommitted changes. Commit or stash them, then run this again."
   git fetch -q origin main
   if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
-    confirm "Your main is behind GitHub. Pull the latest now?" || die "Run: git pull"
-    git pull -q --ff-only origin main
+    if git merge-base --is-ancestor HEAD origin/main; then
+      confirm "Your main is behind GitHub. Pull the latest now?" || die "Run: git pull"
+      git pull -q --ff-only origin main
+    fi
+    # Releases must be exactly what is on GitHub: stop on local-only commits.
+    [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] \
+      || die "Your main has commits that aren't on GitHub. Push them through a PR first, or reset to origin/main."
   fi
   ! git rev-parse -q --verify "refs/tags/$tag" >/dev/null || die "$tag already exists. Pick another version."
 fi
@@ -76,6 +81,9 @@ if [ ! -f "$base" ] && [ "$guided" = 1 ]; then
   info "Needed to make the patch. It stays on this Mac and is never uploaded."
   read -r -p "Path to your Emerald .gba (you can drag the file into this window): " given
   given="${given%\'}"; given="${given#\'}"; given="${given%\"}"; given="${given#\"}"; given="${given% }"
+  # Terminal escapes dragged paths (e.g. Pokemon\ Emerald.gba). Undo backslash escapes as
+  # plain text; nothing typed here is ever run as a command.
+  [ -f "$given" ] || given="$(printf '%s' "$given" | sed 's/\\\(.\)/\1/g')"
   [ -f "$given" ] || die "No file at: $given"
   [ "$(sha1 "$given")" = "$expected" ] || die "That file's SHA-1 is $(sha1 "$given"); a clean Pokémon Emerald (USA/Europe) is $expected."
   mkdir -p "$(dirname "$base")" && cp "$given" "$base"
