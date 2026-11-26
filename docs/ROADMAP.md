@@ -4,8 +4,8 @@ Status key: TODO, ACTIVE, BLOCKED, AWAITING_ACCEPTANCE, DONE. All entries TODO i
 
 | ID | Deliverable | Depends on |
 |---|---|---|
-| F000 | Documentation scaffold review | — |
-| F001 | Upstream audit, pinned baseline, approved integration preserving history | F000 |
+| F000 | Documentation scaffold review — DONE ([spec](features/F000-scaffold-review.md)) | — |
+| F001 | Upstream audit, pinned baseline, approved integration preserving history — ACTIVE, import in review ([spec](features/F001-upstream-integration.md)) | F000 |
 | F002 | Mac setup and doctor scripts, pinned dependencies | F001 |
 | F003 | Reproducible ROM compilation, build script | F002 |
 | F004 | Upstream test integration, GitHub CI and test script | F003 |

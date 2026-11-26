@@ -18,5 +18,10 @@
 - Expanded status stacking, damage pacing formulas, XP timing, mid-battle evolution triggers and stat recalculation, permanent Mega unlock requirements and branches.
 - Additional species/evolutions, story and world details later.
 
+## Owner input 2026-11-26 (direction, not final design)
+- Branching move progression via a talent tree. Proposed storage model: moves are derived from species line + level + the player's stored branch choices (e.g. Ember replaced by Flamethrower at level 20, then a level-35 choice between Fire Spin and Flame Wheel; only the choice is stored). Details belong to F015 and F027–F028.
+- Battle Lab is debug-only and excluded from release builds (already required by BATTLE_LAB.md).
+- Owner will review the cut-candidate feature list in SAVE_COMPATIBILITY.md.
+
 See BATTLE_SYSTEM.md for implementation-facing design and DECISIONS.md for decision state.
 
