@@ -17,19 +17,21 @@ for a in "$@"; do
 done
 cd "$ROOT"
 tc="$(make_toolchain_args)"
-rm -f "$ROM_OUT" "$ROM_COPY"
+rom_src="$ROM_OUT"
+[ "$target" = release ] && rom_src="$ROOT/pokeemerald-release.gba"   # upstream names release builds differently
+rm -f "$rom_src" "$ROM_COPY"
 [ "$clean" = 1 ] && { info "Cleaning previous build outputs"; make tidy >/dev/null; }
 jobs="$(cpu_count)"
 info "make -j$jobs $target ${tc:+(project toolchain)}"
 start=$(date +%s)
 log="$ROOT/build/last-build.log"; mkdir -p "$ROOT/build"
 if ! make -j"$jobs" $tc "$target" >"$log" 2>&1; then
-  rm -f "$ROM_OUT" "$ROM_COPY"
+  rm -f "$rom_src" "$ROM_COPY"
   tail -n 30 "$log"
   die "Build failed after $(( $(date +%s) - start ))s. Full log: build/last-build.log"
 fi
-[ -f "$ROM_OUT" ] || die "Build reported success but $ROM_OUT is missing. Log: build/last-build.log"
-cp "$ROM_OUT" "$ROM_COPY"
+[ -f "$rom_src" ] || die "Build reported success but $rom_src is missing. Log: build/last-build.log"
+cp "$rom_src" "$ROM_COPY"
 grep -A3 'Memory region' "$log" || true
-ok "Built in $(( $(date +%s) - start ))s: build/pokemon-ascension.gba"
+ok "Built ($target) in $(( $(date +%s) - start ))s: build/pokemon-ascension.gba"
 info "SHA-1 $(shasum -a 1 "$ROM_COPY" 2>/dev/null | awk '{print $1}' || sha1sum "$ROM_COPY" | awk '{print $1}')"
