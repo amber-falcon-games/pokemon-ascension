@@ -112,6 +112,7 @@ void BattleLab_PayEnergy(u32 battler, u32 move);       // called where PP would 
 bool32 BattleLab_IsExhausted(u32 battler);
 u32 BattleLab_ExhaustedSpeed(u32 battler, u32 speed);
 bool32 BattleLab_ExhaustionLocksMove(u32 battler, u32 move);
+bool32 BattleLab_TimelineSkips(u32 battler);           // timeline: this battler sits the round out
 bool32 BattleLab_ShouldAutoOpen(void);
 void BattleLab_LogTurnEnd(void);   // F012: per-turn battle log (mGBA log window); no-op outside Lab battles
 void BattleLab_LogBattleEnd(void); // F012: final state before the battle clears its data
@@ -121,6 +122,7 @@ static inline void BattleLab_PayEnergy(u32 battler, u32 move) {}
 static inline bool32 BattleLab_IsExhausted(u32 battler) { return FALSE; }
 static inline u32 BattleLab_ExhaustedSpeed(u32 battler, u32 speed) { return speed; }
 static inline bool32 BattleLab_ExhaustionLocksMove(u32 battler, u32 move) { return FALSE; }
+static inline bool32 BattleLab_TimelineSkips(u32 battler) { return FALSE; }
 static inline bool32 BattleLab_IsLabBattle(void) { return FALSE; }
 static inline bool32 BattleLab_ShouldAutoOpen(void) { return FALSE; }
 static inline void BattleLab_LogTurnEnd(void) {}

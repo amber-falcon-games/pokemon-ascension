@@ -3826,7 +3826,12 @@ static void HandleTurnActionSelectionState(void)
                 }
                 else
                 {
-                    if (gBattleMons[battler].volatiles.multipleTurns
+                    if (BattleLab_TimelineSkips(battler))   // Pokémon Ascension (F017 spike): not this battler's time
+                    {
+                        gChosenActionByBattler[battler] = B_ACTION_NOTHING_FAINTED;
+                        gBattleCommunication[battler] = STATE_WAIT_ACTION_CONFIRMED_STANDBY;
+                    }
+                    else if (gBattleMons[battler].volatiles.multipleTurns
                         || gBattleMons[battler].volatiles.rechargeTimer > 0)
                     {
                         gChosenActionByBattler[battler] = B_ACTION_USE_MOVE;

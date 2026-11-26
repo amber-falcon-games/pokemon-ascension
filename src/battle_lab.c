@@ -754,12 +754,110 @@ bool32 BattleLab_ExhaustionLocksMove(u32 battler, u32 move)
 
 static EWRAM_DATA u8 sLabProtectedThisTurn = 0;   // battler bit mask; no regen on a turn you protected
 
+// Timeline (D023, spike step 3). Each battler has a clock time for its next action. A round
+// lets only the battler(s) whose time is earliest act; everyone else sits the round out.
+// Acting pushes the actor's time on by 1000 x weight / Speed, so a faster Pokémon (or one
+// whose Speed rises) acts more often, and a heavy move or Exhaustion delays the next action.
+#define LAB_TIMELINE_SCALE 1000
+static EWRAM_DATA u32 sLabNextAct[MAX_BATTLERS_COUNT] = {0};
+static EWRAM_DATA u8 sLabPartyIndex[MAX_BATTLERS_COUNT] = {0};
+static EWRAM_DATA u32 sLabNow = 0;
+static EWRAM_DATA u8 sLabActors = 0;        // battlers acting this round
+static EWRAM_DATA u8 sLabCharged = 0;       // actors whose next time is already set this round
+static EWRAM_DATA bool8 sLabRoundPlanned = FALSE;
+static EWRAM_DATA bool8 sLabTimelineStarted = FALSE;
+
+static u32 LabMoveWeight(u32 move)
+{
+    if (move == MOVE_NONE || GetMoveCategory(move) == DAMAGE_CATEGORY_STATUS)
+        return 100;
+    return 100 + GetMovePower(move) / 3;    // Tackle 113, Flamethrower 130, Hyper Beam 150
+}
+
+static u32 LabActionDelay(u32 battler, u32 weight)
+{
+    u32 speed = GetBattlerTotalSpeedStat(battler, GetBattlerAbility(battler), GetBattlerHoldEffect(battler));
+    if (speed == 0)
+        speed = 1;
+    return LAB_TIMELINE_SCALE * weight / speed;
+}
+
+static bool32 LabBattlerOnField(u32 battler)
+{
+    return !(gAbsentBattlerFlags & (1u << battler)) && gBattleMons[battler].hp > 0;
+}
+
+static void LabPlanRound(void)
+{
+    u32 battler, earliest = 0xFFFFFFFF;
+    sLabRoundPlanned = TRUE;
+    sLabActors = 0;
+    sLabCharged = 0;
+    for (battler = 0; battler < gBattlersCount; battler++)
+    {
+        if (!LabBattlerOnField(battler))
+            continue;
+        // A Pokémon that has just come in joins the clock: half a step after "now".
+        if (!sLabTimelineStarted || sLabPartyIndex[battler] != gBattlerPartyIndexes[battler])
+        {
+            sLabNextAct[battler] = sLabNow + LabActionDelay(battler, 100) / (sLabTimelineStarted ? 2 : 1);
+            sLabPartyIndex[battler] = gBattlerPartyIndexes[battler];
+        }
+        if (sLabNextAct[battler] < earliest)
+            earliest = sLabNextAct[battler];
+    }
+    sLabTimelineStarted = TRUE;
+    if (earliest == 0xFFFFFFFF)
+        return;
+    sLabNow = earliest;
+    for (battler = 0; battler < gBattlersCount; battler++)
+        if (LabBattlerOnField(battler) && sLabNextAct[battler] == earliest)
+            sLabActors |= 1u << battler;
+    for (battler = 0; battler < gBattlersCount; battler++)
+        if (LabBattlerOnField(battler))
+            DebugPrintf("LAB clock: %S at %d%s", GetSpeciesName(gBattleMons[battler].species),
+                        sLabNextAct[battler], (sLabActors & (1u << battler)) ? " ACTS" : "");
+}
+
+// Action selection asks this for each battler; TRUE = this battler sits the round out.
+bool32 BattleLab_TimelineSkips(u32 battler)
+{
+    if (!BattleLab_StaminaMode())
+        return FALSE;
+    if (!sLabRoundPlanned)
+        LabPlanRound();
+    return sLabActors != 0 && !(sLabActors & (1u << battler));
+}
+
+static void LabChargeAction(u32 battler, u32 move)
+{
+    if (!(sLabActors & (1u << battler)) || (sLabCharged & (1u << battler)))
+        return;
+    sLabCharged |= 1u << battler;
+    sLabNextAct[battler] = sLabNow + LabActionDelay(battler, LabMoveWeight(move));
+}
+
+// End of round: actors that did not use a move (switch, item, full paralysis...) take a plain
+// step; the next round is planned afresh.
+static void LabTimelineRoundEnd(void)
+{
+    u32 battler;
+    for (battler = 0; battler < gBattlersCount; battler++)
+        if (LabBattlerOnField(battler))
+        {
+            LabChargeAction(battler, MOVE_NONE);
+            sLabPartyIndex[battler] = gBattlerPartyIndexes[battler];
+        }
+    sLabRoundPlanned = FALSE;
+}
+
 void BattleLab_PayEnergy(u32 battler, u32 move)
 {
     u32 hp = gBattleMons[battler].hp;
     u32 cost = BattleLab_EnergyCost(move, gBattleMons[battler].maxHP), effect = GetMoveEffect(move);
     if (effect == EFFECT_PROTECT || effect == EFFECT_ENDURE || effect == EFFECT_MAT_BLOCK)
         sLabProtectedThisTurn |= 1u << battler;
+    LabChargeAction(battler, move);
     if (cost == 0 || hp <= 1)
         return;
     hp = (hp > cost) ? hp - cost : 1;   // own moves never faint the user (D023)
@@ -846,7 +944,10 @@ void BattleLab_LogTurnEnd(void)
     if (!sLabInBattleFlag)
         return;
     if (BattleLab_StaminaMode())
+    {
         LabRegenEnergy();
+        LabTimelineRoundEnd();
+    }
     DebugPrintf("LAB turn %d", gBattleResults.battleTurnCounter + 1);
     LabLogBattlers();
 }
@@ -2055,6 +2156,9 @@ static void Task_BattleLab_StartBattle(u8 taskId)
     sLabInBattleFlag = TRUE;
     sLabEndRequest = LAB_END_NONE;
     sLabProtectedThisTurn = 0;
+    sLabNow = 0;
+    sLabRoundPlanned = FALSE;
+    sLabTimelineStarted = FALSE;
     gIsDebugBattle = TRUE;   // upstream then keeps the Lab's prebuilt enemy party (battle_main.c)
     gDebugAIFlags = BattleLab_OpponentAiFlags();
     if (wild)

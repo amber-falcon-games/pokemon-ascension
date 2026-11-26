@@ -334,3 +334,16 @@ TEST("Battle Lab 'use last seed' needs a battle first, then fixes that seed")
     BattleLab_LogTurnEnd();                 // outside a Lab battle: does nothing
     EXPECT(!gBattleLabRules.fixedSeed);
 }
+
+TEST("Battle Lab stamina energy costs (D023) and no timeline outside Lab battles")
+{
+    EXPECT_EQ(BattleLab_EnergyCost(MOVE_TACKLE, 600), 36);        // power 40 -> 6%
+    EXPECT_EQ(BattleLab_EnergyCost(MOVE_HYDRO_PUMP, 600), 108);   // power 110 -> 18%
+    EXPECT_EQ(BattleLab_EnergyCost(MOVE_GROWL, 600), 30);         // status -> 5%
+    EXPECT_EQ(BattleLab_EnergyCost(MOVE_PROTECT, 600), 0);        // Protect is free
+    EXPECT_EQ(BattleLab_EnergyCost(MOVE_RECOVER, 600), 0);        // healing is free
+    EXPECT_EQ(BattleLab_EnergyCost(MOVE_TACKLE, 5), 1);           // never below 1
+    EXPECT(!BattleLab_StaminaMode());
+    EXPECT(!BattleLab_TimelineSkips(0));
+    EXPECT(!BattleLab_IsExhausted(0));
+}
