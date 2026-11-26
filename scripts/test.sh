@@ -14,6 +14,10 @@ if [ -n "${1:-}" ]; then
   filter_args=("TESTS=$1")
 fi
 start=$(date +%s)
+if [ -z "${1:-}" ]; then
+  info "Project tool tests (Python)"
+  python3 -I test/ascension/test_bps.py || die "Project tool tests failed"
+fi
 if make -j"$(cpu_count)" $tc check ${filter_args[@]+"${filter_args[@]}"}; then
   ok "Tests passed in $(( $(date +%s) - start ))s"
 else

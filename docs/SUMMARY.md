@@ -170,3 +170,4 @@
         - [F004a CI speed and badges](./features/F004a-ci-speed-and-badges.md)
         - [F002–F005 local scripts](./features/F002-F005-local-scripts.md)
         - [F005b lean cuts](./features/F005b-lean-cuts.md)
+        - [F006 baseline release](./features/F006-baseline-release.md)

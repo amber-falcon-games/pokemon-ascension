@@ -41,6 +41,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check docs/SUMMARY.md lists every doc
         run: .github/docs_validate/inclusive_summary.py
+      - name: Project tool tests (patch tool)
+        run: python3 -I test/ascension/test_bps.py
 
   build:
     needs: changes

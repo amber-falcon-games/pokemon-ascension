@@ -17,7 +17,7 @@ Work proceeds strictly in this order; the table below keeps dependencies and des
 | F005 | mGBA launch, local play and status scripts | F003 |
 | F005b | DONE ([spec](features/F005b-lean-cuts.md)) — Lean cuts: features with upstream switches (Mystery Gift/Event, e-Reader, record-mixing records, Union Room chat, link battle records, Match Call → VS Seeker, Pokémon Jump, Trainer Hill, extra Pokédex flags) and PC reduced to 10 boxes | F005 |
 | F005c | Deep cuts needing map/script edits (Secret Bases, TV, Contests and ribbons, Mail, flavour NPCs, link minigames, Recorded Battle sector). Split from F005b for a faster MVP; must land before F015, which needs the space | F005b |
-| F006 | Baseline playable release 0.1.0, smoke test, resource measurements, release script (D017) | F004b,F005b |
+| F006 | Baseline playable release 0.1.0, smoke test, resource measurements, release script (D017) — ACTIVE ([spec](features/F006-baseline-release.md)) | F004b,F005b |
 | F007 | Battle Lab entry and debug UI | F006 |
 | F008 | Both team builders | F007 |
 | F009 | Battle conditions, moves, abilities, items and AI setup | F008 |
