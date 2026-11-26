@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased — F008 Battle Lab team builders (2026-11-26)
+- Dev builds: the Battle Lab's Player team and Opponent team screens set up to 6 Pokémon per side (any species or form, level 1–100, in battle on/off). Changed slots are marked `!`; LAB-001 is the starting point and START resets it.
+
 ## Unreleased — F007b dev checkpoints (2026-11-26)
 - Dev builds: R+Start → Checkpoints… jumps to 10 story points (Start, Poké Balls, and outside each of the 8 gyms) with a ready team, items, money and the story state of a normal run. Release builds contain none of it.
 

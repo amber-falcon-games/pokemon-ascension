@@ -1,5 +1,5 @@
 # F007b — Dev checkpoints: jump to set points in the story
-Status: AWAITING_ACCEPTANCE (all 10 checkpoints implemented and tested; owner playtest pending)
+Status: DONE (owner playtested and accepted 2026-11-26)
 Dependencies: F007 (shares the debug-menu entry work); owner decision D019
 Owner decision IDs: D019
 Branch / commit: part 1 `feature/F007b-dev-checkpoints` (PR #8, merged); part 2 `feature/F007b-gym-checkpoints`

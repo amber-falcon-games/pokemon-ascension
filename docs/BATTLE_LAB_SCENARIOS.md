@@ -12,7 +12,7 @@ Each scenario is reproducible data in `src/data/battle_lab_trainers.party` (dev 
 | LAB-006 | Branching move mastery | — | — | — | F027–F028 | — | Planned |
 | LAB-007 | Mid-battle evolution | — | — | — | F029 | — | Planned |
 | LAB-008 | Permanent Mega | — | — | — | F031 | — | Planned |
-| LAB-009 | Six-member trainer battle | — | — | — | F008–F010 | — | Planned |
+| LAB-009 | Six-member trainer battle | Set up by hand with the F008 team builder | 6 slots | Single, trainer battle | F008–F010 | Becomes a saved preset with F011 | Planned |
 | LAB-010 | Over-levelled wild encounter | — | — | — | F009 | — | Planned |
 
 Automated check: `test/ascension/battle_lab.c` (LAB-001 parties). Scenarios are never marked passed before their mechanics exist.
