@@ -76,7 +76,8 @@ Each runs under Classic and under the prototype, so they can be compared directl
   - The PP box shows the boost and the energy cost (e.g. "POW 46" for Hydro Pump), and the player's energy bar previews what is left after paying.
   - Speed costs +50% and makes the next action come sooner (clock delay ×0.6). Power costs +50% for ×1.3 power. Both costs +100%.
   - Log: "Swampert pays 46 for Hydro Pump +POWER".
-  - Not yet built: the AI never boosts, the "screen on fire" effect, and showing the spent part of the bar in a different colour (F018 polish).
+  - Owner feedback (2026-11-26) was that the preview was too subtle and the bar still said "HP". The preview now **blinks**: every 8 frames the bar alternates between your current energy and what you'll have after paying, so the part you'd spend flashes. In stamina battles the bar label reads **"EN"**, using a Lab-only tile edited from upstream's "HP" tile (`graphics/battle_interface/lab_energy_label.png`).
+  - Not yet built: the AI never boosts, and the "screen on fire" effect (F018 polish).
 
 ## Measurements (step 5)
 Raw logs come from headless runs (gbashot with the game's log).

@@ -685,6 +685,8 @@ void HandleInputChooseMove(enum BattlerId battler)
     else
         gPlayerDpadHoldFrames = 0;
 
+    BattleLab_MoveMenuFrame(battler);   // Pokémon Ascension (F017 spike): blinking energy-cost preview
+
     if (JOY_NEW(A_BUTTON) && !gBattleStruct->descriptionSubmenu)
     {
         if (BattleLab_StaminaMode())

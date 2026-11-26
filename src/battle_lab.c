@@ -893,10 +893,40 @@ void BattleLab_ClearBoost(u32 battler)
 
 // Move menu in stamina battles: the PP box shows the boost and the energy cost, and the
 // player's energy bar previews what is left after paying it.
+// Stamina battles relabel the bar "EN" (energy): two 8x8 tiles in place of upstream's "HP".
+const u32 gBattleLabEnergyLabelGfx[] = INCBIN_U32("graphics/battle_interface/lab_energy_label.4bpp");
+
+const void *BattleLab_HealthbarLabelGfx(const void *hpLabel)
+{
+    return BattleLab_StaminaMode() ? (const void *)gBattleLabEnergyLabelGfx : hpLabel;
+}
+
+// The preview blinks: the bar alternates between now and after paying, so the part that
+// would be spent flashes (8 frames each).
+static EWRAM_DATA u16 sLabPreviewAfter[MAX_BATTLERS_COUNT] = {0};
+static EWRAM_DATA u8 sLabPreviewTimer = 0;
+
+static void LabDrawBar(u32 battler, u32 value)
+{
+    SetBattleBarStruct(battler, gHealthboxSpriteIds[battler], gBattleMons[battler].maxHP, value, 0);
+    MoveBattleBar(battler, gHealthboxSpriteIds[battler], HEALTH_BAR, 0);
+}
+
+void BattleLab_MoveMenuFrame(u32 battler)
+{
+    if (!BattleLab_StaminaMode() || sLabPreviewAfter[battler] == gBattleMons[battler].hp)
+        return;
+    sLabPreviewTimer++;
+    if ((sLabPreviewTimer & 7) == 0)
+        LabDrawBar(battler, (sLabPreviewTimer & 8) ? sLabPreviewAfter[battler] : gBattleMons[battler].hp);
+}
+
 void BattleLab_ShowMoveCost(u32 battler, u32 move)
 {
     u32 hp = gBattleMons[battler].hp, cost = BattleLab_BoostedCost(battler, move), after;
     after = (cost == 0 || hp <= 1) ? hp : (hp > cost ? hp - cost : 1);
+    sLabPreviewAfter[battler] = after;
+    sLabPreviewTimer = 8;
     BattlePutTextOnWindow(sLabBoostTag[sLabBoost[battler]], B_WIN_PP);
     ConvertIntToDecimalStringN(gDisplayedStringBattle, cost, STR_CONV_MODE_RIGHT_ALIGN, 3);
     BattlePutTextOnWindow(gDisplayedStringBattle, B_WIN_PP_REMAINING);
@@ -906,8 +936,8 @@ void BattleLab_ShowMoveCost(u32 battler, u32 move)
 
 void BattleLab_EndMoveCostPreview(u32 battler)
 {
-    SetBattleBarStruct(battler, gHealthboxSpriteIds[battler], gBattleMons[battler].maxHP, gBattleMons[battler].hp, 0);
-    MoveBattleBar(battler, gHealthboxSpriteIds[battler], HEALTH_BAR, 0);
+    sLabPreviewAfter[battler] = gBattleMons[battler].hp;
+    LabDrawBar(battler, gBattleMons[battler].hp);
 }
 
 void BattleLab_PayEnergy(u32 battler, u32 move)

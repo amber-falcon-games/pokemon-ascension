@@ -120,6 +120,8 @@ void BattleLab_CycleBoost(u32 battler);
 void BattleLab_ClearBoost(u32 battler);
 void BattleLab_ShowMoveCost(u32 battler, u32 move);    // move menu: cost in the PP box, preview on the bar
 void BattleLab_EndMoveCostPreview(u32 battler);
+void BattleLab_MoveMenuFrame(u32 battler);             // blinks the cost preview on the bar
+const void *BattleLab_HealthbarLabelGfx(const void *hpLabel);   // "EN" label tiles in stamina battles
 void BattleLab_AiTimerStart(void);                     // F017 measurement: AI decision time
 void BattleLab_AiTimerStop(u32 battler);
 bool32 BattleLab_ShouldAutoOpen(void);
@@ -137,6 +139,8 @@ static inline void BattleLab_CycleBoost(u32 battler) {}
 static inline void BattleLab_ClearBoost(u32 battler) {}
 static inline void BattleLab_ShowMoveCost(u32 battler, u32 move) {}
 static inline void BattleLab_EndMoveCostPreview(u32 battler) {}
+static inline void BattleLab_MoveMenuFrame(u32 battler) {}
+static inline const void *BattleLab_HealthbarLabelGfx(const void *hpLabel) { return hpLabel; }
 static inline void BattleLab_AiTimerStart(void) {}
 static inline void BattleLab_AiTimerStop(u32 battler) {}
 static inline bool32 BattleLab_IsLabBattle(void) { return FALSE; }
