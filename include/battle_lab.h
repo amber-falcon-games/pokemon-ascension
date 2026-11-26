@@ -45,6 +45,7 @@ enum LabWeather { LAB_WEATHER_NONE, LAB_WEATHER_RAIN, LAB_WEATHER_SUN, LAB_WEATH
 enum LabTerrain { LAB_TERRAIN_NONE, LAB_TERRAIN_ELECTRIC, LAB_TERRAIN_GRASSY, LAB_TERRAIN_MISTY, LAB_TERRAIN_PSYCHIC, LAB_TERRAIN_COUNT };
 enum LabAi { LAB_AI_SCENARIO, LAB_AI_SMART, LAB_AI_RANDOM, LAB_AI_COUNT };
 enum LabCombat { LAB_COMBAT_CLASSIC, LAB_COMBAT_STAMINA, LAB_COMBAT_COUNT };   // F017 spike (D023)
+enum LabBoost { LAB_BOOST_NONE, LAB_BOOST_SPEED, LAB_BOOST_POWER, LAB_BOOST_BOTH, LAB_BOOST_COUNT };   // bit 0 speed, bit 1 power
 
 struct LabRules
 {
@@ -113,6 +114,12 @@ bool32 BattleLab_IsExhausted(u32 battler);
 u32 BattleLab_ExhaustedSpeed(u32 battler, u32 speed);
 bool32 BattleLab_ExhaustionLocksMove(u32 battler, u32 move);
 bool32 BattleLab_TimelineSkips(u32 battler);           // timeline: this battler sits the round out
+u32 BattleLab_BoostedCost(u32 battler, u32 move);      // Boost (R): energy cost with the chosen boost
+u32 BattleLab_BoostPower(u32 battler, u32 power);
+void BattleLab_CycleBoost(u32 battler);
+void BattleLab_ClearBoost(u32 battler);
+void BattleLab_ShowMoveCost(u32 battler, u32 move);    // move menu: cost in the PP box, preview on the bar
+void BattleLab_EndMoveCostPreview(u32 battler);
 bool32 BattleLab_ShouldAutoOpen(void);
 void BattleLab_LogTurnEnd(void);   // F012: per-turn battle log (mGBA log window); no-op outside Lab battles
 void BattleLab_LogBattleEnd(void); // F012: final state before the battle clears its data
@@ -123,6 +130,11 @@ static inline bool32 BattleLab_IsExhausted(u32 battler) { return FALSE; }
 static inline u32 BattleLab_ExhaustedSpeed(u32 battler, u32 speed) { return speed; }
 static inline bool32 BattleLab_ExhaustionLocksMove(u32 battler, u32 move) { return FALSE; }
 static inline bool32 BattleLab_TimelineSkips(u32 battler) { return FALSE; }
+static inline u32 BattleLab_BoostPower(u32 battler, u32 power) { return power; }
+static inline void BattleLab_CycleBoost(u32 battler) {}
+static inline void BattleLab_ClearBoost(u32 battler) {}
+static inline void BattleLab_ShowMoveCost(u32 battler, u32 move) {}
+static inline void BattleLab_EndMoveCostPreview(u32 battler) {}
 static inline bool32 BattleLab_IsLabBattle(void) { return FALSE; }
 static inline bool32 BattleLab_ShouldAutoOpen(void) { return FALSE; }
 static inline void BattleLab_LogTurnEnd(void) {}

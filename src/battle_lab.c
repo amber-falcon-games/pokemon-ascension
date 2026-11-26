@@ -11,6 +11,8 @@
 
 #include "battle.h"
 #include "battle_controllers.h"
+#include "battle_interface.h"
+#include "battle_message.h"
 #include "battle_main.h"
 #include "battle_setup.h"
 #include "bg.h"
@@ -766,6 +768,7 @@ static EWRAM_DATA u8 sLabActors = 0;        // battlers acting this round
 static EWRAM_DATA u8 sLabCharged = 0;       // actors whose next time is already set this round
 static EWRAM_DATA bool8 sLabRoundPlanned = FALSE;
 static EWRAM_DATA bool8 sLabTimelineStarted = FALSE;
+static EWRAM_DATA u8 sLabBoost[MAX_BATTLERS_COUNT] = {0};   // enum LabBoost, chosen with R on the move menu
 
 static u32 LabMoveWeight(u32 move)
 {
@@ -834,7 +837,8 @@ static void LabChargeAction(u32 battler, u32 move)
     if (!(sLabActors & (1u << battler)) || (sLabCharged & (1u << battler)))
         return;
     sLabCharged |= 1u << battler;
-    sLabNextAct[battler] = sLabNow + LabActionDelay(battler, LabMoveWeight(move));
+    sLabNextAct[battler] = sLabNow + LabActionDelay(battler, LabMoveWeight(move))
+                         * ((sLabBoost[battler] & LAB_BOOST_SPEED) ? 6 : 10) / 10;
 }
 
 // End of round: actors that did not use a move (switch, item, full paralysis...) take a plain
@@ -849,20 +853,78 @@ static void LabTimelineRoundEnd(void)
             sLabPartyIndex[battler] = gBattlerPartyIndexes[battler];
         }
     sLabRoundPlanned = FALSE;
+    memset(sLabBoost, 0, sizeof(sLabBoost));
+}
+
+// Boost (D023, spike step 4): R on the move menu cycles None > Speed > Power > Both.
+// Speed: +50% cost, the next action comes sooner (delay x0.6). Power: +50% cost, power x1.3.
+// Both: +100% cost. The choice lasts until the end of the round. The AI does not boost yet.
+static const char *const sLabBoostLog[LAB_BOOST_COUNT] = {"", " +SPEED", " +POWER", " +BOTH"};
+static const u8 sLabBoostTag[LAB_BOOST_COUNT][4] = {_("EN"), _("SPD"), _("POW"), _("ALL")};
+
+u32 BattleLab_BoostedCost(u32 battler, u32 move)
+{
+    u32 cost = BattleLab_EnergyCost(move, gBattleMons[battler].maxHP);
+    switch (sLabBoost[battler])
+    {
+    case LAB_BOOST_SPEED:
+    case LAB_BOOST_POWER:
+        return cost * 3 / 2;
+    case LAB_BOOST_BOTH:
+        return cost * 2;
+    default:
+        return cost;
+    }
+}
+
+u32 BattleLab_BoostPower(u32 battler, u32 power)
+{
+    if (BattleLab_StaminaMode() && (sLabBoost[battler] & LAB_BOOST_POWER))
+        return power * 13 / 10;
+    return power;
+}
+
+void BattleLab_CycleBoost(u32 battler)
+{
+    sLabBoost[battler] = (sLabBoost[battler] + 1) % LAB_BOOST_COUNT;
+}
+
+void BattleLab_ClearBoost(u32 battler)
+{
+    sLabBoost[battler] = LAB_BOOST_NONE;
+}
+
+// Move menu in stamina battles: the PP box shows the boost and the energy cost, and the
+// player's energy bar previews what is left after paying it.
+void BattleLab_ShowMoveCost(u32 battler, u32 move)
+{
+    u32 hp = gBattleMons[battler].hp, cost = BattleLab_BoostedCost(battler, move), after;
+    after = (cost == 0 || hp <= 1) ? hp : (hp > cost ? hp - cost : 1);
+    BattlePutTextOnWindow(sLabBoostTag[sLabBoost[battler]], B_WIN_PP);
+    ConvertIntToDecimalStringN(gDisplayedStringBattle, cost, STR_CONV_MODE_RIGHT_ALIGN, 3);
+    BattlePutTextOnWindow(gDisplayedStringBattle, B_WIN_PP_REMAINING);
+    SetBattleBarStruct(battler, gHealthboxSpriteIds[battler], gBattleMons[battler].maxHP, after, 0);
+    MoveBattleBar(battler, gHealthboxSpriteIds[battler], HEALTH_BAR, 0);
+}
+
+void BattleLab_EndMoveCostPreview(u32 battler)
+{
+    SetBattleBarStruct(battler, gHealthboxSpriteIds[battler], gBattleMons[battler].maxHP, gBattleMons[battler].hp, 0);
+    MoveBattleBar(battler, gHealthboxSpriteIds[battler], HEALTH_BAR, 0);
 }
 
 void BattleLab_PayEnergy(u32 battler, u32 move)
 {
     u32 hp = gBattleMons[battler].hp;
-    u32 cost = BattleLab_EnergyCost(move, gBattleMons[battler].maxHP), effect = GetMoveEffect(move);
+    u32 cost = BattleLab_BoostedCost(battler, move), effect = GetMoveEffect(move);
     if (effect == EFFECT_PROTECT || effect == EFFECT_ENDURE || effect == EFFECT_MAT_BLOCK)
         sLabProtectedThisTurn |= 1u << battler;
     LabChargeAction(battler, move);
     if (cost == 0 || hp <= 1)
         return;
     hp = (hp > cost) ? hp - cost : 1;   // own moves never faint the user (D023)
-    DebugPrintf("LAB energy: %S pays %d for %S (%d -> %d)", GetSpeciesName(gBattleMons[battler].species),
-                cost, GetMoveName(move), gBattleMons[battler].hp, hp);
+    DebugPrintf("LAB energy: %S pays %d for %S%s (%d -> %d)", GetSpeciesName(gBattleMons[battler].species),
+                cost, GetMoveName(move), sLabBoostLog[sLabBoost[battler]], gBattleMons[battler].hp, hp);
     gBattleMons[battler].hp = hp;
     BtlController_EmitSetMonData(battler, B_COMM_TO_CONTROLLER, REQUEST_HP_BATTLE, 0, sizeof(gBattleMons[battler].hp), &gBattleMons[battler].hp);
     MarkBattlerForControllerExec(battler);
@@ -2173,6 +2235,7 @@ static void Task_BattleLab_StartBattle(u8 taskId)
     memset(sLabRegenCarry, 0, sizeof(sLabRegenCarry));
     sLabRoundPlanned = FALSE;
     sLabTimelineStarted = FALSE;
+    memset(sLabBoost, 0, sizeof(sLabBoost));
     gIsDebugBattle = TRUE;   // upstream then keeps the Lab's prebuilt enemy party (battle_main.c)
     gDebugAIFlags = BattleLab_OpponentAiFlags();
     if (wild)

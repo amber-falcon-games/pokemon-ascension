@@ -1,4 +1,5 @@
 #include "global.h"
+#include "battle_lab.h"
 #include "battle.h"
 #include "battle_anim.h"
 #include "battle_arena.h"
@@ -686,6 +687,8 @@ void HandleInputChooseMove(enum BattlerId battler)
 
     if (JOY_NEW(A_BUTTON) && !gBattleStruct->descriptionSubmenu)
     {
+        if (BattleLab_StaminaMode())
+            BattleLab_EndMoveCostPreview(battler);
         TryToHideMoveInfoWindow();
         PlaySE(SE_SELECT);
 
@@ -782,6 +785,11 @@ void HandleInputChooseMove(enum BattlerId battler)
     else if ((JOY_NEW(B_BUTTON) || gPlayerDpadHoldFrames > 59)  && !gBattleStruct->descriptionSubmenu)
     {
         PlaySE(SE_SELECT);
+        if (BattleLab_StaminaMode())
+        {
+            BattleLab_ClearBoost(battler);
+            BattleLab_EndMoveCostPreview(battler);
+        }
         gBattleStruct->gimmick.playerSelect = FALSE;
         if (gBattleStruct->zmove.viewing)
         {
@@ -904,6 +912,12 @@ void HandleInputChooseMove(enum BattlerId battler)
     {
         gBattleStruct->descriptionSubmenu = TRUE;
         TryMoveSelectionDisplayMoveDescription(battler);
+    }
+    else if (JOY_NEW(R_BUTTON) && BattleLab_StaminaMode())   // Pokémon Ascension (F017 spike): Boost
+    {
+        BattleLab_CycleBoost(battler);
+        MoveSelectionDisplayPPNumber(battler);
+        PlaySE(SE_SELECT);
     }
     else if (JOY_NEW(START_BUTTON))
     {
@@ -1684,6 +1698,13 @@ static void MoveSelectionDisplayPPNumber(enum BattlerId battler)
 
     if (gBattleResources->bufferA[battler][2] == TRUE) // check if we didn't want to display PP number
         return;
+
+    if (BattleLab_StaminaMode())   // Pokémon Ascension (F017 spike): energy cost instead of PP
+    {
+        moveInfo = (struct ChooseMoveStruct *)(&gBattleResources->bufferA[battler][4]);
+        BattleLab_ShowMoveCost(battler, moveInfo->moves[gMoveSelectionCursor[battler]]);
+        return;
+    }
 
     SetPPNumbersPaletteInMoveSelection(battler);
     moveInfo = (struct ChooseMoveStruct *)(&gBattleResources->bufferA[battler][4]);

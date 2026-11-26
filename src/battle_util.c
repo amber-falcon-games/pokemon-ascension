@@ -6802,6 +6802,9 @@ static inline u32 CalcMoveBasePowerAfterModifiers(struct DamageContext *ctx)
     // Pokémon Ascension (F017 spike, D023): Exhausted attackers hit weaker.
     if (BattleLab_IsExhausted(battlerAtk))
         modifier = uq4_12_multiply(modifier, UQ_4_12(0.85));
+    // Power Boost (R on the move menu): x1.3.
+    if (BattleLab_BoostPower(battlerAtk, 10) != 10)
+        modifier = uq4_12_multiply(modifier, UQ_4_12(1.3));
     return uq4_12_multiply_by_int_half_down(modifier, basePower);
 }
 
