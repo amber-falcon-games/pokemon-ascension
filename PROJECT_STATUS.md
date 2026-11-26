@@ -1,19 +1,29 @@
 # Project status
 
-Last updated: 2026-11-26 (Claude session: F004a in progress).
+Last updated: 2026-11-26 (Claude session: F004a done; F002–F005 scripts awaiting owner's Mac run).
 Current phase: 0 — scaffolding and foundation.
-Current feature: F004a — CI speed-up (ACTIVE on `claude/sharp-euler-yfhti2`). F000, F001 DONE.
+Current feature: F002/F003/F004b/F005 local scripts — AWAITING_ACCEPTANCE (owner Mac run). F000, F001, F004a DONE.
 F000: DONE (owner accepted 2026-11-26).
-Next eligible feature: F002 Mac setup/doctor scripts (needs the owner's Mac), then the approved order in docs/ROADMAP.md.
+Next eligible feature: F005b lean cuts (config-switch features + 10 boxes), then F006 baseline release 0.1.0.
 Last known-good playable build: none (pre-F006 bootstrap exception).
 Current engine version: pokeemerald-expansion `expansion/1.17.2` (commit 79dd4369) on `main`.
 Automated tests: on the merged tree (`bfc0553a56`, Linux container) `make -j4` exit 0 and `make check -j4` exit 0: 5,429 passed / 5,876 total, 0 unexpected failures; ROM byte-identical to pristine upstream. Details in docs/features/F001-upstream-integration.md.
 Local Mac environment: unverified. Linux container can build and run tests; Mac scripts (F002, F005) and playtests need the owner's Mac.
-Pending owner decisions: none blocking. Repository is public (D013, done by owner). Approved order and continuous work: D018.
+Pending owner decisions: none. OWNER ACTION NEEDED: run the Mac steps below and paste the output back.
 Progress by feature status: DONE 2 (F000, F001); TODO 34 (F002–F035).
 
+## Owner action (Mac)
+```bash
+git clone https://github.com/amber-falcon-games/pokemon-ascension.git   # skip if already cloned
+cd pokemon-ascension && git checkout main && git pull
+./scripts/setup.sh
+./scripts/play.sh
+./scripts/test.sh test/battle/move_effect/dragon_darts.c
+```
+Expected: setup ends with "Ready to build."; play prints "Built … SHA-1 c5eabb9bca66e218063a623e3dcd0d357f4e68d5" and opens mGBA at the Emerald title screen (this is still vanilla upstream content); the test prints 16 passed. Paste the terminal output back, especially the SHA-1 line and any ✘ lines.
+
 ## Session handoff
-- `main` at `e7e19d1`: upstream 1.17.2 + project docs; builds and passes upstream tests (Linux). Not yet booted in an emulator.
-- F004a work on `claude/sharp-euler-yfhti2`: new `.github/workflows/ci.yml` (PR-only; docs-only skip; changed-tests-only; full suite sharded 4 ways), `nightly-build.yml` / `nightly-tests.yml` (run only if `main` changed; carry previous result forward; seed caches on main), `.github/actions/setup` and `.github/ci/*.sh` (incremental build cache via timestamps), sharding support in `tools/mgba-rom-test-hydra/main.c` (`TEST_SHARD_COUNT`/`TEST_SHARD_INDEX`). Upstream `build.yml` removed (keep deleted on upstream merges).
-- Exact next action: verify cache scripts locally, open the F004a PR, measure CI timings for docs-only / test-only / full, merge, then dispatch both nightly workflows once to seed caches and badges. Then F002.
-- Owner preferences: see docs/DEVELOPMENT_WORKFLOW.md (nudge on decisions, builds ready, playable features, required testing).
+- `main`: upstream 1.17.2 + docs + F004a CI (PR #2, `520ffeb`). Nightly build/tests dispatched once to seed caches and badges.
+- Scripts for F002–F005 on `claude/sharp-euler-yfhti2` (PR pending/merged — check `git log main`).
+- Exact next action: owner's Mac run (above). In parallel: F005b lean cuts — enable upstream FREE_* switches for cut features, I_VS_SEEKER_CHARGING, reduce TOTAL_BOXES_COUNT to 10; spec first. Deeper removals (Secret Bases, TV, Contests, Mail, flavour NPCs, recorded-battle sector) are split into F005c before F015, when the space is needed.
+- Owner preferences: docs/DEVELOPMENT_WORKFLOW.md.

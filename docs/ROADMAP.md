@@ -10,12 +10,13 @@ Work proceeds strictly in this order; the table below keeps dependencies and des
 |---|---|---|
 | F000 | Documentation scaffold review — DONE ([spec](features/F000-scaffold-review.md)) | — |
 | F001 | Upstream audit, pinned baseline, approved integration preserving history — DONE ([spec](features/F001-upstream-integration.md)) | F000 |
-| F004a | CI speed, selective runs, nightly status and badges — next, pulled ahead by D014 ([spec](features/F004a-ci-speed-and-badges.md)) | F001 |
-| F002 | Mac setup and doctor scripts, pinned dependencies | F001 |
+| F004a | CI speed, selective runs, nightly status and badges — DONE ([spec](features/F004a-ci-speed-and-badges.md)) | F001 |
+| F002 | Mac setup and doctor scripts, pinned dependencies — AWAITING_ACCEPTANCE, bundled with F003/F004b/F005 ([spec](features/F002-F005-local-scripts.md)) | F001 |
 | F003 | Reproducible ROM compilation, build script | F002 |
 | F004b | Test script (`scripts/test.sh`) on top of F004a CI | F003 |
 | F005 | mGBA launch, local play and status scripts | F003 |
-| F005b | Remove cut features (D011), reduce PC to 10 boxes; final save layout before first release | F005 |
+| F005b | Lean cuts: features with upstream switches (Mystery Gift/Event, e-Reader, record-mixing records, Union Room chat, link battle records, Match Call → VS Seeker, Pokémon Jump, Trainer Hill, extra Pokédex flags) and PC reduced to 10 boxes | F005 |
+| F005c | Deep cuts needing map/script edits (Secret Bases, TV, Contests and ribbons, Mail, flavour NPCs, link minigames, Recorded Battle sector). Split from F005b for a faster MVP; must land before F015, which needs the space | F005b |
 | F006 | Baseline playable release 0.1.0, smoke test, resource measurements, release script (D017) | F004b,F005b |
 | F007 | Battle Lab entry and debug UI | F006 |
 | F008 | Both team builders | F007 |

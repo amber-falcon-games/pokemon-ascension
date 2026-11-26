@@ -1,5 +1,5 @@
 # F004a — CI speed, selective runs and status badges
-Status: TODO (next; pulled ahead of F002 by D014)
+Status: DONE (merged in PR #2, merge commit `520ffeb`, 2026-11-26)
 Dependencies: F001. Repository made public (D013) before measuring, since public runners differ (more CPU, no minute quota).
 Owner decision IDs: D012, D013, D014
 Branch / commit: —
@@ -37,4 +37,7 @@ None (CI only).
 Revert the workflow commit; upstream's original `build.yml` is in history.
 
 ## Evidence and acceptance
-Pending.
+- Local (4 cores): full suite with everything built 697 s; shard 0/4 175 s. Shards 0–3 totals sum to 5,876 total, 5,429 passed, 419 TO_DO, 19 KNOWN_FAILING, 9 EXPECT_FAILING, identical to the unsharded run, so no test is lost.
+- Cache simulation on a fresh clone: 0 compiles when nothing changed; exactly 1 (`battle_util.o`) after editing `src/battle_util.c`. Exact-hit and deletion-only restore bug found by Codex review, reproduced (exit 1) and fixed (exit 0).
+- GitHub, PR #2 head `365b9ea`, cold cache, public runners: build 3 m 36 s; test shards 9 m 08 s / 9 m 19 s / 10 m 23 s / 14 m 25 s (each includes compiling the test build); whole run ≈ 15 min, versus ≈ 32 min before.
+- Warm-cache timings and the docs-only and test-only paths are measured on the next PRs, after the first nightly runs seed `main`. Results to be appended here.
