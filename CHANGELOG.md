@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased — F011 Battle Lab scenario files (2026-11-26)
+- Dev builds: Battle Lab scenarios are JSON files in `lab/scenarios/`; `./scripts/play.sh --lab` (or `--scenario ID`) builds a separate Lab ROM that opens straight into the Lab with them. Presets LAB-009 (6v6 trainer) and LAB-010 (over-levelled wild). No save memory used (D022).
+
 ## Unreleased — F010 Battle Lab battle loop (2026-11-26)
 - Dev builds: the in-battle debug menu (SELECT) gains Lab: Restart (replay the same setup at once) and Lab: Quit (back to the Lab with edits kept); the Lab title shows how the last battle ended.
 

@@ -68,8 +68,8 @@ Project commands (macOS, Apple Silicon). Run `./scripts/setup.sh` once first:
 | `./scripts/build.sh` | Compile a ROM |
 | `./scripts/test.sh` | Run automated tests |
 | `./scripts/play.sh` | Build and launch mGBA |
-| `./scripts/play.sh --lab` | Build and launch directly into the Battle Lab (from F007) |
-| `./scripts/play.sh --scenario LAB-001` | Launch a reproducible scenario (from F011) |
+| `./scripts/play.sh --lab` | Build and launch directly into the Battle Lab, with every scenario in `lab/scenarios/` (separate Lab ROM and save) |
+| `./scripts/play.sh --scenario LAB-009` | Same, opening with that scenario |
 | `./scripts/status.sh` | Show project state |
 
 See [testing](docs/TESTING.md), [Battle Lab](docs/BATTLE_LAB.md), [vision](docs/VISION.md), and [workflow](docs/DEVELOPMENT_WORKFLOW.md).

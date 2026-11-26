@@ -295,3 +295,30 @@ TEST("Battle Lab turn count shows turns played (counter is zero-based)")
     EXPECT_EQ(BattleLab_TurnsPlayed(4), 5);
     EXPECT_EQ(BattleLab_TurnsPlayed(255), 255);
 }
+
+// ---------------------------------------------------------------- F011: scenarios
+
+TEST("Battle Lab plain dev ROM has only the built-in scenario and does not auto-open")
+{
+    ASSUME(ASCENSION_BATTLE_LAB);
+    EXPECT_EQ(BattleLab_BlockScenarioCount(), 0);     // the block is all 0xFF until play.sh injects it
+    EXPECT_EQ(BattleLab_ScenarioCount(), 1);
+    EXPECT_EQ(BattleLab_AutoOpenScenario(), -1);
+    EXPECT(!BattleLab_ShouldAutoOpen());
+}
+
+TEST("Battle Lab selecting the built-in scenario resets teams and rules to LAB-001")
+{
+    ASSUME(ASCENSION_BATTLE_LAB);
+    BattleLab_SelectScenario(0);
+    BattleLab_SetSlotSpecies(LAB_SIDE_PLAYER, 0, SPECIES_PIKACHU);
+    gBattleLabRules.weather = LAB_WEATHER_RAIN;
+    EXPECT(BattleLab_IsEdited());
+    EXPECT(BattleLab_SlotEdited(LAB_SIDE_PLAYER, 0));
+    EXPECT(!BattleLab_SlotEdited(LAB_SIDE_OPPONENT, 0));
+    EXPECT(BattleLab_SelectScenario(0));
+    EXPECT_EQ(gBattleLabTeams[LAB_SIDE_PLAYER][0].species, SPECIES_SWAMPERT);
+    EXPECT_EQ(gBattleLabRules.weather, LAB_WEATHER_NONE);
+    EXPECT(!BattleLab_IsEdited());
+    EXPECT(!BattleLab_SelectScenario(1));             // no injected scenarios in the test ROM
+}

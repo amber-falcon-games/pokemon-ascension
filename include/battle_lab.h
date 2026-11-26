@@ -74,6 +74,7 @@ void BattleLab_SetSlotLevel(u32 side, u32 slot, s32 level);
 void BattleLab_SetSlotActive(u32 side, u32 slot, bool32 active);
 u32 BattleLab_ActiveCount(u32 side);
 bool32 BattleLab_IsEdited(void);
+bool32 BattleLab_SlotEdited(u32 side, u32 slot);
 
 // Pokémon details (F009)
 bool32 BattleLab_IsMoveSelectable(u32 move);
@@ -101,11 +102,36 @@ const u8 *BattleLab_ValidateStart(void);   // NULL if the battle can start, else
 void BattleLab_TrimToWildOpponent(void);
 
 // TRUE while a Battle Lab battle runs (used by small upstream hooks); always FALSE in release.
+// BattleLab_ShouldAutoOpen: the ROM carries injected scenarios asking to open the Lab (F011).
 #if ASCENSION_BATTLE_LAB
 bool32 BattleLab_IsLabBattle(void);
+bool32 BattleLab_ShouldAutoOpen(void);
 #else
 static inline bool32 BattleLab_IsLabBattle(void) { return FALSE; }
+static inline bool32 BattleLab_ShouldAutoOpen(void) { return FALSE; }
 #endif
+
+// Scenarios (F011, D022): repository files injected into a reserved ROM block of a Lab ROM copy.
+// Block layout (tools/ascension/lab_scenario.py): 16-byte ASCII marker "ASCENSION-LAB-01",
+// then version (1), count, auto-open (0 = no, n = open scenario n-1), reserved, then `count`
+// records. Little-endian, same layout as these structs.
+#define LAB_SCENARIO_BLOCK_SIZE  4096
+#define LAB_MAX_BLOCK_SCENARIOS  14   // (4096 - 20) / 280
+
+struct LabScenarioRecord
+{
+    u8 id[8];           // game charset, EOS-terminated, e.g. "LAB-009"
+    u8 name[24];
+    struct LabRules rules;
+    struct LabSlot teams[LAB_SIDE_COUNT][PARTY_SIZE];
+};
+
+extern const u8 gBattleLabScenarioBlock[LAB_SCENARIO_BLOCK_SIZE];
+extern struct LabScenarioRecord gBattleLabScratchRecord;
+u32 BattleLab_BlockScenarioCount(void);
+u32 BattleLab_ScenarioCount(void);          // built-in LAB-001 + block scenarios
+s32 BattleLab_AutoOpenScenario(void);       // -1 if none
+bool32 BattleLab_SelectScenario(u32 index); // 0 = built-in
 
 // Battle loop (F010)
 enum LabResult

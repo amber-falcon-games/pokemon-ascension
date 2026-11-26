@@ -1,0 +1,21 @@
+{
+  "id": "LAB-009",
+  "name": "Six-member trainer",
+  "rules": { "format": "trainer_single", "weather": "none", "terrain": "none", "ai": "smart", "seed": null },
+  "player": [
+    { "species": "SWAMPERT",  "level": 50, "moves": ["WATERFALL", "EARTHQUAKE", "ICE_BEAM", "PROTECT"], "item": "LEFTOVERS", "nature": "ADAMANT" },
+    { "species": "GARDEVOIR", "level": 50, "moves": ["PSYCHIC", "MOONBLAST", "THUNDERBOLT", "CALM_MIND"], "nature": "MODEST" },
+    { "species": "SALAMENCE", "level": 50, "moves": ["DRAGON_CLAW", "FLY", "EARTHQUAKE", "DRAGON_DANCE"], "nature": "JOLLY" },
+    { "species": "METAGROSS", "level": 50, "moves": ["METEOR_MASH", "ZEN_HEADBUTT", "EARTHQUAKE", "BULLET_PUNCH"], "nature": "ADAMANT" },
+    { "species": "BRELOOM",   "level": 50, "moves": ["MACH_PUNCH", "SEED_BOMB", "SPORE", "ROCK_TOMB"], "ability": 2 },
+    { "species": "MANECTRIC", "level": 50, "moves": ["THUNDERBOLT", "FLAMETHROWER", "VOLT_SWITCH", "THUNDER_WAVE"], "nature": "TIMID" }
+  ],
+  "opponent": [
+    { "species": "BLAZIKEN",  "level": 50, "moves": ["BLAZE_KICK", "SKY_UPPERCUT", "ROCK_SLIDE", "BULK_UP"] },
+    { "species": "SCEPTILE",  "level": 50, "moves": ["LEAF_BLADE", "EARTHQUAKE", "DRAGON_CLAW", "SWORDS_DANCE"] },
+    { "species": "AGGRON",    "level": 50, "moves": ["IRON_HEAD", "ROCK_SLIDE", "EARTHQUAKE", "PROTECT"] },
+    { "species": "MILOTIC",   "level": 50, "moves": ["SURF", "ICE_BEAM", "RECOVER", "TOXIC"], "item": "LEFTOVERS" },
+    { "species": "FLYGON",    "level": 50, "moves": ["EARTHQUAKE", "DRAGON_CLAW", "U_TURN", "FIRE_PUNCH"] },
+    { "species": "ALTARIA",   "level": 50, "moves": ["DRAGON_PULSE", "MOONBLAST", "ROOST", "COTTON_GUARD"] }
+  ]
+}

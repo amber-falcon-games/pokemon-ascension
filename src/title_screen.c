@@ -783,7 +783,8 @@ static void Task_TitleScreenPhase2(u8 taskId)
 static void Task_TitleScreenPhase3(u8 taskId)
 {
     // Pokémon Ascension: L + SELECT opens the Battle Lab in dev builds (F007).
-    if (ASCENSION_BATTLE_LAB && JOY_HELD(L_BUTTON) && JOY_NEW(SELECT_BUTTON))
+    // F011: a Lab ROM made by play.sh --lab / --scenario opens the Lab directly (hold B to skip).
+    if (ASCENSION_BATTLE_LAB && ((JOY_HELD(L_BUTTON) && JOY_NEW(SELECT_BUTTON)) || BattleLab_ShouldAutoOpen()))
     {
         BattleLab_Open();
         return;
