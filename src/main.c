@@ -1,4 +1,5 @@
 #include "global.h"
+#include "battle_lab.h"
 #include "crt0.h"
 #include "malloc.h"
 #include "link.h"
@@ -374,7 +375,9 @@ static void VBlankIntr(void)
     m4aSoundMain();
     TryReceiveLinkBattleData();
 
-    if (!gTestRunnerEnabled && (!gMain.inBattle || !(gBattleTypeFlags & (BATTLE_TYPE_LINK | BATTLE_TYPE_FRONTIER | BATTLE_TYPE_RECORDED))))
+    // Pokémon Ascension (F009): no frame-driven RNG in Battle Lab battles (seeded replays).
+    if (!gTestRunnerEnabled && (!gMain.inBattle || !(gBattleTypeFlags & (BATTLE_TYPE_LINK | BATTLE_TYPE_FRONTIER | BATTLE_TYPE_RECORDED)))
+        && !BattleLab_IsLabBattle())
         AdvanceRandom();
 
     UpdateWirelessStatusIndicatorSprite();
