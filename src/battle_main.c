@@ -3629,6 +3629,7 @@ bool32 EndTurnEvents(void) // Called from Battle Script
         return FALSE;
     }
 
+    BattleLab_LogTurnEnd();   // Pokémon Ascension (F012): Battle Lab turn log; no-op otherwise
     if (gBattleResults.battleTurnCounter < 0xFF)
     {
         gBattleResults.battleTurnCounter++;

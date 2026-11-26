@@ -322,3 +322,15 @@ TEST("Battle Lab selecting the built-in scenario resets teams and rules to LAB-0
     EXPECT(!BattleLab_IsEdited());
     EXPECT(!BattleLab_SelectScenario(1));             // no injected scenarios in the test ROM
 }
+
+// ---------------------------------------------------------------- F012: determinism and diagnostics
+
+TEST("Battle Lab 'use last seed' needs a battle first, then fixes that seed")
+{
+    ASSUME(ASCENSION_BATTLE_LAB);
+    BattleLab_SelectScenario(0);
+    if (!BattleLab_HasLastSeed())
+        EXPECT(!BattleLab_UseLastSeed());
+    BattleLab_LogTurnEnd();                 // outside a Lab battle: does nothing
+    EXPECT(!gBattleLabRules.fixedSeed);
+}
