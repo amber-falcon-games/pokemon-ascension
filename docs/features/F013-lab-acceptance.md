@@ -1,5 +1,5 @@
 # F013 — Battle Lab acceptance and 0.2.0 foundation release
-Status: IN_PROGRESS (acceptance matrix complete; 0.2.0 release needs the owner's Mac)
+Status: DONE (0.2.0 published 2026-11-26)
 Dependencies: F007–F012 (all merged or stacked), F007b
 Owner decision IDs: D003, D017 (deliberate releases), D021, D022
 Branch / commit: `feature/F013-lab-acceptance` (based on `feature/F012-lab-inspection`)
@@ -42,8 +42,8 @@ The player-facing build is functionally identical to 0.1.0. 0.2.0 marks the stab
 ## Acceptance criteria
 - [x] Every row of the matrix has automated evidence, owner evidence, or both.
 - [x] Overhead measured.
-- [ ] CI builds the Lab ROM on every PR, and the nightly checks the release ROM for the scenario block (added in this PR).
-- [ ] 0.2.0 published by the owner with `release.sh`.
+- [x] CI builds the Lab ROM on every PR, and the nightly checks the release ROM for the scenario block.
+- [x] 0.2.0 published by the owner with `release.sh`: https://github.com/amber-falcon-games/pokemon-ascension/releases/tag/v0.2.0 (tag at 3faa92d298, patch 19,601,497 B).
 
 ## Rollback
 Docs and CI only, apart from the release. Revert the PR, and a published release stays as a tag.
