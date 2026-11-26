@@ -1,0 +1,40 @@
+/*
+
+Battle Lab scenario parties (F007). See docs/BATTLE_LAB_SCENARIOS.md.
+
+Each scenario has a _PLAYER entry (its party becomes the player's team for the
+Lab battle) and an _OPPONENT entry (the trainer the Lab battles). These are
+dev-build data only; release builds exclude the Battle Lab entirely.
+
+*/
+
+=== LAB_TRAINER_001_PLAYER ===
+Name: Lab
+Class: Pkmn Trainer 1
+Pic: Brendan
+Gender: Male
+Music: Male
+
+Swampert
+Level: 50
+IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
+- Waterfall
+- Earthquake
+- Ice Beam
+- Protect
+
+=== LAB_TRAINER_001_OPPONENT ===
+Name: Lab Rival
+Class: Rival
+Pic: May
+Gender: Female
+Music: Female
+AI: Basic Trainer
+
+Blaziken
+Level: 50
+IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
+- Blaze Kick
+- Sky Uppercut
+- Rock Slide
+- Bulk Up

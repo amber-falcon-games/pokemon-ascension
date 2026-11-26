@@ -1,3 +1,5 @@
+#include "battle_lab.h"
+#include "config/ascension.h"
 #include "global.h"
 #include "battle.h"
 #include "config/quickstart.h"
@@ -780,6 +782,13 @@ static void Task_TitleScreenPhase2(u8 taskId)
 // Show Rayquaza silhouette and process main title screen input
 static void Task_TitleScreenPhase3(u8 taskId)
 {
+    // Pokémon Ascension: L + SELECT opens the Battle Lab in dev builds (F007).
+    if (ASCENSION_BATTLE_LAB && JOY_HELD(L_BUTTON) && JOY_NEW(SELECT_BUTTON))
+    {
+        BattleLab_Open();
+        return;
+    }
+
     if (QUICKSTART && JOY_NEW(SELECT_BUTTON))
         Quickstart();
 

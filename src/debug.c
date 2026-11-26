@@ -4812,8 +4812,13 @@ const struct Trainer sDebugTrainers[DIFFICULTY_COUNT][DEBUG_TRAINERS_COUNT] =
 #include "data/debug_trainers.h"
 };
 
+// Pokémon Ascension: the Battle Lab (F007) points this at its scenario opponent.
+EWRAM_DATA const struct Trainer *gDebugAiTrainerOverride = NULL;
+
 const struct Trainer* GetDebugAiTrainer(void)
 {
+    if (gDebugAiTrainerOverride != NULL)
+        return gDebugAiTrainerOverride;
     return &sDebugTrainers[DIFFICULTY_NORMAL][DEBUG_TRAINER_AI];
 }
 
