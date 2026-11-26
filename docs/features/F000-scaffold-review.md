@@ -1,5 +1,5 @@
 # F000 — Documentation scaffold review
-Status: AWAITING_ACCEPTANCE
+Status: DONE
 Dependencies: —
 Owner decision IDs: none required (amendments below are non-gameplay)
 Branch / commit: `claude/sharp-euler-yfhti2` (review base `39bf610`)
@@ -15,7 +15,7 @@ No upstream import, no scripts, no gameplay decisions.
 - [x] Consistency check across CLAUDE.md, roadmap, decisions, Battle Lab, testing and workflow docs.
 - [x] Amendments recorded below and applied where purely factual/procedural.
 - [x] F001 spec written (`docs/features/F001-upstream-integration.md`).
-- [ ] Owner accepts the review and amendments.
+- [x] Owner accepts the review and amendments (2026-11-26).
 
 ## Findings
 Consistent: dependency order (F000→F013 foundation before combat), Lab-first rule (D003, BATTLE_LAB.md, CLAUDE.md), save-isolation rules (SAVE_COMPATIBILITY.md, BATTLE_LAB F010), "no fabricated results" across workflow, testing and PR template, and ROM/save exclusion in README, .gitignore and PR checklist.
@@ -37,4 +37,4 @@ No contradictions requiring owner decisions were found.
 Revert the documentation commit.
 
 ## Evidence and acceptance
-Review performed 2026-11-25 against commit `39bf610`. Owner acceptance pending.
+Review performed 2026-11-25 against commit `39bf610`. Owner accepted 2026-11-26.

@@ -1,8 +1,8 @@
 # F001 — Upstream audit, pinned baseline and integration plan
-Status: BLOCKED (awaiting owner decision D010)
+Status: ACTIVE (D010 approved 2026-11-26; import done, verification and PR in progress)
 Dependencies: F000
 Owner decision IDs: D010
-Branch / commit: investigation on `claude/sharp-euler-yfhti2`; import will happen on `feature/F001-upstream-import` after approval
+Branch / commit: `claude/sharp-euler-yfhti2` (the cloud session may only push this branch, so it serves as the F001 feature branch instead of `feature/F001-upstream-import`)
 
 ## Objective and scope
 Audit RHH's pokeemerald-expansion, recommend a pinned baseline and a Git integration method that preserves upstream history and attribution and keeps this repository's documents. Import only after the owner approves D010.
@@ -13,7 +13,7 @@ No gameplay changes, no project scripts (F002+), no CI redesign (F004), no ROM o
 ## Audit findings (measured 2026-11-25)
 Source: `https://github.com/rh-hideout/pokeemerald-expansion`, cloned with full history (blobless) into a scratch directory outside this repository.
 
-**Releases and branches.** Tags `expansion/X.Y.Z`; latest stable is **`expansion/1.17.2`**, commit `79dd436920845ebc145577649de624f65298c209`, released 2026-10-31 (prior: 1.17.1 on 2026-09-29, 1.17.0 on 2026-08-31; roughly monthly patch cadence). Branches: `master` = latest release plus bugfixes; `upcoming` = new features (unstable). 20,954 commits of history reachable from 1.17.2; packed history ≈ 97 MiB; working tree ≈ 253 MB including build outputs.
+**Releases and branches.** Tags `expansion/X.Y.Z`; latest stable is **`expansion/1.17.2`**, commit `79dd436920845ebc145577649de624f65298c209`, released 2026-10-31 (prior: 1.17.1 on 2026-09-29, 1.17.0 on 2026-08-31; roughly monthly patch cadence). Branches: `master` = latest release plus bugfixes; `upcoming` = new features (unstable). 20,954 commits of history reachable from 1.17.2; packed history ≈ 500 MiB with all file contents (≈ 97 MiB without file contents, the figure first measured); working tree ≈ 253 MB including build outputs.
 
 **Attribution and licence.** README asks hacks to credit RHH: `Based off RHH's pokeemerald-expansion 1.17.2 https://github.com/rh-hideout/pokeemerald-expansion/` and to consider crediting all contributors (`CREDITS.md`). There is **no top-level licence file**: the codebase derives from pret's pokeemerald decompilation, which has none. Only bundled tools carry licences (`tools/{bin2c,gbagfx,mid2agb,preproc,ramscrgen,rsfont,scaninc,wav2agb}/LICENSE`, `tools/gbafix/COPYING`). Practical meaning: no grant of rights beyond normal fan-project norms; this reinforces the existing private, non-commercial, no-public-ROM boundary.
 
@@ -62,7 +62,7 @@ No finding undermines the foundation phase (F002–F013).
 ## Integration options (D010)
 | Option | Description | History & attribution | Future upstream updates | Risk |
 |---|---|---|---|---|
-| **A (recommended)** | Pin `expansion/1.17.2`; on `feature/F001-upstream-import`, `git merge --allow-unrelated-histories` the tag into our history. Resolve: keep our `README.md` (add RHH credit line), union `.gitignore`, keep our PR template and issue templates, drop RHH `config.yml`, disable `docs.yml` and `labels.yml`, list our docs in `docs/SUMMARY.md` so `docs_validate` passes. Add `rhh` remote locally only. | Both histories fully preserved; RHH credit in README. | `git merge expansion/X.Y.Z` on a feature branch, exactly as upstream's own update guide. | Low. Repo grows by ≈97 MiB of history. |
+| **A (recommended)** | Pin `expansion/1.17.2`; on `feature/F001-upstream-import`, `git merge --allow-unrelated-histories` the tag into our history. Resolve: keep our `README.md` (add RHH credit line), union `.gitignore`, keep our PR template and issue templates, drop RHH `config.yml`, disable `docs.yml` and `labels.yml`, list our docs in `docs/SUMMARY.md` so `docs_validate` passes. Add `rhh` remote locally only. | Both histories fully preserved; RHH credit in README. | `git merge expansion/X.Y.Z` on a feature branch, exactly as upstream's own update guide. | Low. Repo grows by ≈500 MiB of packed history. |
 | B | Same as A but track `master` instead of a tag. | Same. | Picks up bugfixes but is a moving, unversioned target. | Medium. |
 | C | Copy a 1.17.2 snapshot as one commit, no upstream history. | Lost (credit text only). | Painful manual diffs. | High; violates "preserve history". |
 | D | Rebuild our repo on top of upstream history (rebase our two commits). | Preserved but rewrites our `main`, needs force-push. | Same as A. | Violates "no force-push". |
@@ -73,7 +73,7 @@ Not recommended: `upcoming` (unstable), submodule/subtree (upstream build expect
 - [x] Upstream releases, branches, prerequisites, tests and debug tools inspected.
 - [x] Memory, save, move-slot and scheduler constraints measured and recorded.
 - [x] Baseline and integration recommendation with options.
-- [ ] Owner approves D010.
+- [x] Owner approves D010 (2026-11-26).
 - [ ] After approval: merge performed on `feature/F001-upstream-import`; `make` and `make check` pass on the merged tree; all scaffold docs intact; PR opened with evidence.
 
 ## Automated tests and regression
@@ -87,6 +87,21 @@ Baseline is upstream 1.17.2; no prior saves exist. Measured budgets above become
 
 ## Rollback
 Before merge to `main`: delete the feature branch. After merge: revert the merge commit (`git revert -m 1 <merge>`); no force-push needed.
+
+## Integration performed (2026-11-26)
+```
+git remote add rhh https://github.com/rh-hideout/pokeemerald-expansion.git   # local only
+git fetch --no-tags rhh refs/tags/expansion/1.17.2:refs/remotes/rhh/expansion-1.17.2
+git merge --no-commit --allow-unrelated-histories rhh/expansion-1.17.2
+```
+Conflicts were exactly the three predicted add/add files. Resolution:
+- `README.md`: ours, plus RHH credit line.
+- `.github/pull_request_template.md`: ours.
+- `.gitignore`: ours followed by upstream's rules (union).
+- Removed `.github/workflows/docs.yml` (GitHub Pages deploy), `.github/workflows/labels.yml` (RHH label policy) and `.github/ISSUE_TEMPLATE/config.yml` (RHH Discord link; disabled blank issues). Expect modify/delete conflicts on these when updating upstream; resolve by keeping them deleted.
+- `docs/SUMMARY.md`: added a "Pokémon Ascension" section listing our docs, so upstream's `docs_validate` passes (`python3 .github/docs_validate/inclusive_summary.py` exit 0). New docs must be added there.
+- Upstream tracks three small multiboot binaries, `data/mb_berry_fix.gba` (15 KB), `data/mb_colosseum.gba` (160 KB) and `data/mb_ereader.gba` (12 KB), embedded via `.incbin` in `data/multiboot_*.s`; upstream's `.gitignore` re-includes `data/*.gba`. They are build inputs from upstream history, not project ROM builds; kept so the build works. Our no-ROM rule applies to built game ROMs and saves.
+- `build.yml` left unchanged; trimming FireRed/LeafGreen jobs and runtime cost is F004.
 
 ## Evidence and acceptance
 - Investigation commit: this document on `claude/sharp-euler-yfhti2`.
