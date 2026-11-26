@@ -1,5 +1,5 @@
 # F008 — Battle Lab team builders (player and opponent)
-Status: SPEC (awaiting owner review)
+Status: AWAITING_ACCEPTANCE (spec approved by the owner 2026-11-26; implemented; owner playtest needed)
 Dependencies: F007 (Battle Lab entry, accepted 2026-11-26)
 Owner decision IDs: D003 (Lab before combat changes)
 Branch / commit: `feature/F008-lab-team-builder`
@@ -9,8 +9,8 @@ Set up both sides of a Lab battle from inside the Lab: up to 6 Pokémon per side
 
 - **Where:** the Lab menu's *Player team* and *Opponent team* entries (placeholders in F007) open a team screen for that side.
 - **Team screen:** six rows, one per slot, each showing the slot number, species name, level and markers:
-  `1 SWAMPERT  Lv50` · `2 PIKACHU*  Lv12` · `3 (off) GENGAR Lv40` · `4 ———`.
-  `*` means the slot differs from the scenario (a debug override). `(off)` means it stays out of the battle. `———` is an empty slot.
+  `1 Swampert  Lv50` · `2 Pikachu!  Lv12` · `3 off Gengar Lv40` · `4 - - -`.
+  `!` means the slot differs from the scenario (a debug override). `off` (greyed) means it stays out of the battle. `- - -` is an empty slot. The GBA font has no `*`, `#` or `—`, so `!` and `No.` are used instead.
   Up/Down moves between slots, A edits the slot, B goes back to the Lab menu, and START returns both teams to the scenario defaults after a Yes/No check.
 - **Slot editor:** a small panel with *Species*, *Level*, *In battle*, *Reset slot* and *Clear slot*.
   - **Species:** Left/Right steps ±1 and L/R jumps ±25 through every species the game has enabled, forms included, in National Dex order. Holding a button repeats. SELECT opens a letter picker (A–Z) that jumps to the first species starting with that letter. The panel shows the name and dex number, plus `form N` when the entry is an alternate form of the same species.
@@ -34,7 +34,7 @@ Set up both sides of a Lab battle from inside the Lab: up to 6 Pokémon per side
 ## Acceptance criteria
 - [ ] On both team screens, LAB-001 is pre-filled, with Swampert on the player's side and Blaziken on the opponent's.
 - [ ] Any species and form can be picked with the stepping, jump and letter controls. Level can be set from 1 to 100. Slots can be switched off, cleared and reset.
-- [ ] Changed slots show `*`, and the title shows `(edited)`. START resets everything.
+- [ ] Changed slots show `!`, and the title shows `(edited)`. START resets everything.
 - [ ] Start battle runs a real battle with exactly the active members, in slot order, at the chosen levels, on both sides. A 6v6 battle works (LAB-009 setup).
 - [ ] An unchanged LAB-001 still plays exactly as it does in F007.
 - [ ] A side with no active members blocks Start battle with a clear message.
@@ -67,7 +67,7 @@ Set up both sides of a Lab battle from inside the Lab: up to 6 Pokémon per side
 ## Manual playtest
 `./scripts/play.sh --lab`, then **L + SELECT** on the title screen:
 1. Open *Opponent team*. Slot 1 shows BLAZIKEN Lv50.
-2. Slot 2 → Species: press SELECT, pick G, step to GENGAR. Level: L/R to 40. Back with B, and the row shows `GENGAR* Lv40`.
+2. Slot 2 → Species: press SELECT, pick G, step to GENGAR. Level: L/R to 40. Back with B, and the row shows `Gengar! Lv40`.
 3. Fill the player's side up to 3 Pokémon, and set one of them to *In battle: No*.
 4. Start battle: the opponent leads with Blaziken and has 2 Pokémon; you have 2 active. Win or lose, you return to the Lab and your edits are still there.
 5. Clear every opponent slot, then try Start battle: you get a message and no battle.
@@ -82,4 +82,13 @@ Report anything that's awkward to use, especially finding species.
 Revert the PR. The Lab falls back to fixed LAB-001.
 
 ## Evidence and acceptance
-Pending implementation.
+Implemented 2026-11-26 (Linux container):
+- `make -j8`: exit 0, no warnings. `make check TESTS=test/ascension/battle_lab.c`: **7/7 PASS**. The tests cover LAB-001 parties, defaults and the edited flag, dex-order stepping with wrap and the battle-only-form filter, the letter jump, level clamping, building parties from active slots in order (unchanged slots keep scenario moves, changed slots get level-up moves), and empty-side detection with reset and clear.
+- Battle-only forms hidden: `isMegaEvolution`, `isPrimalReversion`, `isUltraBurst`, `isGigantamax`, `isTeraForm`. Eggs and disabled species are also excluded.
+- Headless screenshots (gbashot):
+  - Lab menu → Opponent team (Blaziken) → slot editor (No.0257, level, Battle, Reset, Clear) → letter grid.
+  - H jumps to Haunter; level 49; slot 2 is stepped to Ivysaur; the title reads "(edited)".
+  - Main panel shows "Foe: 2". A real battle starts with the opponent's two Pokémon.
+- Release: `arm-none-eabi-nm pokeemerald-release.elf | grep -ci "BattleLab\|Ascension_C"` = 0.
+- Dev cost vs main: ROM text +4,810 B, EWRAM +56 B. Release: 0.
+- Not checked headlessly: a full 6v6 played to the end (covered by the party-building test, plus the owner playtest).
