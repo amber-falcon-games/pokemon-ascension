@@ -290,6 +290,7 @@ static void DebugAction_Selection_NextStep(u8 taskId);
 static void DebugAction_Util_Fly(u8 taskId);
 static void DebugAction_Util_WatchCredits(u8 taskId);
 static void DebugAction_Util_CheatStart(u8 taskId);
+static void DebugAction_AscensionCheckpoint(u8 taskId, void *script);
 
 static void DebugAction_TimeMenu_ChangeTimeOfDay(u8 taskId);
 static void DebugAction_TimeMenu_ChangeWeekdays(u8 taskId);
@@ -391,6 +392,9 @@ extern const u8 DebugScript_ZeroDaycareMons[];
 
 extern const u8 Debug_ShowFieldMessageStringVar4[];
 extern const u8 Debug_CheatStart[];
+// Pokémon Ascension dev checkpoints (F007b): data/scripts/ascension_checkpoints.inc
+extern const u8 Ascension_Checkpoint_Start[];
+extern const u8 Ascension_Checkpoint_PokeBalls[];
 extern const u8 Debug_CheatStartFrlg[];
 extern const u8 Debug_HatchAnEgg[];
 extern const u8 PlayersHouse_2F_EventScript_SetWallClock[];
@@ -767,8 +771,18 @@ static const u8 *const sDebugMenu_Actions_BagUse_Options[] =
     COMPOUND_STRING("No Bag: {STR_VAR_1}Invalid value"),
 };
 
+// Pokémon Ascension (F007b): jump to set points in the story. Each entry runs a script
+// from data/scripts/ascension_checkpoints.inc.
+static const struct DebugMenuOption sDebugMenu_Actions_Checkpoints[] =
+{
+    { COMPOUND_STRING("Start (before starter)"), DebugAction_AscensionCheckpoint, Ascension_Checkpoint_Start },
+    { COMPOUND_STRING("Poké Balls received"),    DebugAction_AscensionCheckpoint, Ascension_Checkpoint_PokeBalls },
+    { NULL }
+};
+
 static const struct DebugMenuOption sDebugMenu_Actions_Main[] =
 {
+    { COMPOUND_STRING("Checkpoints…"),  DebugAction_OpenSubMenu, sDebugMenu_Actions_Checkpoints, },
     { COMPOUND_STRING("Utilities…"),    DebugAction_OpenSubMenu, sDebugMenu_Actions_Utilities, },
     { COMPOUND_STRING("PC/Bag…"),       DebugAction_OpenSubMenu, sDebugMenu_Actions_PCBag, },
     { COMPOUND_STRING("Party…"),        DebugAction_OpenSubMenu, sDebugMenu_Actions_Party, },
@@ -2005,6 +2019,15 @@ static void DebugAction_Util_CheatStart(u8 taskId)
         Debug_DestroyMenu_Full_Script(taskId, Debug_CheatStartFrlg);
     else
         Debug_DestroyMenu_Full_Script(taskId, Debug_CheatStart);
+}
+
+// Pokémon Ascension (F007b): same clock set-up as "Cheat start", then the checkpoint script.
+static void DebugAction_AscensionCheckpoint(u8 taskId, void *script)
+{
+    if (!FlagGet(FLAG_SYS_CLOCK_SET))
+        RtcInitLocalTimeOffset(0, 0);
+    InitTimeBasedEvents();
+    Debug_DestroyMenu_Full_Script(taskId, (const u8 *)script);
 }
 
 void BufferExpansionVersion(struct ScriptContext *ctx)
