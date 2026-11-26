@@ -13,7 +13,7 @@ Already in place from F007–F009: Start battle plays the current setup, every b
 - **Quit during a battle.** The same menu gains **Lab: Quit**, which ends the battle and returns to the Lab menu so you can edit and relaunch.
 - Both entries do nothing outside Lab battles: they play the "can't" sound, so campaign debug battles are unaffected.
 
-The in-battle debug menu itself (stats, stat stages, status, hazards, AI scores, Instant Win) is upstream's and is now listed in the Lab help. Extending it is F012.
+The in-battle debug menu itself (stats, stat stages, status, hazards, AI scores, Instant Win) is upstream's; extending it is F012.
 
 ## Explicit exclusions
 - Changing the setup without leaving the battle.
