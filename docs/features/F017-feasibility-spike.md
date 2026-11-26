@@ -71,6 +71,23 @@ Each runs under Classic and under the prototype, so they can be compared directl
   - The rest need re-timing: per own action, or per 1,000 units for field effects. That's engineering for F018. It's a known, bounded list, not a blocker.
 - **Known spike shortcuts.** If a battler sits out the round after Hyper Beam, its recharge turn passes anyway; the clock delay stands in for it. Exact ties act together, in classic order.
 
+- **Step 4, Boost (done, `f19cd882c6`).**
+  - In the move menu, R cycles EN → SPD → POW → ALL.
+  - The PP box shows the boost and the energy cost (e.g. "POW 46" for Hydro Pump), and the player's energy bar previews what is left after paying.
+  - Speed costs +50% and makes the next action come sooner (clock delay ×0.6). Power costs +50% for ×1.3 power. Both costs +100%.
+  - Log: "Swampert pays 46 for Hydro Pump +POWER".
+  - Not yet built: the AI never boosts, the "screen on fire" effect, and showing the spent part of the bar in a different colour (F018 polish).
+
+## Measurements (step 5)
+Raw logs come from headless runs (gbashot with the game's log).
+
+| Question | Measured | Verdict |
+|---|---|---|
+| Can the upstream loop run one-action rounds? | Yes. One hook in action selection reuses upstream's "cannot act" action. Lab tests 22/22; LAB-011 and LAB-012 play to the end under the timeline. End-of-turn effects need re-timing (above) | **Go**, with F018 re-timing work |
+| AI decision time (hardware timer 3, 4,389 ticks = 1 frame) | 1v1 Swampert mirror: 0.71–0.99 frames per decision under both Classic and Stamina. Metagross Lv55: 1.06 frames. **6v6 LAB-009 under Classic: 4.5–8.1 frames**, because upstream's smart AI analyses switches across the whole party. The timeline adds no measurable AI cost | **Go for 1v1** (under 2 frames). For full parties the 2-frame target is already missed upstream, at about 0.13 s, not a visible stall. F018 should cache or spread the switch analysis across frames |
+| More than 4 moves in battle RAM | Not prototyped in the spike. Code audit: `MAX_MON_MOVES` is used 272 times in 26 battle files (446 in all of src). A separate battle-only `MAX_BATTLE_MOVES = 8`, with saved Pokémon keeping 4, adds about 1.3 KB of battle RAM (AI damage, score and accuracy tables, battler move lists). AI scoring is linear in moves: about 2× per decision, so about 1.5 frames for 1v1 | **Go (estimate)**. A bounded refactor plus a new scrolling move menu, for F015/F018 |
+| ROM and EWRAM (spike code, dev builds only) | +2,188 B ROM and +53 B EWRAM for the stamina, timeline and Boost code (symbol sizes), plus about 0.3 KB for the AI timer. Release build: 0 (checked) | **Go** |
+
 ## Explicit exclusions
 - Final balance: F019.
 - The polished timeline UI: F018.
