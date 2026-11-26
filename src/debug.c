@@ -2026,6 +2026,9 @@ static void DebugAction_Util_CheatStart(u8 taskId)
 // Pokémon Ascension (F007b): same clock set-up as "Cheat start", then the checkpoint script.
 static void DebugAction_AscensionCheckpoint(u8 taskId, void *script)
 {
+    // A checkpoint replaces the game state (F007b): start from a fresh new game
+    // (keeps the player's name and gender in SaveBlock2), then apply the script.
+    NewGameInitData();
     if (!FlagGet(FLAG_SYS_CLOCK_SET))
         RtcInitLocalTimeOffset(0, 0);
     InitTimeBasedEvents();
