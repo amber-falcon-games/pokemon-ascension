@@ -396,6 +396,13 @@ extern const u8 Debug_CheatStart[];
 extern const u8 Ascension_Checkpoint_Start[];
 extern const u8 Ascension_Checkpoint_PokeBalls[];
 extern const u8 Ascension_Checkpoint_Gym1[];
+extern const u8 Ascension_Checkpoint_Gym2[];
+extern const u8 Ascension_Checkpoint_Gym3[];
+extern const u8 Ascension_Checkpoint_Gym4[];
+extern const u8 Ascension_Checkpoint_Gym5[];
+extern const u8 Ascension_Checkpoint_Gym6[];
+extern const u8 Ascension_Checkpoint_Gym7[];
+extern const u8 Ascension_Checkpoint_Gym8[];
 extern const u8 Debug_CheatStartFrlg[];
 extern const u8 Debug_HatchAnEgg[];
 extern const u8 PlayersHouse_2F_EventScript_SetWallClock[];
@@ -779,6 +786,13 @@ static const struct DebugMenuOption sDebugMenu_Actions_Checkpoints[] =
     { COMPOUND_STRING("Start (before starter)"), DebugAction_AscensionCheckpoint, Ascension_Checkpoint_Start },
     { COMPOUND_STRING("Poké Balls received"),    DebugAction_AscensionCheckpoint, Ascension_Checkpoint_PokeBalls },
     { COMPOUND_STRING("Gym 1: Roxanne"),         DebugAction_AscensionCheckpoint, Ascension_Checkpoint_Gym1 },
+    { COMPOUND_STRING("Gym 2: Brawly"), DebugAction_AscensionCheckpoint, Ascension_Checkpoint_Gym2 },
+    { COMPOUND_STRING("Gym 3: Wattson"), DebugAction_AscensionCheckpoint, Ascension_Checkpoint_Gym3 },
+    { COMPOUND_STRING("Gym 4: Flannery"), DebugAction_AscensionCheckpoint, Ascension_Checkpoint_Gym4 },
+    { COMPOUND_STRING("Gym 5: Norman"), DebugAction_AscensionCheckpoint, Ascension_Checkpoint_Gym5 },
+    { COMPOUND_STRING("Gym 6: Winona"), DebugAction_AscensionCheckpoint, Ascension_Checkpoint_Gym6 },
+    { COMPOUND_STRING("Gym 7: Tate & Liza"), DebugAction_AscensionCheckpoint, Ascension_Checkpoint_Gym7 },
+    { COMPOUND_STRING("Gym 8: Juan"), DebugAction_AscensionCheckpoint, Ascension_Checkpoint_Gym8 },
     { NULL }
 };
 
