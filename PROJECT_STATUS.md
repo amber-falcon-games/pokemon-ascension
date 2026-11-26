@@ -1,10 +1,10 @@
 # Project status
 
-Last updated: 2026-11-26 (Claude session: F004a done; F002–F005 scripts awaiting owner's Mac run).
+Last updated: 2026-11-26 (Claude session: F005b done; F006 next).
 Current phase: 0 — scaffolding and foundation.
-Current feature: F002/F003/F004b/F005 local scripts — AWAITING_ACCEPTANCE (owner Mac run). F000, F001, F004a DONE.
+Current feature: F006 baseline release 0.1.0 (next). F002–F005 AWAITING owner Mac run. F000, F001, F004a, F005b DONE.
 F000: DONE (owner accepted 2026-11-26).
-Next eligible feature: F005b lean cuts (config-switch features + 10 boxes), then F006 baseline release 0.1.0.
+Next eligible feature: F006 — smoke test, resource measurements, release script and first `.bps` patch (needs the owner's Mac for the patch, D017).
 Last known-good playable build: none (pre-F006 bootstrap exception).
 Current engine version: pokeemerald-expansion `expansion/1.17.2` (commit 79dd4369) on `main`.
 Automated tests: on the merged tree (`bfc0553a56`, Linux container) `make -j4` exit 0 and `make check -j4` exit 0: 5,429 passed / 5,876 total, 0 unexpected failures; ROM byte-identical to pristine upstream. Details in docs/features/F001-upstream-integration.md.

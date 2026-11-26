@@ -2400,6 +2400,14 @@ static void Fill1PRecords(struct RankingHall1P *dst, s32 hallFacilityId, s32 lvl
     }
 
     Free(playerHallRecords);
+#else
+    // Pokémon Ascension: record-mixing records are freed (D011), so show only the
+    // player's own best and leave the other places empty instead of uninitialized.
+    struct PlayerHallRecords *playerHallRecords = AllocZeroed(sizeof(struct PlayerHallRecords));
+    GetPlayerHallRecords(playerHallRecords);
+    memset(dst, 0, sizeof(*dst) * HALL_RECORDS_COUNT);
+    dst[0] = playerHallRecords->onePlayer[hallFacilityId][lvlMode];
+    Free(playerHallRecords);
 #endif //FREE_RECORD_MIXING_HALL_RECORDS
 }
 
@@ -2435,6 +2443,13 @@ static void Fill2PRecords(struct RankingHall2P *dst, s32 lvlMode)
         record2P[highestId].winStreak = 0;
     }
 
+    Free(playerHallRecords);
+#else
+    // Pokémon Ascension: as in Fill1PRecords, only the player's own best remains.
+    struct PlayerHallRecords *playerHallRecords = AllocZeroed(sizeof(struct PlayerHallRecords));
+    GetPlayerHallRecords(playerHallRecords);
+    memset(dst, 0, sizeof(*dst) * HALL_RECORDS_COUNT);
+    dst[0] = playerHallRecords->twoPlayers[lvlMode];
     Free(playerHallRecords);
 #endif //FREE_RECORD_MIXING_HALL_RECORDS
 }
