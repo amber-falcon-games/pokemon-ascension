@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased — F007 Battle Lab entry (2026-11-26)
+- Dev builds: L + SELECT on the title screen opens the Battle Lab; LAB-001 (Swampert vs Blaziken, Lv50) runs a real battle and returns to the Lab; Exit soft-resets without saving. Release builds contain no Lab code.
+
 ## Unreleased — F004a, F002–F005, F005b (2026-11-26)
 - CI: PR-only, selective (docs-only / changed tests / full), tests split across 4 machines, incremental build cache, nightly build and test badges.
 - Scripts: `setup.sh`, `doctor.sh`, `build.sh`, `test.sh`, `play.sh`, `status.sh` for Apple Silicon Macs (no sudo; pinned ARM toolchain in `.local/`).
