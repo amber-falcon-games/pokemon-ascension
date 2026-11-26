@@ -44,8 +44,11 @@ jobs:
       - name: Release excludes the Battle Lab
         if: steps.gate.outputs.run == 'true'
         run: |
-          if arm-none-eabi-nm pokeemerald-release.elf | grep -iE 'BattleLab|sLabTrainers'; then
-            echo "::error::Battle Lab code found in the release build"; exit 1
+          if arm-none-eabi-nm pokeemerald-release.elf | grep -iE 'BattleLab|sLabTrainers|Ascension_C'; then
+            echo "::error::Battle Lab or dev-checkpoint code found in the release build"; exit 1
+          fi
+          if grep -c ASCENSION-LAB-01 pokeemerald-release.gba; then
+            echo "::error::Battle Lab scenario block found in the release ROM"; exit 1
           fi
           arm-none-eabi-nm pokeemerald.elf | grep -q BattleLab_Open || { echo "::error::Battle Lab missing from the dev build"; exit 1; }
       - name: Pack build cache
