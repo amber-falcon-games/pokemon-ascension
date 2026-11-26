@@ -37,7 +37,7 @@ Pokémon Ascension will be released as a **patch file** (`.bps`), never as a ROM
 On Android, any GBA emulator that loads `.gba` files works the same way.
 
 ### Build it yourself (developers, until releases exist)
-Follow upstream's [INSTALL.md](INSTALL.md) for your OS, then run `make` in this folder. The ROM is written to `pokeemerald.gba` (never commit it). One-command scripts (`./scripts/setup.sh`, `./scripts/play.sh`) are planned in F002–F005.
+On an Apple Silicon Mac: `./scripts/setup.sh` once, then `./scripts/play.sh` (builds and opens mGBA). The ROM is written to `build/pokemon-ascension.gba` (never commit it). On other systems follow upstream's [INSTALL.md](INSTALL.md) and run `make`.
 
 ## Start development on Apple Silicon macOS
 
@@ -48,17 +48,17 @@ Follow upstream's [INSTALL.md](INSTALL.md) for your OS, then run `make` in this 
 4. Paste: **Read CLAUDE.md and PROJECT_STATUS.md. Begin the next eligible feature and follow the project gates.**
 5. Review the proposed upstream integration and environment setup. Claude will request any necessary permissions.
 
-Do not attempt the following commands until Claude has implemented them during Phase 0:
+Project commands (macOS, Apple Silicon). Run `./scripts/setup.sh` once first:
 
-| Planned command | Purpose |
+| Command | Purpose |
 |---|---|
 | `./scripts/setup.sh` | Configure pinned prerequisites |
 | `./scripts/doctor.sh` | Diagnose the toolchain |
 | `./scripts/build.sh` | Compile a ROM |
 | `./scripts/test.sh` | Run automated tests |
 | `./scripts/play.sh` | Build and launch mGBA |
-| `./scripts/play.sh --lab` | Build and launch directly into the Battle Lab |
-| `./scripts/play.sh --scenario LAB-001` | Launch a reproducible scenario |
+| `./scripts/play.sh --lab` | Build and launch directly into the Battle Lab (from F007) |
+| `./scripts/play.sh --scenario LAB-001` | Launch a reproducible scenario (from F011) |
 | `./scripts/status.sh` | Show project state |
 
 See [testing](docs/TESTING.md), [Battle Lab](docs/BATTLE_LAB.md), [vision](docs/VISION.md), and [workflow](docs/DEVELOPMENT_WORKFLOW.md).

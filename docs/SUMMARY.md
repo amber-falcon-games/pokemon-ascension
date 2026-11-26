@@ -168,3 +168,4 @@
         - [F000 scaffold review](./features/F000-scaffold-review.md)
         - [F001 upstream integration](./features/F001-upstream-integration.md)
         - [F004a CI speed and badges](./features/F004a-ci-speed-and-badges.md)
+        - [F002–F005 local scripts](./features/F002-F005-local-scripts.md)
