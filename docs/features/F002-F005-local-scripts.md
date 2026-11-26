@@ -28,7 +28,7 @@ Battle Lab launch (F007/F011). Release patches (F006). Linux setup (CI covers Li
 - [x] Scripts written; `bash -n` syntax check passes; doctor runs on Linux with an informative message.
 - [x] On Linux (container, system toolchain): `./scripts/build.sh` exit 0, ROM SHA-1 `c5eabb9b…` identical to CI/upstream; `./scripts/test.sh test/battle/move_effect/dragon_darts.c` 16/16 passed; `play.sh --lab` and `play.sh` without mGBA fail with clear messages; `status.sh` prints state.
 - [ ] Owner runs `./scripts/setup.sh` on the Mac: completes, doctor reports "Ready to build".
-- [ ] `./scripts/build.sh` on the Mac produces SHA-1 `c5eabb9bca66e218063a623e3dcd0d357f4e68d5` (same as CI), proving the ARM toolchain matches.
+- [ ] `./scripts/build.sh` on the Mac produces the same SHA-1 as the Linux build of the same commit, proving the ARM toolchain matches (`main` at F005b: `49cb2f71f87562bd2bcb15392150e3d13f4f9375`).
 - [ ] `./scripts/play.sh` opens the game in mGBA and reaches the title screen; new game starts.
 - [ ] `./scripts/test.sh test/battle/move_effect/dragon_darts.c` passes on the Mac.
 - [ ] Re-running `./scripts/setup.sh` changes nothing (idempotent).
@@ -42,6 +42,9 @@ None (tooling only). `.local/` is git-ignored (~600 MB toolchain).
 
 ## Rollback
 Delete `scripts/` changes; `rm -rf .local/arm-gnu-toolchain` on the Mac.
+
+## Mac issue found in the owner's first run (2026-11-26)
+`./scripts/play.sh` failed with `data/battle_partners.h: No such file or directory`. Doctor passed; make was macOS's GNU make 3.81. Upstream's Makefile generates headers in a `$(shell $(MAKE) generated)` pre-step and checks for failure with `.SHELLSTATUS`, which exists only from GNU make 4.2. On 3.81 a failure there is silently ignored, so the build later dies on the missing header. Fix: `setup.sh` installs Homebrew `make` (`gmake` 4.x); `build.sh`/`test.sh` use `gmake` when present and refuse make < 4.2; `doctor.sh` reports an old make as a failure. Verified on Linux (make 4.3) plus a unit check of the version comparison (3.81, 4.1 rejected; 4.2, 4.3, 4.4.1, 10.0 accepted). Re-verification on the Mac pending.
 
 ## Evidence and acceptance
 Pending owner's Mac run.
