@@ -155,9 +155,11 @@ notes="$ROOT/dist/release-notes-$tag.md"
 } > "$notes"
 confirm "Tag $tag at $commit and publish the patch on GitHub?" || { ok "Stopped before publishing. The patch is in dist/."; exit 0; }
 git tag -a "$tag" -m "Pokémon Ascension $version"
+info "Pushing the tag to GitHub"
 git push -q origin "$tag"
 ok "Tagged and pushed $tag"
 if have gh && gh auth status >/dev/null 2>&1; then
+  info "Uploading the $(du -h "$patch" | awk '{print $1}') patch to GitHub. This shows no progress bar and can take a few minutes on home broadband."
   gh release create "$tag" "$patch" --title "Pokémon Ascension $version" --notes-file "$notes"
   ok "Published: $(gh release view "$tag" --json url -q .url)"
 else
