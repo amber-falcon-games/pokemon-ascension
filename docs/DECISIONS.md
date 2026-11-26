@@ -16,10 +16,14 @@ Decided:
 
 - D011 (2026-11-26) — optional Emerald features. Owner direction; implementation scheduled per item, each change behind its own spec and save-compatibility note (nothing removed yet).
   - Cut: Recorded Battle, Secret Bases and decorations, Mystery Gift / Mystery Event / e-Reader, record mixing, TV shows / PokéNews / Gabby & Ty, Contests (incl. Pokéblocks, contest stats and ribbons), Mail, Union Room, link battle records, Match Call (rematches move to an in-world mechanism such as the upstream VS Seeker), redundant Pokédex seen-flag copies.
-  - Keep: Hall of Fame, Battle Frontier (for now), fusion storage (for now), Daycare/breeding, roaming legendaries (to be expanded with quests), PC boxes as-is (10 boxes or a box-less PC to revisit).
-  - Awaiting owner answer after explanation: Trainer Hill, Mauville Old Man / Lilycove Lady / Dewford Trends / Walda, link-cable minigames.
+  - Also cut (owner, later on 2026-11-26): Trainer Hill, Mauville Old Man / Lilycove Lady / Dewford Trends / Walda phrase, link-cable minigames (Berry Crush, Pokémon Jump, Dodrio Berry Picking).
+  - Keep: Hall of Fame, Battle Frontier (for now), fusion storage (official fusions; curated custom fusions are a future idea), Daycare/breeding, roaming legendaries (to be expanded with quests).
+  - PC boxes: reduce from 14 to 10 (300 slots); can grow again later if space allows.
   - Replacement concept: in-game "mystery gift" style events (hidden eggs, gift NPCs, special battles); design later.
-- D012 (2026-11-26) — CI direction for F004: run build and tests on pull requests only, not on pushes to `main`; add build/test status badges to README; cut CI time (caching, drop unneeded jobs). Public vs private repository is an open owner decision.
+- D012 (2026-11-26) — CI direction for F004: run build and tests on pull requests only, not on pushes to `main`; add build/test status badges to README; cut CI time (caching, drop unneeded jobs). Owner refinement: nightly status run on `main` only if `main` changed that day, run asynchronously; badges in README; selective builds/tests so unchanged work is not redone. Caching and CI speed come before further feature work (see D014).
+- D013 (2026-11-26) — repository becomes public. Rationale: noncommercial fan hack, free unlimited Actions minutes and faster public runners. Constraints unchanged: no ROMs, saves or secrets committed; releases are `.bps` patches only. Owner changes the visibility in GitHub settings.
+- D014 (2026-11-26) — roadmap order: CI speed-up and badges (F004a) are pulled ahead of F002, since they need no Mac. `scripts/test.sh` (F004b) stays after F003.
+- D015 (2026-11-26) — move system direction (supersedes the technique-slot suggestion, which owner rejected because it removes role choice): multi-layer talent tree per evolution line; Final Fantasy-style categorised move list showing more than four moves, with tree upgrades replacing earlier moves. Cost analysis recorded in GAME_DESIGN.md; formulas, trees and PP/energy handling remain open for F014–F015 and F027–F028.
 
 To be raised at F015 (not decided): how to recover save space for an expanded move library — see SAVE_COMPATIBILITY.md options S1–S5.
 
