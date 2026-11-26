@@ -237,3 +237,31 @@ TEST("Battle Lab fixed seed repeats the RNG sequence")
     c = Random32();
     EXPECT_EQ(c, b);
 }
+
+TEST("Battle Lab fixed seed makes party building repeatable (personality, gender)")
+{
+    u32 first;
+    ASSUME(ASCENSION_BATTLE_LAB);
+    BattleLab_ResetTeams();
+    BattleLab_SetSlotSpecies(LAB_SIDE_OPPONENT, 0, SPECIES_NIDORINO);
+    SeedRng(4321);
+    BattleLab_SetupScenarioParties();
+    first = GetMonData(&gParties[B_TRAINER_OPPONENT_A][0], MON_DATA_PERSONALITY);
+    SeedRng(4321);
+    BattleLab_SetupScenarioParties();
+    EXPECT_EQ(GetMonData(&gParties[B_TRAINER_OPPONENT_A][0], MON_DATA_PERSONALITY), first);
+}
+
+TEST("Battle Lab wild battles keep only the opponent's first active Pokémon")
+{
+    ASSUME(ASCENSION_BATTLE_LAB);
+    BattleLab_ResetTeams();
+    BattleLab_SetSlotSpecies(LAB_SIDE_OPPONENT, 1, SPECIES_ONIX);
+    BattleLab_SetupScenarioParties();
+    EXPECT_EQ(gPartiesCount[B_TRAINER_OPPONENT_A], 2);
+    BattleLab_TrimToWildOpponent();
+    EXPECT_EQ(GetMonData(&gParties[B_TRAINER_OPPONENT_A][0], MON_DATA_SPECIES), SPECIES_BLAZIKEN);
+    EXPECT_EQ(GetMonData(&gParties[B_TRAINER_OPPONENT_A][1], MON_DATA_SPECIES), SPECIES_NONE);
+    EXPECT_EQ(gPartiesCount[B_TRAINER_OPPONENT_A], 1);
+    EXPECT(!BattleLab_IsLabBattle());   // only set while a Lab battle runs
+}

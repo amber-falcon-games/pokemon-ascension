@@ -107,6 +107,7 @@ static EWRAM_DATA u8 sLabCursor = 0;
 static EWRAM_DATA bool8 sLabNeedsFreshGame = FALSE;
 EWRAM_DATA struct LabSlot gBattleLabTeams[LAB_SIDE_COUNT][PARTY_SIZE] = {0};
 EWRAM_DATA struct LabRules gBattleLabRules = {0};
+static EWRAM_DATA bool8 sLabInBattleFlag = FALSE;   // a Lab battle is running
 
 // Team screen state (task-independent so it survives returning from a battle)
 enum { LAB_MODE_MAIN, LAB_MODE_TEAM, LAB_MODE_EDIT, LAB_MODE_LETTER, LAB_MODE_CONFIRM_RESET, LAB_MODE_RULES };
@@ -573,6 +574,20 @@ void BattleLab_ApplyStartingStatuses(void)
     case LAB_TERRAIN_MISTY:    gStartingStatuses.mistyTerrain = TRUE; break;
     case LAB_TERRAIN_PSYCHIC:  gStartingStatuses.psychicTerrain = TRUE; break;
     }
+}
+
+// Wild 1v1 uses only the opponent's first active slot (the party is already compacted).
+void BattleLab_TrimToWildOpponent(void)
+{
+    u32 i;
+    for (i = 1; i < PARTY_SIZE; i++)
+        ZeroMonData(&gParties[B_TRAINER_OPPONENT_A][i]);
+    CalculateEnemyPartyCount();
+}
+
+bool32 BattleLab_IsLabBattle(void)
+{
+    return sLabInBattleFlag;
 }
 
 const u8 *BattleLab_ValidateStart(void)
@@ -1485,13 +1500,19 @@ static void Task_BattleLab_StartBattle(u8 taskId)
     if (gPaletteFade.active)
         return;
 
+    // A fixed seed covers building the parties too (personality: gender, etc.), so the
+    // whole run replays, not just the battle.
+    if (gBattleLabRules.fixedSeed)
+        SeedRng(gBattleLabRules.seed);
     BattleLab_SetupScenarioParties();
+    sLabInBattleFlag = TRUE;
     gIsDebugBattle = TRUE;   // upstream then keeps the Lab's prebuilt enemy party (battle_main.c)
     gDebugAIFlags = BattleLab_OpponentAiFlags();
     if (wild)
     {
         gDebugAiTrainerOverride = NULL;
         gBattleTypeFlags = 0;
+        BattleLab_TrimToWildOpponent();
         PlayBGM(MUS_VS_WILD);
     }
     else
@@ -1506,8 +1527,6 @@ static void Task_BattleLab_StartBattle(u8 taskId)
     }
     BattleLab_ApplyStartingStatuses();
     gBattleEnvironment = BATTLE_ENVIRONMENT_BUILDING;
-    if (gBattleLabRules.fixedSeed)
-        SeedRng(gBattleLabRules.seed);
     DestroyTask(taskId);
     FreeAllWindowBuffers();
     gMain.savedCallback = CB2_BattleLab_ReturnFromBattle;
@@ -1518,6 +1537,7 @@ static void CB2_BattleLab_ReturnFromBattle(void)
 {
     gIsDebugBattle = FALSE;
     gDebugAiTrainerOverride = NULL;
+    sLabInBattleFlag = FALSE;
     memset(&gStartingStatuses, 0, sizeof(gStartingStatuses));
     FadeOutBGM(4);
     // Throw away whatever the battle changed (XP, items, money): nothing is saved,

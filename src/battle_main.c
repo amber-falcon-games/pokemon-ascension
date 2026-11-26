@@ -9,6 +9,7 @@
 #include "battle_hold_effects.h"
 #include "battle_interface.h"
 #include "battle_main.h"
+#include "battle_lab.h"
 #include "battle_message.h"
 #include "battle_pyramid.h"
 #include "battle_scripts.h"
@@ -600,7 +601,8 @@ static void CB2_InitBattleInternal(void)
 
     if (!(gBattleTypeFlags & BATTLE_TYPE_TRAINER))
     {
-        if (!(gBattleTypeFlags & (BATTLE_TYPE_LEGENDARY | BATTLE_TYPE_PYRAMID | BATTLE_TYPE_PIKE)))
+        // Pokémon Ascension (F009): Battle Lab wild opponents keep their configured item, including none.
+        if (!(gBattleTypeFlags & (BATTLE_TYPE_LEGENDARY | BATTLE_TYPE_PYRAMID | BATTLE_TYPE_PIKE)) && !BattleLab_IsLabBattle())
             SetWildMonHeldItem();
         TryFormChange(&gParties[B_TRAINER_OPPONENT_A][0], FORM_CHANGE_BEGIN_WILD_ENCOUNTER, B_TRAINER_OPPONENT_A);
         if (IsDoubleBattle())
