@@ -74,7 +74,8 @@ Not recommended: `upcoming` (unstable), submodule/subtree (upstream build expect
 - [x] Memory, save, move-slot and scheduler constraints measured and recorded.
 - [x] Baseline and integration recommendation with options.
 - [x] Owner approves D010 (2026-11-26).
-- [ ] After approval: merge performed on `feature/F001-upstream-import`; `make` and `make check` pass on the merged tree; all scaffold docs intact; PR opened with evidence.
+- [x] Merge performed (merge commit `bfc0553a56` on `claude/sharp-euler-yfhti2`); `make` and `make check` pass on the merged tree; all scaffold docs intact.
+- [ ] PR reviewed and merged to `main`.
 
 ## Automated tests and regression
 After import: `make -j$(nproc)` and `make check -j$(nproc)` must reproduce the figures above (allowing for our documentation-only additions, which do not affect the ROM). `git log` must show both root commits.
@@ -102,6 +103,13 @@ Conflicts were exactly the three predicted add/add files. Resolution:
 - `docs/SUMMARY.md`: added a "Pokémon Ascension" section listing our docs, so upstream's `docs_validate` passes (`python3 .github/docs_validate/inclusive_summary.py` exit 0). New docs must be added there.
 - Upstream tracks three small multiboot binaries, `data/mb_berry_fix.gba` (15 KB), `data/mb_colosseum.gba` (160 KB) and `data/mb_ereader.gba` (12 KB), embedded via `.incbin` in `data/multiboot_*.s`; upstream's `.gitignore` re-includes `data/*.gba`. They are build inputs from upstream history, not project ROM builds; kept so the build works. Our no-ROM rule applies to built game ROMs and saves.
 - `build.yml` left unchanged; trimming FireRed/LeafGreen jobs and runtime cost is F004.
+
+## Merged-tree verification (2026-11-26, Linux container, tree at merge commit `bfc0553a56`)
+- `make -j4`: exit 0, 255 s. EWRAM 226,416 B (86.37 %), IWRAM 28,376 B (86.60 %), ROM 26,751,104 B (79.72 %). ROM SHA-1 `c5eabb9bca66e218063a623e3dcd0d357f4e68d5`, byte-identical to the pristine upstream 1.17.2 build, which confirms the integration changed nothing in the game.
+- `make check -j4`: exit 0. TOTAL 5,876; PASSED 5,429; TO_DO 419; KNOWN_FAILING 19; EXPECT_FAILING 9; no unexpected failures. Identical to the pristine upstream run.
+- `python3 .github/docs_validate/inclusive_summary.py`: exit 0.
+- `git log`: both root commits reachable (`e25e424` project, upstream history via `79dd4369`).
+- Not verified: macOS build/test (F002/F004); in-emulator boot (F005/F006).
 
 ## Evidence and acceptance
 - Investigation commit: this document on `claude/sharp-euler-yfhti2`.
