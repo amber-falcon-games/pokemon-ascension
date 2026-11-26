@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — F004a, F002–F005, F005b (2026-11-26)
+- CI: PR-only, selective (docs-only / changed tests / full), tests split across 4 machines, incremental build cache, nightly build and test badges.
+- Scripts: `setup.sh`, `doctor.sh`, `build.sh`, `test.sh`, `play.sh`, `status.sh` for Apple Silicon Macs (no sudo; pinned ARM toolchain in `.local/`).
+- Game: link-cable, e-Reader and Mystery Event save data removed; redundant Pokédex flags removed; PC reduced to 10 boxes. Frees 12.4 KB of save space and working memory. Save layout changed (start a new game on dev builds).
+
 ## Unreleased — F001 upstream import (2026-11-26)
 - Merged RHH pokeemerald-expansion `expansion/1.17.2` (commit 79dd4369) with full history (decision D010, option A).
 - Kept project README, PR template and docs; combined .gitignore; removed upstream Pages, label and Discord-link GitHub files; listed project docs in docs/SUMMARY.md.

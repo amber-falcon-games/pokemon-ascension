@@ -6,6 +6,14 @@ No engine or save schema yet. F001/F006 establish upstream layout, capacity and 
 ## Measured upstream headroom (expansion/1.17.2, F001 audit)
 SaveBlock2 84 B free of 3,968; SaveBlock1 304 B free of 15,872; PokemonStorage 1,568 B free of 35,712; SaveBlock3 ≈1,620 B free of 1,624 (default config). All 32 flash sectors are allocated (two 14-sector slots, Hall of Fame, Trainer Hill, Recorded Battle). Consequence: persistent per-Pokémon additions (e.g. extra stored moves) are effectively impossible for boxed Pokémon; prefer data-derived state. Lab scenario storage must reuse a debug-only sector or live outside the save; to be designed in F011.
 
+## Layout history
+| Version | Change | SaveBlock1 | SaveBlock2 | PokemonStorage | Migration |
+|---|---|---|---|---|---|
+| upstream 1.17.2 | baseline | 15,568 | 3,884 | 34,144 | — |
+| F005b (pre-0.1.0) | link/e-Reader data freed, extra Pokédex flags freed, 14 → 10 PC boxes | 14,160 | 2,544 | 24,504 | none: no released saves; dev saves must start a new game |
+
+`test/save.c` holds the current sizes and fails on any unintended change; update it together with this table.
+
 ## Options for more save space (reference for F015; none decided)
 The 128 KB flash chip is the largest standard GBA save type and is already fully allocated, so space can only be reclaimed, not added. Work RAM (EWRAM 256 KB, IWRAM 32 KB) is fixed hardware; ROM (32 MB, ≈6.8 MB free) is cheap, so anything derivable from game data should live in ROM, not the save.
 - S1 — Upstream `include/config/save.h` toggles: remove unused link/e-Reader/Mystery Gift/record-mixing data. Up to 2,516 B in SaveBlock1 and 1,274 B in SaveBlock2. Low risk, mostly features this project does not need.
