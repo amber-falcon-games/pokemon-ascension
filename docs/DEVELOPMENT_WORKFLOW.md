@@ -18,6 +18,9 @@ Otherwise keep working through the approved order without asking. Keep messages 
 
 Owner dashboard (Ascension Mission Control, https://claude.ai/artifact/TBcNe5AUVsVQBbduRuj2Wv): keep it current with ArtifactData (collections `data/ascension/{features,actions,activity,state}`; run `date -u` before writing timestamps). Requests for the owner go in `actions` (`status`: `open` = needed now, `soon` = pending). The owner can press **Done** on a request, which sets `status: done`, `done_by: owner`, `done_at`. At the start of every step, read `data/ascension/actions` and act on anything newly marked done.
 
+## Branches (D021)
+Feature branches are `feature/F0xx-short-name` (plus the session branch). Tooling and dev-only work merges to `main` when CI passes. Gameplay features awaiting owner sign-off stack on the previous feature's branch and merge to `main` in order once approved.
+
 ## Session continuity
 Everything needed to resume lives in the repository: PROJECT_STATUS.md (current feature, exact next action, blockers, evidence), ROADMAP.md (approved order), DECISIONS.md and the feature specs. Update and push PROJECT_STATUS.md at every meaningful step, not only at session end, so a new session can resume from `main` or the active feature branch.
 
