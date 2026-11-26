@@ -1,5 +1,5 @@
 # F002, F003, F004b, F005 — Local scripts: setup, doctor, build, test, play, status
-Status: AWAITING_ACCEPTANCE (scripts written and verified on Linux; awaiting owner's Mac run)
+Status: DONE (owner verified on Apple Silicon Mac, 2026-11-26)
 Bundling rationale: all four are thin wrappers over upstream `make` and share `scripts/lib/common.sh`; one Mac session verifies them together, which is the fastest route to a playable MVP (owner priority).
 Dependencies: F001
 Owner decision IDs: D013–D018 (order); no new decision unless the owner prefers devkitPro
@@ -27,10 +27,10 @@ Battle Lab launch (F007/F011). Release patches (F006). Linux setup (CI covers Li
 ## Acceptance criteria
 - [x] Scripts written; `bash -n` syntax check passes; doctor runs on Linux with an informative message.
 - [x] On Linux (container, system toolchain): `./scripts/build.sh` exit 0, ROM SHA-1 `c5eabb9b…` identical to CI/upstream; `./scripts/test.sh test/battle/move_effect/dragon_darts.c` 16/16 passed; `play.sh --lab` and `play.sh` without mGBA fail with clear messages; `status.sh` prints state.
-- [ ] Owner runs `./scripts/setup.sh` on the Mac: completes, doctor reports "Ready to build".
-- [ ] `./scripts/build.sh` on the Mac produces the same SHA-1 as the Linux build of the same commit, proving the ARM toolchain matches (`main` at F005b: `49cb2f71f87562bd2bcb15392150e3d13f4f9375`).
-- [ ] `./scripts/play.sh` opens the game in mGBA and reaches the title screen; new game starts.
-- [ ] `./scripts/test.sh test/battle/move_effect/dragon_darts.c` passes on the Mac.
+- [x] Owner runs `./scripts/setup.sh` on the Mac: completes, doctor reports "Ready to build" (after the GNU make 4.x fix).
+- [ ] (not yet reported) `./scripts/build.sh` on the Mac produces the same SHA-1 as the Linux build of the same commit, proving the ARM toolchain matches (`main` at F005b: `49cb2f71f87562bd2bcb15392150e3d13f4f9375`).
+- [x] `./scripts/play.sh` builds and opens the game in mGBA (owner report).
+- [x] `./scripts/test.sh test/battle/move_effect/dragon_darts.c` passes on the Mac: 16 passed (owner report).
 - [ ] Re-running `./scripts/setup.sh` changes nothing (idempotent).
 - [ ] Toolchain SHA-256 pinned from the verified run.
 

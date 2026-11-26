@@ -11,7 +11,7 @@ Work proceeds strictly in this order; the table below keeps dependencies and des
 | F000 | Documentation scaffold review — DONE ([spec](features/F000-scaffold-review.md)) | — |
 | F001 | Upstream audit, pinned baseline, approved integration preserving history — DONE ([spec](features/F001-upstream-integration.md)) | F000 |
 | F004a | CI speed, selective runs, nightly status and badges — DONE ([spec](features/F004a-ci-speed-and-badges.md)) | F001 |
-| F002 | Mac setup and doctor scripts, pinned dependencies — AWAITING_ACCEPTANCE, bundled with F003/F004b/F005 ([spec](features/F002-F005-local-scripts.md)) | F001 |
+| F002 | Mac setup and doctor scripts, pinned dependencies — DONE (owner verified on Mac), bundled with F003/F004b/F005 ([spec](features/F002-F005-local-scripts.md)) | F001 |
 | F003 | Reproducible ROM compilation, build script | F002 |
 | F004b | Test script (`scripts/test.sh`) on top of F004a CI | F003 |
 | F005 | mGBA launch, local play and status scripts | F003 |

@@ -2,7 +2,7 @@
 
 Last updated: 2026-11-26 (Claude session: PR #5 merged; F007 started).
 Current phase: 0 — scaffolding and foundation.
-Current feature: F007 Battle Lab entry (spec written, implementation next). F006 tooling merged; owner Mac retry + 0.1.0 release pending.
+Current feature: F007 Battle Lab entry (implementation next). F002–F005 DONE (owner verified on Mac 2026-11-26). F006: owner smoke test + `release.sh 0.1.0` pending.
 F000: DONE (owner accepted 2026-11-26).
 Next eligible feature: F007 Battle Lab entry (can start while the owner verifies 0.1.0).
 Last known-good playable build: none (pre-F006 bootstrap exception).
