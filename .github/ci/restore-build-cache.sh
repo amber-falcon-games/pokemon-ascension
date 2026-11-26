@@ -21,5 +21,7 @@ if [ -z "$cached_sha" ] || ! git fetch --quiet --depth=1 origin "$cached_sha" 2>
 fi
 changed="$(git diff --name-only "$cached_sha" HEAD || true)"
 echo "Cache from ${cached_sha}; $(printf '%s\n' "$changed" | grep -c . || true) tracked files changed since."
-printf '%s\n' "$changed" | while IFS= read -r f; do [ -n "$f" ] && [ -e "$f" ] && touch "$f"; done
+printf '%s\n' "$changed" | while IFS= read -r f; do
+  if [ -n "$f" ] && [ -e "$f" ]; then touch "$f"; fi   # skip blank lines and deleted files
+done
 exit 0
