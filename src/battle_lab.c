@@ -732,10 +732,34 @@ u32 BattleLab_EnergyCost(u32 move, u32 maxEnergy)
     return cost > 0 ? cost : 1;
 }
 
+// Exhausted (D023): at or below 25% energy, whatever the cause.
+bool32 BattleLab_IsExhausted(u32 battler)
+{
+    return BattleLab_StaminaMode() && gBattleMons[battler].hp > 0
+        && gBattleMons[battler].hp * 4 <= gBattleMons[battler].maxHP;
+}
+
+// Speed x0.75 while Exhausted (used by GetBattlerTotalSpeedStat).
+u32 BattleLab_ExhaustedSpeed(u32 battler, u32 speed)
+{
+    return BattleLab_IsExhausted(battler) ? speed * 3 / 4 : speed;
+}
+
+// Exhausted Pokémon can't use their heaviest moves (power 100+).
+bool32 BattleLab_ExhaustionLocksMove(u32 battler, u32 move)
+{
+    return BattleLab_IsExhausted(battler) && GetMoveCategory(move) != DAMAGE_CATEGORY_STATUS
+        && GetMovePower(move) >= 100;
+}
+
+static EWRAM_DATA u8 sLabProtectedThisTurn = 0;   // battler bit mask; no regen on a turn you protected
+
 void BattleLab_PayEnergy(u32 battler, u32 move)
 {
     u32 hp = gBattleMons[battler].hp;
-    u32 cost = BattleLab_EnergyCost(move, gBattleMons[battler].maxHP);
+    u32 cost = BattleLab_EnergyCost(move, gBattleMons[battler].maxHP), effect = GetMoveEffect(move);
+    if (effect == EFFECT_PROTECT || effect == EFFECT_ENDURE || effect == EFFECT_MAT_BLOCK)
+        sLabProtectedThisTurn |= 1u << battler;
     if (cost == 0 || hp <= 1)
         return;
     hp = (hp > cost) ? hp - cost : 1;   // own moves never faint the user (D023)
@@ -790,16 +814,39 @@ static void LabLogBattlers(void)
     for (battler = 0; battler < gBattlersCount; battler++)
     {
         const struct BattlePokemon *mon = &gBattleMons[battler];
-        DebugPrintf("  %s%d %S Lv%d HP %d/%d status 0x%x",
+        DebugPrintf("  %s%d %S Lv%d HP %d/%d status 0x%x%s",
                     IsOnPlayerSide(battler) ? "you" : "foe", battler,
-                    GetSpeciesName(mon->species), mon->level, mon->hp, mon->maxHP, mon->status1);
+                    GetSpeciesName(mon->species), mon->level, mon->hp, mon->maxHP, mon->status1,
+                    BattleLab_IsExhausted(battler) ? " EXHAUSTED" : "");
     }
+}
+
+// End of turn in stamina combat: +2% energy for every active battler that did not protect.
+static void LabRegenEnergy(void)
+{
+    u32 battler;
+    for (battler = 0; battler < gBattlersCount; battler++)
+    {
+        u32 hp = gBattleMons[battler].hp, maxHp = gBattleMons[battler].maxHP, gain;
+        if (hp == 0 || hp >= maxHp || (sLabProtectedThisTurn & (1u << battler)))
+            continue;
+        gain = maxHp / 50;
+        if (gain == 0)
+            gain = 1;
+        hp = (hp + gain < maxHp) ? hp + gain : maxHp;
+        gBattleMons[battler].hp = hp;
+        BtlController_EmitSetMonData(battler, B_COMM_TO_CONTROLLER, REQUEST_HP_BATTLE, 0, sizeof(gBattleMons[battler].hp), &gBattleMons[battler].hp);
+        MarkBattlerForControllerExec(battler);
+    }
+    sLabProtectedThisTurn = 0;
 }
 
 void BattleLab_LogTurnEnd(void)
 {
     if (!sLabInBattleFlag)
         return;
+    if (BattleLab_StaminaMode())
+        LabRegenEnergy();
     DebugPrintf("LAB turn %d", gBattleResults.battleTurnCounter + 1);
     LabLogBattlers();
 }
@@ -2007,6 +2054,7 @@ static void Task_BattleLab_StartBattle(u8 taskId)
     BattleLab_SetupScenarioParties();
     sLabInBattleFlag = TRUE;
     sLabEndRequest = LAB_END_NONE;
+    sLabProtectedThisTurn = 0;
     gIsDebugBattle = TRUE;   // upstream then keeps the Lab's prebuilt enemy party (battle_main.c)
     gDebugAIFlags = BattleLab_OpponentAiFlags();
     if (wild)

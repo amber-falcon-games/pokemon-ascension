@@ -1637,6 +1637,9 @@ u32 CheckMoveLimitations(enum BattlerId battler, u8 unusableMoves, u32 check)
         // Placeholder
         else if (check & MOVE_LIMITATION_PLACEHOLDER && moveEffect == EFFECT_PLACEHOLDER)
             unusableMoves |= 1u << i;
+        // Pokémon Ascension (F017 spike, D023): Exhausted Pokémon can't use their heaviest moves
+        else if (BattleLab_ExhaustionLocksMove(battler, move))
+            unusableMoves |= 1u << i;
         // Disable
         else if (check & MOVE_LIMITATION_DISABLED && move == gBattleMons[battler].volatiles.disabledMove)
             unusableMoves |= 1u << i;
@@ -6796,6 +6799,9 @@ static inline u32 CalcMoveBasePowerAfterModifiers(struct DamageContext *ctx)
         return 60;
     }
 
+    // Pokémon Ascension (F017 spike, D023): Exhausted attackers hit weaker.
+    if (BattleLab_IsExhausted(battlerAtk))
+        modifier = uq4_12_multiply(modifier, UQ_4_12(0.85));
     return uq4_12_multiply_by_int_half_down(modifier, basePower);
 }
 
@@ -10499,6 +10505,12 @@ u32 GetTotalAccuracy(struct BattleCalcValues *cv, u32 weather)
 
     u32 calc = gAccuracyStageRatios[buff].dividend * moveAcc;
     calc /= gAccuracyStageRatios[buff].divisor;
+
+    // Pokémon Ascension (F017 spike, D023): Exhausted attackers are less accurate, Exhausted targets easier to hit.
+    if (BattleLab_IsExhausted(battlerAtk))
+        calc = (calc * 90) / 100;
+    if (BattleLab_IsExhausted(battlerDef))
+        calc = (calc * 110) / 100;
 
     // Attacker's ability
     switch (cv->abilities[battlerAtk])

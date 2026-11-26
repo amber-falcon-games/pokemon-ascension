@@ -4436,6 +4436,7 @@ u32 GetBattlerTotalSpeedStat(enum BattlerId battler, enum Ability ability, enum 
     if (gSideStatuses[GetBattlerSide(battler)] & SIDE_STATUS_SWAMP)
         speed /= 4;
 
+    speed = BattleLab_ExhaustedSpeed(battler, speed);   // Pokémon Ascension (F017 spike): Exhausted is slower
     return speed;
 }
 

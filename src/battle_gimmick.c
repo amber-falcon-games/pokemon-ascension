@@ -1,4 +1,5 @@
 #include "global.h"
+#include "battle_lab.h"
 #include "battle.h"
 #include "battle_anim.h"
 #include "battle_controllers.h"
@@ -36,6 +37,9 @@ void AssignUsableGimmicks(void)
 // Returns whether a battler is able to use a gimmick. Checks consumption and gimmick specific functions.
 bool32 CanActivateGimmick(enum BattlerId battler, enum Gimmick gimmick)
 {
+    // Pokémon Ascension: no Mega / Z-Move / Dynamax / Tera in Battle Lab battles (not part of the Lab or D023).
+    if (BattleLab_IsLabBattle())
+        return FALSE;
     return gGimmicksInfo[gimmick].CanActivate != NULL && gGimmicksInfo[gimmick].CanActivate(battler);
 }
 

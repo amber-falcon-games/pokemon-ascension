@@ -109,12 +109,18 @@ bool32 BattleLab_IsLabBattle(void);
 bool32 BattleLab_StaminaMode(void);                   // F017: a Lab battle using model D (D023)
 u32 BattleLab_EnergyCost(u32 move, u32 maxEnergy);     // energy a move costs, as HP
 void BattleLab_PayEnergy(u32 battler, u32 move);       // called where PP would be deducted
+bool32 BattleLab_IsExhausted(u32 battler);
+u32 BattleLab_ExhaustedSpeed(u32 battler, u32 speed);
+bool32 BattleLab_ExhaustionLocksMove(u32 battler, u32 move);
 bool32 BattleLab_ShouldAutoOpen(void);
 void BattleLab_LogTurnEnd(void);   // F012: per-turn battle log (mGBA log window); no-op outside Lab battles
 void BattleLab_LogBattleEnd(void); // F012: final state before the battle clears its data
 #else
 static inline bool32 BattleLab_StaminaMode(void) { return FALSE; }
 static inline void BattleLab_PayEnergy(u32 battler, u32 move) {}
+static inline bool32 BattleLab_IsExhausted(u32 battler) { return FALSE; }
+static inline u32 BattleLab_ExhaustedSpeed(u32 battler, u32 speed) { return speed; }
+static inline bool32 BattleLab_ExhaustionLocksMove(u32 battler, u32 move) { return FALSE; }
 static inline bool32 BattleLab_IsLabBattle(void) { return FALSE; }
 static inline bool32 BattleLab_ShouldAutoOpen(void) { return FALSE; }
 static inline void BattleLab_LogTurnEnd(void) {}

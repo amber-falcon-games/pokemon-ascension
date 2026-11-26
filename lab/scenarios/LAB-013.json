@@ -1,0 +1,13 @@
+{
+  "id": "LAB-013",
+  "name": "Tire out the boss",
+  "rules": { "format": "trainer_single", "combat": "stamina", "ai": "smart", "seed": 777 },
+  "player": [
+    { "species": "BLISSEY",  "level": 50, "moves": ["SOFT_BOILED", "PROTECT", "TOXIC", "SEISMIC_TOSS"] },
+    { "species": "SKARMORY", "level": 50, "moves": ["SPIKES", "ROOST", "WHIRLWIND", "BRAVE_BIRD"] },
+    { "species": "SALAMENCE", "level": 50, "moves": ["DRAGON_DANCE", "OUTRAGE", "EARTHQUAKE", "FLY"] }
+  ],
+  "opponent": [
+    { "species": "METAGROSS", "level": 55, "moves": ["METEOR_MASH", "HAMMER_ARM", "EARTHQUAKE", "HYPER_BEAM"] }
+  ]
+}
