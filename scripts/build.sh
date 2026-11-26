@@ -17,15 +17,17 @@ for a in "$@"; do
 done
 cd "$ROOT"
 tc="$(make_toolchain_args)"
+MAKE_BIN="$(make_bin)"
+make_ok || die "GNU make $MIN_MAKE_VERSION or newer is required (found $(make_version) at $MAKE_BIN). Run ./scripts/setup.sh."
 rom_src="$ROM_OUT"
 [ "$target" = release ] && rom_src="$ROOT/pokeemerald-release.gba"   # upstream names release builds differently
 rm -f "$rom_src" "$ROM_COPY"
-[ "$clean" = 1 ] && { info "Cleaning previous build outputs"; make tidy >/dev/null; }
+[ "$clean" = 1 ] && { info "Cleaning previous build outputs"; "$MAKE_BIN" tidy >/dev/null; }
 jobs="$(cpu_count)"
 info "make -j$jobs $target ${tc:+(project toolchain)}"
 start=$(date +%s)
 log="$ROOT/build/last-build.log"; mkdir -p "$ROOT/build"
-if ! make -j"$jobs" $tc "$target" >"$log" 2>&1; then
+if ! "$MAKE_BIN" -j"$jobs" $tc "$target" >"$log" 2>&1; then
   rm -f "$rom_src" "$ROM_COPY"
   tail -n 30 "$log"
   die "Build failed after $(( $(date +%s) - start ))s. Full log: build/last-build.log"

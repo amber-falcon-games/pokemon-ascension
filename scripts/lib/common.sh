@@ -11,7 +11,7 @@ ARM_TC_NAME="arm-gnu-toolchain-${ARM_TC_VERSION}-darwin-arm64-arm-none-eabi"
 ARM_TC_URL="https://developer.arm.com/-/media/Files/downloads/gnu/${ARM_TC_VERSION}/binrel/${ARM_TC_NAME}.tar.xz"
 TOOLCHAIN_DIR="$LOCAL_DIR/arm-gnu-toolchain"   # passed to make as TOOLCHAIN=
 
-BREW_FORMULAE=(libpng pkg-config coreutils)
+BREW_FORMULAE=(libpng pkg-config coreutils make)   # make = GNU make 4.x as `gmake` (macOS ships 3.81)
 MIN_FREE_GB=3
 
 if [ -t 1 ]; then
@@ -43,6 +43,23 @@ ask_yes() {  # ask_yes "question" -> 0 if yes. Non-interactive (CI or --yes) ans
 
 ROM_OUT="$ROOT/pokeemerald.gba"                # upstream's output name
 ROM_COPY="$ROOT/build/pokemon-ascension.gba"   # friendly copy (build/ is git-ignored)
+
+# GNU make 4.2+ is required: the Makefile relies on .SHELLSTATUS (added in 4.2) to
+# notice failures while generating headers. macOS ships make 3.81, which silently
+# ignores those failures and the build then dies on a missing generated header.
+MIN_MAKE_VERSION="4.2"
+make_bin() {
+  if have gmake; then command -v gmake
+  elif [ -n "$(brew_bin)" ] && [ -x "$("$(brew_bin)" --prefix 2>/dev/null)/bin/gmake" ]; then echo "$("$(brew_bin)" --prefix)/bin/gmake"
+  else command -v make; fi
+}
+make_version() { "$(make_bin)" --version 2>/dev/null | head -1 | awk '{print $3}'; }
+make_ok() {  # true if the make in use is at least MIN_MAKE_VERSION (portable: no sort -V)
+  awk -v have="$(make_version)" -v need="$MIN_MAKE_VERSION" 'BEGIN {
+    split(have, h, "."); split(need, n, ".");
+    for (i = 1; i <= 3; i++) { if ((h[i] + 0) > (n[i] + 0)) exit 0; if ((h[i] + 0) < (n[i] + 0)) exit 1 }
+    exit 0 }'
+}
 
 cpu_count() { if is_macos; then sysctl -n hw.ncpu; else nproc; fi; }
 

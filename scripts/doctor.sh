@@ -23,7 +23,11 @@ else
   warn "$(uname -s) detected: these scripts target macOS. On Linux, follow INSTALL.md (CI uses Ubuntu packages)."
 fi
 if have python3; then ok "python3 $(python3 --version | awk '{print $2}')"; else need "python3 missing" "comes with Xcode Command Line Tools"; fi
-if have make; then ok "make $(make --version | head -1 | awk '{print $3}')"; else need "make missing" "comes with Xcode Command Line Tools"; fi
+if have make || have gmake; then
+  if make_ok; then ok "GNU make $(make_version) ($(make_bin))"; else need "GNU make $(make_version) is too old (need $MIN_MAKE_VERSION+; macOS ships 3.81)" "./scripts/setup.sh (or: brew install make)"; fi
+else
+  need "make missing" "comes with Xcode Command Line Tools"
+fi
 if have git; then ok "git $(git --version | awk '{print $3}')"; else need "git missing" "comes with Xcode Command Line Tools"; fi
 if toolchain_ok; then
   ok "ARM toolchain $ARM_TC_VERSION ($("$(toolchain_gcc)" --version | head -1 | awk '{print $NF}')) in .local/"
