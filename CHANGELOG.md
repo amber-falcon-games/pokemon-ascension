@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased — F009 Battle Lab details and rules (2026-11-26)
+- Dev builds: each Lab Pokémon can have its moves, ability, held item, nature, IVs, starting HP % and status set; a Rules screen sets the format (trainer 1v1, trainer 2v2, wild), weather, terrain, opponent AI and a fixed RNG seed.
+
 ## Unreleased — F008 Battle Lab team builders (2026-11-26)
 - Dev builds: the Battle Lab's Player team and Opponent team screens set up to 6 Pokémon per side (any species or form, level 1–100, in battle on/off). Changed slots are marked `!`; LAB-001 is the starting point and START resets it.
 

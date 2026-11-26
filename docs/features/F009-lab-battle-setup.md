@@ -1,5 +1,5 @@
 # F009 — Battle Lab: Pokémon details and battle rules
-Status: IN_PROGRESS (spec; stacked on F008, D021)
+Status: AWAITING_ACCEPTANCE (implemented on a branch stacked on F008, D021; owner playtest needed after F008)
 Dependencies: F008 (team builders)
 Owner decision IDs: D003 (Lab before combat changes), D021 (stacked branches)
 Branch / commit: `feature/F009-lab-conditions` (based on `feature/F008-lab-team-builder`)
@@ -45,9 +45,9 @@ The Lab menu's **Rules** entry opens a list. Left/Right changes a value, B goes 
 - **Model:** `struct LabSlot` grows to hold `moves[4]`, `item`, `abilitySlot`, `nature`, `ivs`, `hpPercent` and `status` (about 20 B per slot, 240 B in all). A `struct LabRules` adds about 8 B. EWRAM, dev builds only. Reset copies the scenario's `TrainerMon` values (moves, held item, ability, nature, IVs) into the slot.
 - **Build:** for a changed slot, `CreateMonWithIVs`, then `SetMonData` for moves, PP, item, ability number, nature (via the expansion's nature setter or a matching personality), HP and status. Moves are written with full PP.
 - **Battle start:**
-  - The Lab passes a per-battle copy of the opponent trainer (EWRAM) to `gDebugAiTrainerOverride`. The copy carries the chosen `aiFlags` and `startingStatus` (terrain), plus `battleType` for doubles.
+  - AI goes through upstream's `gDebugAIFlags` (debug battles). Doubles add `BATTLE_TYPE_DOUBLE`.
   - Wild battles clear the trainer override and battle flags so the battle is a plain wild encounter against the built party.
-  - Weather is set through the field weather the battle reads at start, chosen during implementation. If that proves unreliable, the fallback is upstream's battle-start weather hook.
+  - Weather and terrain are both set through upstream's `gStartingStatuses`, which the battle keeps from before it starts (`battle_main.c`, `UNPACK_STARTING_STATUS_TO_BATTLE`). That works for wild battles too, so no trainer copy is needed. The Lab clears it again on return.
   - A fixed seed calls `SeedRng`.
 - **Risks:**
   - The longer editor list must stay usable at 240×160. It scrolls with the cursor, six rows at a time.
@@ -78,4 +78,14 @@ About 250 B of EWRAM and a few KB of ROM, dev builds only. Release builds: 0. No
 Revert the PR. The Lab falls back to F008.
 
 ## Evidence and acceptance
-Pending implementation.
+Implemented 2026-11-26 (Linux container):
+- `make -j8`: exit 0, no warnings. `make check TESTS=test/ascension/battle_lab.c`: **13/13 PASS**: 7 F008 tests plus 6 new ones (scenario defaults, a changed slot built with every detail, new species refreshing its moves, move and item lists, rules for AI/weather/terrain/doubles, fixed-seed RNG repeat).
+- Nature is written as upstream's *hidden nature*, which stat calculation (`pokemon.c`, `CalculateMonStats`) and the summary use. The personality nature stays random.
+- Headless screenshots (gbashot):
+  - The editor list scrolls. The letter jump puts Night Shade in Move 1, marked `!` as not in Blaziken's learnset. Ability changes to Speed Boost. Item, HP 50% and Burn are set.
+  - Rules screen shows Rain, Electric and Smart, each marked `!`.
+  - Doubles with 1v1 teams are refused ("Doubles: you need 2 in battle"). With 2v2 teams a real double battle starts, showing "An electric current is running across the battlefield!" then "It started to rain!".
+- Release: `nm pokeemerald-release.elf | grep -ci "BattleLab\|Ascension_C"` = 0.
+- Dev cost vs F008: ROM +5,361 B, EWRAM +200 B. Release: 0.
+- Not checked headlessly: fixed-seed replay in a real battle (the RNG repeat is unit-tested), and the wild format and AI behaviour differences. These are part of the owner playtest.
+- The GBA font has no `←`, `→` or `±`, so the help text uses the game's arrow glyphs and `+-`.
