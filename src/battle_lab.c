@@ -208,8 +208,10 @@ static void CB2_BattleLab_Init(void)
         break;
     }
     case 4:
-        ShowBg(0);
+        // Set the display mode first: ShowBg() then adds the BG0 enable bit to it.
+        // (The other order clears BG0 again and hides every Lab window.)
         SetGpuReg(REG_OFFSET_DISPCNT, DISPCNT_OBJ_ON | DISPCNT_OBJ_1D_MAP);
+        ShowBg(0);
         BeginNormalPaletteFade(PALETTES_ALL, 0, 16, 0, RGB_BLACK);
         SetVBlankCallback(VBlankCB_BattleLab);
         CreateTask(Task_BattleLab_Input, 0);
