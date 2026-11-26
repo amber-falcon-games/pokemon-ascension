@@ -121,6 +121,10 @@ Ascension_Checkpoint_StarterToPokeBalls::
 @ Oldale rival sent on, Wally's catching tutorial in Petalburg (PetalburgCity_Gym,
 @ PetalburgCity), Team Aqua in Petalburg Woods, arrival in Rustboro.
 Ascension_Checkpoint_PokeBallsToGym1::
+	@ Mom's Running Shoes scene on leaving Littleroot (LittlerootTown_EventScript_SetReceivedRunningShoes).
+	setflag FLAG_RECEIVED_RUNNING_SHOES
+	setflag FLAG_SYS_B_DASH
+	setvar VAR_LITTLEROOT_TOWN_STATE, 4
 	setvar VAR_OLDALE_RIVAL_STATE, 2
 	setflag FLAG_HIDE_OLDALE_TOWN_RIVAL
 	setflag FLAG_RECEIVED_POTION_OLDALE
