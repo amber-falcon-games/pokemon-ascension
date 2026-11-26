@@ -107,6 +107,7 @@ static EWRAM_DATA u8 sLabCursor = 0;
 static EWRAM_DATA bool8 sLabNeedsFreshGame = FALSE;
 EWRAM_DATA struct LabSlot gBattleLabTeams[LAB_SIDE_COUNT][PARTY_SIZE] = {0};
 EWRAM_DATA struct LabRules gBattleLabRules = {0};
+static EWRAM_DATA bool8 sLabInBattleFlag = FALSE;   // a Lab battle is running
 
 // Team screen state (task-independent so it survives returning from a battle)
 enum { LAB_MODE_MAIN, LAB_MODE_TEAM, LAB_MODE_EDIT, LAB_MODE_LETTER, LAB_MODE_CONFIRM_RESET, LAB_MODE_RULES };
@@ -129,7 +130,6 @@ static EWRAM_DATA u8 sLabRulesRow = 0;
 static EWRAM_DATA u8 sLabLetterRow = 0;   // editor row the letter picker fills
 // Battle loop (F010)
 enum { LAB_END_NONE, LAB_END_QUIT, LAB_END_RESTART };
-static EWRAM_DATA bool8 sLabInBattle = FALSE;
 static EWRAM_DATA u8 sLabEndRequest = LAB_END_NONE;
 static EWRAM_DATA u8 sLabLastResult = LAB_RESULT_NONE;
 static EWRAM_DATA u8 sLabLastTurns = 0;
@@ -579,6 +579,20 @@ void BattleLab_ApplyStartingStatuses(void)
     case LAB_TERRAIN_MISTY:    gStartingStatuses.mistyTerrain = TRUE; break;
     case LAB_TERRAIN_PSYCHIC:  gStartingStatuses.psychicTerrain = TRUE; break;
     }
+}
+
+// Wild 1v1 uses only the opponent's first active slot (the party is already compacted).
+void BattleLab_TrimToWildOpponent(void)
+{
+    u32 i;
+    for (i = 1; i < PARTY_SIZE; i++)
+        ZeroMonData(&gParties[B_TRAINER_OPPONENT_A][i]);
+    CalculateEnemyPartyCount();
+}
+
+bool32 BattleLab_IsLabBattle(void)
+{
+    return sLabInBattleFlag;
 }
 
 const u8 *BattleLab_ValidateStart(void)
@@ -1322,7 +1336,7 @@ static void BattleLab_HandleLetterInput(void)
 // was taken (the caller then ends the battle).
 bool32 BattleLab_RequestEnd(bool32 restart)
 {
-    if (!sLabInBattle)
+    if (!sLabInBattleFlag)
         return FALSE;
     sLabEndRequest = restart ? LAB_END_RESTART : LAB_END_QUIT;
     return TRUE;
@@ -1360,6 +1374,12 @@ static const u8 *const sLabResultNames[LAB_RESULT_COUNT] =
     [LAB_RESULT_QUIT]      = COMPOUND_STRING("Quit"),
     [LAB_RESULT_RESTARTED] = COMPOUND_STRING("Restarted"),
 };
+
+// battleTurnCounter is the zero-based current turn (saturating u8); this is turns played.
+u32 BattleLab_TurnsPlayed(u32 battleTurnCounter)
+{
+    return battleTurnCounter < 255 ? battleTurnCounter + 1 : 255;
+}
 
 const u8 *BattleLab_ResultName(u32 result)
 {
@@ -1565,8 +1585,12 @@ static void Task_BattleLab_StartBattle(u8 taskId)
     if (gPaletteFade.active)
         return;
 
+    // A fixed seed covers building the parties too (personality: gender, etc.), so the
+    // whole run replays, not just the battle.
+    if (gBattleLabRules.fixedSeed)
+        SeedRng(gBattleLabRules.seed);
     BattleLab_SetupScenarioParties();
-    sLabInBattle = TRUE;
+    sLabInBattleFlag = TRUE;
     sLabEndRequest = LAB_END_NONE;
     gIsDebugBattle = TRUE;   // upstream then keeps the Lab's prebuilt enemy party (battle_main.c)
     gDebugAIFlags = BattleLab_OpponentAiFlags();
@@ -1574,6 +1598,7 @@ static void Task_BattleLab_StartBattle(u8 taskId)
     {
         gDebugAiTrainerOverride = NULL;
         gBattleTypeFlags = 0;
+        BattleLab_TrimToWildOpponent();
         PlayBGM(MUS_VS_WILD);
     }
     else
@@ -1588,8 +1613,6 @@ static void Task_BattleLab_StartBattle(u8 taskId)
     }
     BattleLab_ApplyStartingStatuses();
     gBattleEnvironment = BATTLE_ENVIRONMENT_BUILDING;
-    if (gBattleLabRules.fixedSeed)
-        SeedRng(gBattleLabRules.seed);
     DestroyTask(taskId);
     FreeAllWindowBuffers();
     gMain.savedCallback = CB2_BattleLab_ReturnFromBattle;
@@ -1600,10 +1623,10 @@ static void CB2_BattleLab_ReturnFromBattle(void)
 {
     gIsDebugBattle = FALSE;
     gDebugAiTrainerOverride = NULL;
+    sLabInBattleFlag = FALSE;
     memset(&gStartingStatuses, 0, sizeof(gStartingStatuses));
-    sLabInBattle = FALSE;
     sLabLastResult = BattleLab_ResultFromOutcome(gBattleOutcome, sLabEndRequest == LAB_END_QUIT, sLabEndRequest == LAB_END_RESTART);
-    sLabLastTurns = gBattleResults.battleTurnCounter;
+    sLabLastTurns = BattleLab_TurnsPlayed(gBattleResults.battleTurnCounter);
     FadeOutBGM(4);
     // Throw away whatever the battle changed (XP, items, money): nothing is saved,
     // and the next battle rebuilds both parties from the scenario data.
