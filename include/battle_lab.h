@@ -2,6 +2,7 @@
 #define GUARD_BATTLE_LAB_H
 
 #include "global.h"
+#include "config/ascension.h"
 
 // Pokémon Ascension Battle Lab (F007–F009): dev-build sandbox for real battles.
 // Opened with L + SELECT on the title screen; compiled out of release builds.
@@ -97,6 +98,14 @@ bool32 BattleLab_RulesEdited(void);
 u64 BattleLab_OpponentAiFlags(void);
 void BattleLab_ApplyStartingStatuses(void);
 const u8 *BattleLab_ValidateStart(void);   // NULL if the battle can start, else a message
+void BattleLab_TrimToWildOpponent(void);
+
+// TRUE while a Battle Lab battle runs (used by small upstream hooks); always FALSE in release.
+#if ASCENSION_BATTLE_LAB
+bool32 BattleLab_IsLabBattle(void);
+#else
+static inline bool32 BattleLab_IsLabBattle(void) { return FALSE; }
+#endif
 
 // Battle loop (F010)
 enum LabResult
@@ -107,5 +116,6 @@ enum LabResult
 bool32 BattleLab_RequestEnd(bool32 restart);   // from the in-battle debug menu; FALSE outside Lab battles
 u32 BattleLab_ResultFromOutcome(u32 outcome, bool32 quit, bool32 restart);
 const u8 *BattleLab_ResultName(u32 result);
+u32 BattleLab_TurnsPlayed(u32 battleTurnCounter);
 
 #endif // GUARD_BATTLE_LAB_H

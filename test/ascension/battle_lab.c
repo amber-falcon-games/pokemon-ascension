@@ -259,3 +259,39 @@ TEST("Battle Lab restart and quit are refused outside Lab battles")
     EXPECT(!BattleLab_RequestEnd(TRUE));
     EXPECT(!BattleLab_RequestEnd(FALSE));
 }
+
+TEST("Battle Lab fixed seed makes party building repeatable (personality, gender)")
+{
+    u32 first;
+    ASSUME(ASCENSION_BATTLE_LAB);
+    BattleLab_ResetTeams();
+    BattleLab_SetSlotSpecies(LAB_SIDE_OPPONENT, 0, SPECIES_NIDORINO);
+    SeedRng(4321);
+    BattleLab_SetupScenarioParties();
+    first = GetMonData(&gParties[B_TRAINER_OPPONENT_A][0], MON_DATA_PERSONALITY);
+    SeedRng(4321);
+    BattleLab_SetupScenarioParties();
+    EXPECT_EQ(GetMonData(&gParties[B_TRAINER_OPPONENT_A][0], MON_DATA_PERSONALITY), first);
+}
+
+TEST("Battle Lab wild battles keep only the opponent's first active Pokémon")
+{
+    ASSUME(ASCENSION_BATTLE_LAB);
+    BattleLab_ResetTeams();
+    BattleLab_SetSlotSpecies(LAB_SIDE_OPPONENT, 1, SPECIES_ONIX);
+    BattleLab_SetupScenarioParties();
+    EXPECT_EQ(gPartiesCount[B_TRAINER_OPPONENT_A], 2);
+    BattleLab_TrimToWildOpponent();
+    EXPECT_EQ(GetMonData(&gParties[B_TRAINER_OPPONENT_A][0], MON_DATA_SPECIES), SPECIES_BLAZIKEN);
+    EXPECT_EQ(GetMonData(&gParties[B_TRAINER_OPPONENT_A][1], MON_DATA_SPECIES), SPECIES_NONE);
+    EXPECT_EQ(gPartiesCount[B_TRAINER_OPPONENT_A], 1);
+    EXPECT(!BattleLab_IsLabBattle());   // only set while a Lab battle runs
+}
+
+TEST("Battle Lab turn count shows turns played (counter is zero-based)")
+{
+    ASSUME(ASCENSION_BATTLE_LAB);
+    EXPECT_EQ(BattleLab_TurnsPlayed(0), 1);
+    EXPECT_EQ(BattleLab_TurnsPlayed(4), 5);
+    EXPECT_EQ(BattleLab_TurnsPlayed(255), 255);
+}
