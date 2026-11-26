@@ -20,6 +20,7 @@ No automatic releases on merge (D017). No built ROMs, saves or base ROMs in the 
 ## Acceptance criteria
 - [x] Patch tool unit tests: 6/6 (identical files, in-place edits, moved blocks, runs, growth, shrink, empty, wrong source rejected, corrupt patch rejected, varints).
 - [x] Real-size round trip: upstream ROM → F005b ROM (32 MB each), patch 1.96 MB, created in 17 s, verified exact. 16 MB source (Emerald-sized) → 32 MB target: patch 11.2 MB, verified exact.
+- [x] Guided mode (owner request): with no version argument the script proposes one (0.1.0 when there are no tags, otherwise the next minor), offers to switch to and pull `main`, asks for the base ROM path, opens the release build with a smoke-test checklist and waits, opens Rom Patcher JS and Finder at the patch and waits, then asks before publishing. Tested in a pseudo-terminal with scripted answers (version accepted, smoke test yes, patch check yes): all steps ran in order and stopped before publishing with `--no-publish`.
 - [x] `release.sh --no-publish` end to end in the container, with a stand-in base ROM (the checksum check pointed at the stand-in for the test only): release build, 13.1 MB patch, verified exact.
 - [ ] Owner: smoke test passes on the Mac (checklist below).
 - [ ] Owner: `./scripts/release.sh 0.1.0` with their own Emerald dump publishes `v0.1.0`; the patch applies in Rom Patcher JS (independent implementation) and the result boots.
