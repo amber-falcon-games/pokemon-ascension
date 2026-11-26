@@ -1,5 +1,7 @@
 # Pokémon Ascension
 
+[![Nightly build](https://github.com/amber-falcon-games/pokemon-ascension/actions/workflows/nightly-build.yml/badge.svg)](https://github.com/amber-falcon-games/pokemon-ascension/actions/workflows/nightly-build.yml) [![Nightly tests](https://github.com/amber-falcon-games/pokemon-ascension/actions/workflows/nightly-tests.yml/badge.svg)](https://github.com/amber-falcon-games/pokemon-ascension/actions/workflows/nightly-tests.yml)
+
 An experimental, anime-inspired Pokémon Emerald overhaul: dynamic tactical battles, creative elemental interactions and expanded evolution.
 
 **Status:** upstream engine imported (pokeemerald-expansion 1.17.2, F001); project scripts not yet implemented (F002+). Until then, build with upstream's `make` (see upstream [INSTALL.md](INSTALL.md)). See [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current task and [roadmap](docs/ROADMAP.md) for the ordered delivery plan.

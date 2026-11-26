@@ -2,6 +2,10 @@
 
 Status key: TODO, ACTIVE, BLOCKED, AWAITING_ACCEPTANCE, DONE. All entries TODO initially except F000 ready for review. Dependencies are minimum prerequisites; Claude may split work into stable subfeatures after source analysis, recording rationale. Do not reorder foundation without approval. Each feature must be independently runnable after F006; use disabled flags for incomplete mechanics. Do not mark DONE without evidence.
 
+## Approved execution order (owner, 2026-11-26)
+Work proceeds strictly in this order; the table below keeps dependencies and descriptions. Owner priority: reach a lean playable MVP quickly, then visible changes.
+1. F004a CI speed-up · 2. F002 Mac setup/doctor · 3. F003 build script · 4. F004b test script · 5. F005 mGBA play/status scripts · 6. F005b remove cut features (D011) and reduce to 10 boxes · 7. F006 baseline release 0.1.0 + release script · 8–14. F007–F013 Battle Lab (0.2.0) · 15. F017 feasibility spike (timeline, energy, >4 moves; platform checkpoint) · 16. F014 categorised move menu · 17. F015 talent-tree move data and persistence · 18. F016 move info and Pokédex (0.3.0) · 19. F018 initiative timeline · 20. F019 energy replaces PP · 21. F020 queue/cancel/intervene · 22. F021 AI parity and regression (0.4.0) · 23–27. F022–F026 reactive combat (0.5.0) · 28–32. F027–F031 progression and evolution (0.6.0) · 33–35. F032–F034 campaign (1.0) · 36. F035 quests and mythology.
+
 | ID | Deliverable | Depends on |
 |---|---|---|
 | F000 | Documentation scaffold review — DONE ([spec](features/F000-scaffold-review.md)) | — |
@@ -11,7 +15,8 @@ Status key: TODO, ACTIVE, BLOCKED, AWAITING_ACCEPTANCE, DONE. All entries TODO i
 | F003 | Reproducible ROM compilation, build script | F002 |
 | F004b | Test script (`scripts/test.sh`) on top of F004a CI | F003 |
 | F005 | mGBA launch, local play and status scripts | F003 |
-| F006 | Baseline playable release, smoke test and resource measurements | F004,F005 |
+| F005b | Remove cut features (D011), reduce PC to 10 boxes; final save layout before first release | F005 |
+| F006 | Baseline playable release 0.1.0, smoke test, resource measurements, release script (D017) | F004b,F005b |
 | F007 | Battle Lab entry and debug UI | F006 |
 | F008 | Both team builders | F007 |
 | F009 | Battle conditions, moves, abilities, items and AI setup | F008 |
@@ -19,12 +24,12 @@ Status key: TODO, ACTIVE, BLOCKED, AWAITING_ACCEPTANCE, DONE. All entries TODO i
 | F011 | Save/load named scenarios and preset registry | F010 |
 | F012 | State inspection, deterministic controls and flags | F011 |
 | F013 | Lab acceptance and stable foundation release | F012 |
-| F014 | Expanded command menus using baseline moves | F013 |
+| F014 | Categorised Final Fantasy-style move menu (D015) | F017 |
 | F015 | Move library data/persistence and learning | F014 |
 | F016 | Quick move info and in-battle Pokédex | F015 |
-| F017 | Scheduler feasibility spike, gated and benchmarked | F016 |
-| F018 | Initiative and action duration/recovery | F017 |
-| F019 | Action resources and cooldowns | F018 |
+| F017 | Feasibility spike: timeline, energy (D016), >4 moves, AI time; platform checkpoint | F013 |
+| F018 | Initiative timeline: order from energy, recovery and Speed | F016 |
+| F019 | Energy replaces PP: costs, regeneration, recovery | F018 |
 | F020 | Queue, cancellation and manual intervention | F019 |
 | F021 | Scheduler-aware enemy AI and full battle regression | F020 |
 | F022 | Defensive move variants and conditional reactions | F021 |

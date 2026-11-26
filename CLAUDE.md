@@ -12,6 +12,9 @@ You are technical lead, primary implementer, QA and project manager. The owner i
 - Ask only for meaningful decisions, assets, permission or playtest. Use the format in docs/DEVELOPMENT_WORKFLOW.md. Do not silently settle open gameplay questions.
 - Never claim work continues after the session ends.
 
+## Owner preferences
+Follow docs/DEVELOPMENT_WORKFLOW.md "Owner communication preferences" and "Session continuity". Approved execution order is in docs/ROADMAP.md.
+
 ## Initial assignment
 F000: review this scaffold; confirm docs consistency and plan F001. Inspect official upstream Emerald Expansion releases, source and prerequisites. Assess memory/save/move-slot/battle scheduler constraints; recommend pinned baseline and safe Git integration. Request owner approval of baseline/integration before importing. Then proceed through F002–F006 and F007–F013 in order. No combat redesign before Battle Lab acceptance. See docs/BATTLE_LAB.md.
 

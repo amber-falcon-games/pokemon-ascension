@@ -1,0 +1,35 @@
+name: Set up build
+description: Install the GBA toolchain and restore the incremental build cache.
+inputs:
+  cache-family:
+    description: Cache name prefix (e.g. rom, test).
+    required: true
+outputs:
+  cache-key:
+    description: Exact key to save the cache under after a successful build.
+    value: ${{ steps.key.outputs.key }}
+runs:
+  using: composite
+  steps:
+    - name: Install toolchain
+      shell: bash
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq --no-install-recommends binutils-arm-none-eabi gcc-arm-none-eabi libnewlib-arm-none-eabi libpng-dev python3 >/dev/null
+        arm-none-eabi-gcc --version | head -1
+    - name: Compute cache key
+      id: key
+      shell: bash
+      run: |
+        toolchain=$(arm-none-eabi-gcc --version | head -1 | tr -c 'A-Za-z0-9.' '_')
+        echo "prefix=${{ inputs.cache-family }}-${{ runner.os }}-${toolchain}-${{ hashFiles('Makefile', '*.mk', 'ld_script*.ld', 'tools/**') }}-" >> "$GITHUB_OUTPUT"
+        echo "key=${{ inputs.cache-family }}-${{ runner.os }}-${toolchain}-${{ hashFiles('Makefile', '*.mk', 'ld_script*.ld', 'tools/**') }}-${{ github.sha }}" >> "$GITHUB_OUTPUT"
+    - name: Restore build cache
+      uses: actions/cache/restore@v4
+      with:
+        path: ~/build-cache.tar
+        key: ${{ steps.key.outputs.key }}
+        restore-keys: ${{ steps.key.outputs.prefix }}
+    - name: Prepare incremental build
+      shell: bash
+      run: .github/ci/restore-build-cache.sh ~/build-cache.tar
