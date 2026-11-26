@@ -1,5 +1,5 @@
 # F001 — Upstream audit, pinned baseline and integration plan
-Status: ACTIVE (D010 approved 2026-11-26; import done, verification and PR in progress)
+Status: DONE
 Dependencies: F000
 Owner decision IDs: D010
 Branch / commit: `claude/sharp-euler-yfhti2` (the cloud session may only push this branch, so it serves as the F001 feature branch instead of `feature/F001-upstream-import`)
@@ -75,7 +75,7 @@ Not recommended: `upcoming` (unstable), submodule/subtree (upstream build expect
 - [x] Baseline and integration recommendation with options.
 - [x] Owner approves D010 (2026-11-26).
 - [x] Merge performed (merge commit `bfc0553a56` on `claude/sharp-euler-yfhti2`); `make` and `make check` pass on the merged tree; all scaffold docs intact.
-- [ ] PR reviewed and merged to `main`.
+- [x] PR #1 merged to `main` as a merge commit (`02efe96`, 2026-11-26), owner-instructed.
 
 ## Automated tests and regression
 After import: `make -j$(nproc)` and `make check -j$(nproc)` must reproduce the figures above (allowing for our documentation-only additions, which do not affect the ROM). `git log` must show both root commits.
