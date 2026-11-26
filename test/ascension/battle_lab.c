@@ -2,6 +2,7 @@
 #include "battle_lab.h"
 #include "config/ascension.h"
 #include "battle.h"
+#include "constants/characters.h"
 #include "random.h"
 #include "test/test.h"
 #include "constants/battle_ai.h"
@@ -236,4 +237,25 @@ TEST("Battle Lab fixed seed repeats the RNG sequence")
     EXPECT_EQ(Random32(), a);
     c = Random32();
     EXPECT_EQ(c, b);
+}
+
+// ---------------------------------------------------------------- F010: battle loop
+
+TEST("Battle Lab result text for each battle outcome")
+{
+    ASSUME(ASCENSION_BATTLE_LAB);
+    EXPECT_EQ(BattleLab_ResultFromOutcome(B_OUTCOME_WON, FALSE, FALSE), LAB_RESULT_WON);
+    EXPECT_EQ(BattleLab_ResultFromOutcome(B_OUTCOME_LOST, FALSE, FALSE), LAB_RESULT_LOST);
+    EXPECT_EQ(BattleLab_ResultFromOutcome(B_OUTCOME_RAN, FALSE, FALSE), LAB_RESULT_RAN);
+    EXPECT_EQ(BattleLab_ResultFromOutcome(B_OUTCOME_CAUGHT, FALSE, FALSE), LAB_RESULT_CAUGHT);
+    EXPECT_EQ(BattleLab_ResultFromOutcome(B_OUTCOME_DREW, TRUE, FALSE), LAB_RESULT_QUIT);
+    EXPECT_EQ(BattleLab_ResultFromOutcome(B_OUTCOME_DREW, FALSE, TRUE), LAB_RESULT_RESTARTED);
+    EXPECT_EQ(BattleLab_ResultName(LAB_RESULT_WON)[0], CHAR_W);
+}
+
+TEST("Battle Lab restart and quit are refused outside Lab battles")
+{
+    ASSUME(ASCENSION_BATTLE_LAB);
+    EXPECT(!BattleLab_RequestEnd(TRUE));
+    EXPECT(!BattleLab_RequestEnd(FALSE));
 }

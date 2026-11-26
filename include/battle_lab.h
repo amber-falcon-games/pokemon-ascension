@@ -98,4 +98,14 @@ u64 BattleLab_OpponentAiFlags(void);
 void BattleLab_ApplyStartingStatuses(void);
 const u8 *BattleLab_ValidateStart(void);   // NULL if the battle can start, else a message
 
+// Battle loop (F010)
+enum LabResult
+{
+    LAB_RESULT_NONE, LAB_RESULT_WON, LAB_RESULT_LOST, LAB_RESULT_DREW, LAB_RESULT_RAN,
+    LAB_RESULT_CAUGHT, LAB_RESULT_QUIT, LAB_RESULT_RESTARTED, LAB_RESULT_COUNT
+};
+bool32 BattleLab_RequestEnd(bool32 restart);   // from the in-battle debug menu; FALSE outside Lab battles
+u32 BattleLab_ResultFromOutcome(u32 outcome, bool32 quit, bool32 restart);
+const u8 *BattleLab_ResultName(u32 result);
+
 #endif // GUARD_BATTLE_LAB_H

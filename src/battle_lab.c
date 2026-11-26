@@ -127,6 +127,12 @@ static EWRAM_DATA u8 sLabLetter = 0;
 static EWRAM_DATA u8 sLabEditScroll = 0;
 static EWRAM_DATA u8 sLabRulesRow = 0;
 static EWRAM_DATA u8 sLabLetterRow = 0;   // editor row the letter picker fills
+// Battle loop (F010)
+enum { LAB_END_NONE, LAB_END_QUIT, LAB_END_RESTART };
+static EWRAM_DATA bool8 sLabInBattle = FALSE;
+static EWRAM_DATA u8 sLabEndRequest = LAB_END_NONE;
+static EWRAM_DATA u8 sLabLastResult = LAB_RESULT_NONE;
+static EWRAM_DATA u8 sLabLastTurns = 0;
 
 static void CB2_BattleLab_Init(void);
 static void CB2_BattleLab_Main(void);
@@ -724,9 +730,19 @@ static void CB2_BattleLab_Init(void)
         // (The other order clears BG0 again and hides every Lab window.)
         SetGpuReg(REG_OFFSET_DISPCNT, DISPCNT_OBJ_ON | DISPCNT_OBJ_1D_MAP);
         ShowBg(0);
-        BeginNormalPaletteFade(PALETTES_ALL, 0, 16, 0, RGB_BLACK);
         SetVBlankCallback(VBlankCB_BattleLab);
-        CreateTask(Task_BattleLab_Input, 0);
+        if (sLabEndRequest == LAB_END_RESTART)
+        {
+            // Lab: Restart (F010): stay black and start the same setup again.
+            sLabEndRequest = LAB_END_NONE;
+            BeginNormalPaletteFade(PALETTES_ALL, 0, 16, 16, RGB_BLACK);
+            CreateTask(Task_BattleLab_StartBattle, 0);
+        }
+        else
+        {
+            BeginNormalPaletteFade(PALETTES_ALL, 0, 16, 0, RGB_BLACK);
+            CreateTask(Task_BattleLab_Input, 0);
+        }
         SetMainCallback2(CB2_BattleLab_Main);
         break;
     }
@@ -754,11 +770,25 @@ static void LabAppendNumber(u8 *dst, u32 value, u32 digits)
 
 static void BattleLab_DrawTitle(void)
 {
+    u8 *buf = gStringVar3;
+
+    buf[0] = EOS;
+    StringAppend(buf, BattleLab_IsEdited() ? COMPOUND_STRING("BATTLE LAB · LAB-001 (edited)")
+                                           : COMPOUND_STRING("BATTLE LAB · LAB-001 baseline 1v1"));
+    // Last battle's result (F010), e.g. "· Won 4t".
+    if (sLabLastResult != LAB_RESULT_NONE)
+    {
+        StringAppend(buf, COMPOUND_STRING(" · "));
+        StringAppend(buf, BattleLab_ResultName(sLabLastResult));
+        if (sLabLastResult == LAB_RESULT_WON || sLabLastResult == LAB_RESULT_LOST)
+        {
+            StringAppend(buf, COMPOUND_STRING(" "));
+            LabAppendNumber(buf, sLabLastTurns, 3);
+            StringAppend(buf, COMPOUND_STRING("t"));
+        }
+    }
     FillWindowPixelBuffer(WIN_TITLE, PIXEL_FILL(1));
-    AddTextPrinterParameterized(WIN_TITLE, FONT_NORMAL,
-        BattleLab_IsEdited() ? COMPOUND_STRING("BATTLE LAB · LAB-001 (edited)")
-                             : COMPOUND_STRING("BATTLE LAB · LAB-001 baseline 1v1"),
-        0, 1, TEXT_SKIP_DRAW, NULL);
+    AddTextPrinterParameterized(WIN_TITLE, FONT_NARROW, buf, 0, 1, TEXT_SKIP_DRAW, NULL);
     CopyWindowToVram(WIN_TITLE, COPYWIN_GFX);
 }
 
@@ -1286,6 +1316,56 @@ static void BattleLab_HandleLetterInput(void)
 }
 
 
+// ---------------------------------------------------------------- battle loop (F010)
+
+// Called from upstream's in-battle debug menu. TRUE if this is a Lab battle and the request
+// was taken (the caller then ends the battle).
+bool32 BattleLab_RequestEnd(bool32 restart)
+{
+    if (!sLabInBattle)
+        return FALSE;
+    sLabEndRequest = restart ? LAB_END_RESTART : LAB_END_QUIT;
+    return TRUE;
+}
+
+u32 BattleLab_ResultFromOutcome(u32 outcome, bool32 quit, bool32 restart)
+{
+    if (restart)
+        return LAB_RESULT_RESTARTED;
+    if (quit)
+        return LAB_RESULT_QUIT;
+    switch (outcome & ~B_OUTCOME_LINK_BATTLE_RAN)
+    {
+    case B_OUTCOME_WON:  return LAB_RESULT_WON;
+    case B_OUTCOME_LOST: return LAB_RESULT_LOST;
+    case B_OUTCOME_DREW: return LAB_RESULT_DREW;
+    case B_OUTCOME_RAN:
+    case B_OUTCOME_PLAYER_TELEPORTED:
+    case B_OUTCOME_MON_FLED:
+    case B_OUTCOME_MON_TELEPORTED:
+        return LAB_RESULT_RAN;
+    case B_OUTCOME_CAUGHT: return LAB_RESULT_CAUGHT;
+    default: return LAB_RESULT_NONE;
+    }
+}
+
+static const u8 *const sLabResultNames[LAB_RESULT_COUNT] =
+{
+    [LAB_RESULT_NONE]      = COMPOUND_STRING(""),
+    [LAB_RESULT_WON]       = COMPOUND_STRING("Won"),
+    [LAB_RESULT_LOST]      = COMPOUND_STRING("Lost"),
+    [LAB_RESULT_DREW]      = COMPOUND_STRING("Draw"),
+    [LAB_RESULT_RAN]       = COMPOUND_STRING("Ran"),
+    [LAB_RESULT_CAUGHT]    = COMPOUND_STRING("Caught"),
+    [LAB_RESULT_QUIT]      = COMPOUND_STRING("Quit"),
+    [LAB_RESULT_RESTARTED] = COMPOUND_STRING("Restarted"),
+};
+
+const u8 *BattleLab_ResultName(u32 result)
+{
+    return result < LAB_RESULT_COUNT ? sLabResultNames[result] : sLabResultNames[LAB_RESULT_NONE];
+}
+
 // ---------------------------------------------------------------- rules screen (F009)
 
 static const u8 *const sLabRulesLabels[RULES_ROW_COUNT] =
@@ -1486,6 +1566,8 @@ static void Task_BattleLab_StartBattle(u8 taskId)
         return;
 
     BattleLab_SetupScenarioParties();
+    sLabInBattle = TRUE;
+    sLabEndRequest = LAB_END_NONE;
     gIsDebugBattle = TRUE;   // upstream then keeps the Lab's prebuilt enemy party (battle_main.c)
     gDebugAIFlags = BattleLab_OpponentAiFlags();
     if (wild)
@@ -1519,6 +1601,9 @@ static void CB2_BattleLab_ReturnFromBattle(void)
     gIsDebugBattle = FALSE;
     gDebugAiTrainerOverride = NULL;
     memset(&gStartingStatuses, 0, sizeof(gStartingStatuses));
+    sLabInBattle = FALSE;
+    sLabLastResult = BattleLab_ResultFromOutcome(gBattleOutcome, sLabEndRequest == LAB_END_QUIT, sLabEndRequest == LAB_END_RESTART);
+    sLabLastTurns = gBattleResults.battleTurnCounter;
     FadeOutBGM(4);
     // Throw away whatever the battle changed (XP, items, money): nothing is saved,
     // and the next battle rebuilds both parties from the scenario data.

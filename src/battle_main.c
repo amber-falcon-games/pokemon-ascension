@@ -5856,3 +5856,13 @@ void BattleDebug_WonBattle(void)
     gBattleOutcome |= B_OUTCOME_WON;
     gBattleMainFunc = sEndTurnFuncsTable[gBattleOutcome & 0x7F];
 }
+
+// Pokémon Ascension (F010): ends the battle at once with the given outcome (Battle Lab
+// restart/quit from the in-battle debug menu, during action selection). Marking the turn
+// finished lets HandleEndTurn_FinishBattle run without waiting for the player's action.
+void BattleDebug_EndBattle(u32 outcome)
+{
+    gBattleOutcome |= outcome;
+    gCurrentActionFuncId = B_ACTION_FINISHED;
+    gBattleMainFunc = sEndTurnFuncsTable[gBattleOutcome & 0x7F];
+}

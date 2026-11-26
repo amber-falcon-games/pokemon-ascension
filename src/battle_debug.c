@@ -32,6 +32,10 @@
 #include "reshow_battle_screen.h"
 #include "constants/abilities.h"
 #include "constants/party_menu.h"
+#include "battle_lab.h"
+#include "config/ascension.h"
+#include "sound.h"
+#include "constants/songs.h"
 #include "constants/moves.h"
 #include "constants/items.h"
 #include "constants/rgb.h"
@@ -112,6 +116,8 @@ enum
     LIST_ITEM_AI_PARTY,
     LIST_ITEM_VARIOUS,
     LIST_ITEM_INSTANT_WIN,
+    LIST_ITEM_LAB_RESTART,   // Pokémon Ascension (F010): Battle Lab battles only
+    LIST_ITEM_LAB_QUIT,
     LIST_ITEM_COUNT
 };
 
@@ -328,6 +334,8 @@ static const struct ListMenuItem sMainListItems[] =
     {COMPOUND_STRING("AI Party"),     LIST_ITEM_AI_PARTY},
     {COMPOUND_STRING("Various"),      LIST_ITEM_VARIOUS},
     {COMPOUND_STRING("Instant Win"),  LIST_ITEM_INSTANT_WIN},
+    {COMPOUND_STRING("Lab: Restart"), LIST_ITEM_LAB_RESTART},   // Pokémon Ascension (F010)
+    {COMPOUND_STRING("Lab: Quit"),    LIST_ITEM_LAB_QUIT},
 };
 
 static const struct ListMenuItem sStatsListItems[] =
@@ -1202,6 +1210,23 @@ static void Task_DebugMenuProcessInput(u8 taskId)
                 SwitchToAiPartyView(taskId);
                 return;
             }
+#if ASCENSION_BATTLE_LAB
+            else if ((listItemId == LIST_ITEM_LAB_RESTART || listItemId == LIST_ITEM_LAB_QUIT) && JOY_NEW(A_BUTTON))
+            {
+                // Pokémon Ascension (F010): end a Battle Lab battle and restart it or go back to the Lab.
+                if (BattleLab_RequestEnd(listItemId == LIST_ITEM_LAB_RESTART))
+                {
+                    BattleDebug_EndBattle(B_OUTCOME_PLAYER_TELEPORTED);   // ends silently (HandleEndTurn_FinishBattle)
+                    BeginNormalPaletteFade(-1, 0, 0, 0x10, 0);
+                    gTasks[taskId].func = Task_DebugMenuFadeOut;
+                }
+                else
+                {
+                    PlaySE(SE_FAILURE);
+                }
+                return;
+            }
+#endif
             else if (listItemId == LIST_ITEM_INSTANT_WIN && JOY_NEW(A_BUTTON))
             {
                 BattleDebug_WonBattle();
