@@ -1,5 +1,5 @@
 # F017 — Feasibility spike: timeline, energy, more than 4 moves, AI time
-Status: IN_PROGRESS (model D agreed, D023; spike being built)
+Status: OWNER PLAYTEST (spike steps 1–5 built; go/no-go decision pending)
 Dependencies: F013 (Battle Lab accepted, 0.2.0)
 Owner decision IDs: D015 (more than 4 moves, talent tree), D016 (energy replaces PP; order from energy, recovery and Speed); new decisions requested below
 Branch / commit: `feature/F017-energy-spike`
@@ -86,7 +86,24 @@ Raw logs come from headless runs (gbashot with the game's log).
 | Can the upstream loop run one-action rounds? | Yes. One hook in action selection reuses upstream's "cannot act" action. Lab tests 22/22; LAB-011 and LAB-012 play to the end under the timeline. End-of-turn effects need re-timing (above) | **Go**, with F018 re-timing work |
 | AI decision time (hardware timer 3, 4,389 ticks = 1 frame) | 1v1 Swampert mirror: 0.71–0.99 frames per decision under both Classic and Stamina. Metagross Lv55: 1.06 frames. **6v6 LAB-009 under Classic: 4.5–8.1 frames**, because upstream's smart AI analyses switches across the whole party. The timeline adds no measurable AI cost | **Go for 1v1** (under 2 frames). For full parties the 2-frame target is already missed upstream, at about 0.13 s, not a visible stall. F018 should cache or spread the switch analysis across frames |
 | More than 4 moves in battle RAM | Not prototyped in the spike. Code audit: `MAX_MON_MOVES` is used 272 times in 26 battle files (446 in all of src). A separate battle-only `MAX_BATTLE_MOVES = 8`, with saved Pokémon keeping 4, adds about 1.3 KB of battle RAM (AI damage, score and accuracy tables, battler move lists). AI scoring is linear in moves: about 2× per decision, so about 1.5 frames for 1v1 | **Go (estimate)**. A bounded refactor plus a new scrolling move menu, for F015/F018 |
+| Battle length, Classic vs Stamina (same scripted input: always the first move) | LAB-011: Classic lost after 1 turn (Slaking one-shots Ninjask) vs Stamina lost after 5 rounds, with Ninjask acting 3 times. LAB-012: Classic **lost** after 10 turns (Hydro Pump ran out of PP) vs Stamina **won** after 7 rounds (the cheap-move side tired itself out). The LAB-009 (6v6) and LAB-013 (3v3) headless runs did not finish: scripted input can't reliably get through faint/switch menus | Partial. **Owner playtest** compares feel and length |
 | ROM and EWRAM (spike code, dev builds only) | +2,188 B ROM and +53 B EWRAM for the stamina, timeline and Boost code (symbol sizes), plus about 0.3 KB for the AI timer. Release build: 0 (checked) | **Go** |
+
+## Go/no-go recommendation (owner decides)
+**Recommendation: go, and stay on the GBA engine.** Energy, Exhausted, the timeline and Boost all run on upstream's battle loop with small, Lab-only hooks. The costs found are bounded engineering for F018:
+- re-time the end-of-turn effects
+- cache the AI's switch analysis across frames
+- a battle-only 8-move list plus a scrolling menu
+
+None of them argues for another platform. The open question is **feel**, and that's the owner's playtest.
+
+## Owner playtest (Battle Lab)
+1. `git fetch && git checkout feature/F017-energy-spike && ./scripts/play.sh --lab`
+2. Play **LAB-011** (Ninjask vs Slaking), **LAB-012** (Hydro Pump vs cheap moves) and **LAB-013** (tire out the boss). All three default to Stamina.
+3. In the move menu, press **R** to cycle the Boost: EN → SPD → POW → ALL. Watch the cost in the PP box and the preview on your energy bar.
+4. To compare, set **Rules → Combat: Classic** and play the same scenario again.
+5. Optional: mGBA **Tools → View Logs** shows the clock ("LAB clock: … ACTS"), energy payments and AI timings.
+6. Tell me: does Speed feel right? Is "wait for the big move" a real choice? Does tiring the boss work? Are battles dynamic rather than grindy? And go or no-go?
 
 ## Explicit exclusions
 - Final balance: F019.
