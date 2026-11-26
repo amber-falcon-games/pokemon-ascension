@@ -1,5 +1,5 @@
 # F017 — Feasibility spike: timeline, energy, more than 4 moves, AI time
-Status: SPEC — OWNER DECISIONS NEEDED (model to prototype, and four starting choices, below)
+Status: IN_PROGRESS (model D agreed, D023; spike being built)
 Dependencies: F013 (Battle Lab accepted, 0.2.0)
 Owner decision IDs: D015 (more than 4 moves, talent tree), D016 (energy replaces PP; order from energy, recovery and Speed); new decisions requested below
 Branch / commit: `feature/F017-energy-spike`
@@ -14,37 +14,33 @@ Before committing to F018–F021, prove on the real GBA engine that the core com
 
 Everything sits behind a **Battle Lab only** Rules toggle (`Turn order: Classic / Timeline`). The campaign and release builds are untouched. Classic stays the default until F018–F019 are approved.
 
-## The three models (owner: choose one to prototype, or two to compare)
-All three keep the player in control: the timeline **pauses while you choose**, and nothing acts on its own (GAME_DESIGN.md). Numbers are starting points for the Lab, not final balance.
+## Model: D, the stamina timeline (owner decision D023)
+The owner's design replaces options A–C (2026-11-26).
 
-### A. Charge timeline (FFX-style)
-- Every battler has a **time counter**. The battler with the lowest counter acts next.
-- After acting, its counter grows by the **move's recovery** ÷ **Speed** factor: fast Pokémon and light moves come round sooner.
-- **Energy:** a pool (e.g. 100). Each move costs energy, and every battler regains a little whenever anyone acts. At 0 the Pokémon can only Rest, which restores energy but costs time.
-- *Feel:* very readable, and you can show the next 5–6 turns in a strip on screen. Speed matters a lot.
-- *Engine cost:* medium. Upstream's turn loop collects an action from every battler each round. The spike makes the round 1 action long.
+**Rules:**
+- **One energy bar replaces HP and PP.** Max energy is the Pokémon's max HP (species, level, evolution), and damage drains it as today.
+- **Moves cost energy** as a share of the user's max:
+  - damaging moves: about power ÷ 6 % (Tackle 40 → 7%, Flamethrower 90 → 15%, Hyper Beam 150 → 25%)
+  - status moves: 5%
+  - Protect-type and recovery moves: free
 
-### B. Energy bar (ATB-style; recommended)
-- Each battler's **energy bar fills over time** at a rate set by **Speed**. You may act once your bar covers the move's **cost**.
-- Big moves cost more, so you wait longer to use them; small moves let you act often. After acting, the move's **recovery** briefly slows refilling.
-- Energy *is* the time resource, so there is one number to balance, and stalling is self-limiting (no resource is free).
-- *Feel:* tense and flexible: "hit now with a jab, or wait for the big one?" This fits D016 most directly: order comes from energy, recovery and Speed.
-- *Engine cost:* the same as A (1-action rounds), plus a bar per battler in the UI.
+  Your own move never takes you below 1. These are starting numbers, tuned in the Lab.
+- **Exhausted** applies at ≤ 25% energy, from any cause: Speed ×0.75, move power ×0.85, accuracy ×0.9. Moves with power ≥ 100 are locked, and the Pokémon is easier to hit (opponents' accuracy +10%).
+- **Regeneration:** +2% of max energy at the end of each turn, but not on a turn the Pokémon protected.
+- **Protect:** upstream's consecutive-use rule (1/3, then 1/9, …).
+- **Timeline turn order:** faster Pokémon act more often (spike step 3).
+- **Boost:** R on a move opens Speed / Power / Both. Speed costs +50% (acts sooner), Power costs +50% (×1.3 power), Both costs +100%. The cost is previewed on the energy bar.
 
-### C. Rounds with energy (smallest change)
-- Keep classic rounds: everyone picks, then actions resolve in order.
-- Order is **Speed adjusted by the previous move's recovery**, so a heavy move makes you slower next round.
-- **Energy** replaces PP as a pool, with a per-move cost and a per-round refill.
-- *Feel:* familiar Pokémon rhythm with a resource twist. It is the least "timeline" of the three.
-- *Engine cost:* low (it mostly changes turn order and PP), but it may not deliver the battle feel you're after.
+**Spike build order** (each step is playable in the Lab):
+1. energy costs on one bar
+2. Exhausted
+3. timeline
+4. Boost with the cost preview
+5. scenarios
 
-**Recommendation: B**, with A as a fallback if the bars feel fiddly on a GBA screen. The spike can prototype **B and C side by side** for little extra cost (they share the energy code), so you can feel the difference in the Lab before choosing.
+Everything is behind the Lab Rules row **Combat: Classic / Stamina**.
 
-## Starting choices (owner: accept or change)
-1. **Energy scale:** 100 per Pokémon. Move cost scales with power (e.g. Tackle 15, Flamethrower 35, Hyper Beam 70), and status moves cost 10–25.
-2. **Speed effect:** fill rate or time gain is proportional to Speed, clamped to between 0.5× and 2× of the average, so slow Pokémon still get turns.
-3. **Out of energy:** you can only Rest, which skips your action and refills energy faster. There's no Struggle.
-4. **Selecting pauses the timeline** for both sides; the AI decides instantly when its turn comes.
+Out of scope for the spike: carrying energy over between battles, recovery while walking, and fainted Pokémon waking up. Those are campaign work in F019, and the save layout needs no change for them, since the HP field becomes energy.
 
 ## What the spike measures (the go/no-go evidence)
 | Question | How | Go if |
@@ -82,7 +78,5 @@ Dev-only prototype code and data. No save change: extended move lists exist only
 ## Rollback
 Revert. Everything sits behind a Lab-only toggle.
 
-## Decisions needed from the owner
-1. **Model:** A, B, C, or **B and C side by side** (recommended).
-2. **Starting choices 1–4:** accept or adjust.
-3. **Spike length:** about one working session for the prototype and measurements, then a report with the go/no-go evidence.
+## Decisions
+All taken: D023 (2026-11-26). Numbers are tuned in the Lab, and the owner judges the feel.
