@@ -1,42 +1,26 @@
 # Changelog
 
-## Unreleased — F012 Battle Lab inspection and diagnostics (2026-11-26)
-- Dev builds: every Lab battle has a known seed (Rules shows the last one; A on Seed no. replays it); a turn-by-turn battle log goes to mGBA's log window. Fix: Lab Pokémon always obey (the Lab has no badges).
+`scripts/release.sh` uses the first `##` section below as the release notes, so the next release's section stays at the top.
 
-## Unreleased — F011 Battle Lab scenario files (2026-11-26)
-- Dev builds: Battle Lab scenarios are JSON files in `lab/scenarios/`; `./scripts/play.sh --lab` (or `--scenario ID`) builds a separate Lab ROM that opens straight into the Lab with them. Presets LAB-009 (6v6 trainer) and LAB-010 (over-levelled wild). No save memory used (D022).
+## 0.2.0 (unreleased) — Battle Lab foundation
+**For players:** no gameplay changes. The 0.2.0 patch plays exactly like 0.1.0. Everything below is in dev builds only: release builds contain none of the Lab or checkpoint code, and its few small hooks into the battle engine compile to nothing (checked by CI on every build).
 
-## Unreleased — F010 Battle Lab battle loop (2026-11-26)
-- Dev builds: the in-battle debug menu (SELECT) gains Lab: Restart (replay the same setup at once) and Lab: Quit (back to the Lab with edits kept); the Lab title shows how the last battle ended.
+**For development (dev builds):**
+- **Battle Lab** (F007–F012): a sandbox for real battles, opened by `./scripts/play.sh --lab`.
+  - Both teams can be edited: up to 6 Pokémon, with species and form, level, moves, ability, item, nature, IVs, starting HP and status.
+  - Rules: trainer 1v1, trainer 2v2 or wild; weather, terrain, opponent AI and RNG seed.
+  - In battle, SELECT → Lab: Restart replays the same setup and Lab: Quit returns to the Lab with edits kept.
+  - The last result and seed are shown, and any battle can be replayed exactly.
+  - A turn-by-turn battle log appears in mGBA (Tools → View Logs).
+  - Scenarios are JSON files in `lab/scenarios/` (LAB-009: 6v6 trainer battle; LAB-010: over-levelled wild Pokémon), injected into a separate Lab ROM with its own save (D022). Your campaign save is never touched.
+- **Dev checkpoints** (F007b): R+Start → Checkpoints… jumps to 10 story points: start, Poké Balls, and outside each of the 8 gyms, each with a ready team, items, money and the story state of a normal run.
+- Fixes in Lab battles: Pokémon always obey, a seed replays exactly regardless of input timing, and wild opponents keep the item they were given.
 
-## Unreleased — F009 Battle Lab details and rules (2026-11-26)
-- Dev builds: each Lab Pokémon can have its moves, ability, held item, nature, IVs, starting HP % and status set; a Rules screen sets the format (trainer 1v1, trainer 2v2, wild), weather, terrain, opponent AI and a fixed RNG seed.
+## 0.1.0 — 2026-11-26 — Foundation
+- First release: RHH pokeemerald-expansion `expansion/1.17.2` (commit 79dd4369) with full history (D010), published as a `.bps` patch for your own Pokémon Emerald (USA/Europe) ROM.
+- Game: link-cable, e-Reader and Mystery Event save data removed; redundant Pokédex flags removed; PC reduced to 10 boxes. This frees 12.4 KB of save space and working memory.
+- Scripts for Apple Silicon Macs: `setup.sh`, `doctor.sh`, `build.sh`, `test.sh`, `play.sh`, `status.sh` and the guided `release.sh` (no sudo; pinned ARM toolchain in `.local/`).
+- CI: pull requests only, selective (docs only, changed tests or full), tests split across 4 machines, incremental build cache, and nightly build and test badges.
 
-## Unreleased — F008 Battle Lab team builders (2026-11-26)
-- Dev builds: the Battle Lab's Player team and Opponent team screens set up to 6 Pokémon per side (any species or form, level 1–100, in battle on/off). Changed slots are marked `!`; LAB-001 is the starting point and START resets it.
-
-## Unreleased — F007b dev checkpoints (2026-11-26)
-- Dev builds: R+Start → Checkpoints… jumps to 10 story points (Start, Poké Balls, and outside each of the 8 gyms) with a ready team, items, money and the story state of a normal run. Release builds contain none of it.
-
-## Unreleased — F007 Battle Lab entry (2026-11-26)
-- Dev builds: L + SELECT on the title screen opens the Battle Lab; LAB-001 (Swampert vs Blaziken, Lv50) runs a real battle and returns to the Lab; Exit soft-resets without saving. Release builds contain no Lab code.
-
-## Unreleased — F004a, F002–F005, F005b (2026-11-26)
-- CI: PR-only, selective (docs-only / changed tests / full), tests split across 4 machines, incremental build cache, nightly build and test badges.
-- Scripts: `setup.sh`, `doctor.sh`, `build.sh`, `test.sh`, `play.sh`, `status.sh` for Apple Silicon Macs (no sudo; pinned ARM toolchain in `.local/`).
-- Game: link-cable, e-Reader and Mystery Event save data removed; redundant Pokédex flags removed; PC reduced to 10 boxes. Frees 12.4 KB of save space and working memory. Save layout changed (start a new game on dev builds).
-
-## Unreleased — F001 upstream import (2026-11-26)
-- Merged RHH pokeemerald-expansion `expansion/1.17.2` (commit 79dd4369) with full history (decision D010, option A).
-- Kept project README, PR template and docs; combined .gitignore; removed upstream Pages, label and Discord-link GitHub files; listed project docs in docs/SUMMARY.md.
-- No gameplay changes: ROM is upstream 1.17.2.
-
-## Unreleased — F000 review and F001 audit (2026-11-25)
-- F000 scaffold review recorded with amendments (feature-spec naming, decision format, verification environments).
-- F001 upstream audit of pokeemerald-expansion 1.17.2: build verified in a Linux container; memory, save, move-slot and scheduler constraints measured; integration options and recommendation recorded (decision D010 pending).
-- No engine imported; no gameplay changes.
-
-## Unreleased — documentation bootstrap
-- Seed project vision, operating instructions, dependency roadmap, battle design, Battle Lab specification, testing and workflow.
-- No engine integration, gameplay changes, executable scripts or verified ROM build yet.
-
+## Before 0.1.0
+- F000 scaffold review and F001 upstream audit; documentation bootstrap (vision, operating instructions, roadmap, battle design, Battle Lab specification, testing and workflow).

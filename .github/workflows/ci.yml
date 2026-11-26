@@ -60,6 +60,10 @@ jobs:
           cache-family: rom
       - name: Build ROM
         run: make -j$(nproc) -O all
+      - name: Battle Lab ROM from the scenario files (F011/F013)
+        run: |
+          python3 -I tools/ascension/lab_scenario.py check lab/scenarios/*.json
+          python3 -I tools/ascension/lab_scenario.py inject --rom pokeemerald.gba --out pokeemerald-lab.gba --open builtin lab/scenarios/*.json
       - name: Report size
         run: |
           echo '### ROM build' >> "$GITHUB_STEP_SUMMARY"
