@@ -38,6 +38,7 @@ FORMATS = ["trainer_single", "trainer_double", "wild_single"]
 WEATHERS = ["none", "rain", "sun", "sand", "hail", "snow"]
 TERRAINS = ["none", "electric", "grassy", "misty", "psychic"]
 AIS = ["scenario", "smart", "random"]
+COMBATS = ["classic", "stamina"]   # F017 spike (D023)
 STATUSES = ["none", "poison", "toxic", "burn", "paralysis", "sleep", "freeze"]
 ABILITY_SLOTS = {1: 0, 2: 1, "1": 0, "2": 1, "hidden": 2}
 
@@ -184,7 +185,8 @@ def pack_record(sc, consts, charmap):
                        pick(rules.get("weather"), WEATHERS, f"{where} weather"),
                        pick(rules.get("terrain"), TERRAINS, f"{where} terrain"),
                        pick(rules.get("ai"), AIS, f"{where} ai"),
-                       1 if seed is not None else 0, 0, int(seed or 0))
+                       1 if seed is not None else 0,
+                       pick(rules.get("combat"), COMBATS, f"{where} combat"), int(seed or 0))
     for side in ("player", "opponent"):
         mons = sc[side] + [None] * (PARTY_SIZE - len(sc[side]))
         for i, mon in enumerate(mons):

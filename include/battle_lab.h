@@ -44,6 +44,7 @@ enum LabFormat { LAB_FORMAT_TRAINER_SINGLE, LAB_FORMAT_TRAINER_DOUBLE, LAB_FORMA
 enum LabWeather { LAB_WEATHER_NONE, LAB_WEATHER_RAIN, LAB_WEATHER_SUN, LAB_WEATHER_SAND, LAB_WEATHER_HAIL, LAB_WEATHER_SNOW, LAB_WEATHER_COUNT };
 enum LabTerrain { LAB_TERRAIN_NONE, LAB_TERRAIN_ELECTRIC, LAB_TERRAIN_GRASSY, LAB_TERRAIN_MISTY, LAB_TERRAIN_PSYCHIC, LAB_TERRAIN_COUNT };
 enum LabAi { LAB_AI_SCENARIO, LAB_AI_SMART, LAB_AI_RANDOM, LAB_AI_COUNT };
+enum LabCombat { LAB_COMBAT_CLASSIC, LAB_COMBAT_STAMINA, LAB_COMBAT_COUNT };   // F017 spike (D023)
 
 struct LabRules
 {
@@ -52,7 +53,7 @@ struct LabRules
     u8 terrain;
     u8 ai;
     bool8 fixedSeed;
-    u8 padding;
+    u8 combat;          // enum LabCombat (F017 spike); was padding, so old scenario records read as Classic
     u16 seed;
 };
 
@@ -105,10 +106,15 @@ void BattleLab_TrimToWildOpponent(void);
 // BattleLab_ShouldAutoOpen: the ROM carries injected scenarios asking to open the Lab (F011).
 #if ASCENSION_BATTLE_LAB
 bool32 BattleLab_IsLabBattle(void);
+bool32 BattleLab_StaminaMode(void);                   // F017: a Lab battle using model D (D023)
+u32 BattleLab_EnergyCost(u32 move, u32 maxEnergy);     // energy a move costs, as HP
+void BattleLab_PayEnergy(u32 battler, u32 move);       // called where PP would be deducted
 bool32 BattleLab_ShouldAutoOpen(void);
 void BattleLab_LogTurnEnd(void);   // F012: per-turn battle log (mGBA log window); no-op outside Lab battles
 void BattleLab_LogBattleEnd(void); // F012: final state before the battle clears its data
 #else
+static inline bool32 BattleLab_StaminaMode(void) { return FALSE; }
+static inline void BattleLab_PayEnergy(u32 battler, u32 move) {}
 static inline bool32 BattleLab_IsLabBattle(void) { return FALSE; }
 static inline bool32 BattleLab_ShouldAutoOpen(void) { return FALSE; }
 static inline void BattleLab_LogTurnEnd(void) {}

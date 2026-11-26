@@ -10,6 +10,7 @@
 #if ASCENSION_BATTLE_LAB
 
 #include "battle.h"
+#include "battle_controllers.h"
 #include "battle_main.h"
 #include "battle_setup.h"
 #include "bg.h"
@@ -135,7 +136,7 @@ enum
     EDIT_ROW_ABILITY, EDIT_ROW_ITEM, EDIT_ROW_NATURE, EDIT_ROW_IVS, EDIT_ROW_HP, EDIT_ROW_STATUS,
     EDIT_ROW_RESET, EDIT_ROW_CLEAR, EDIT_ROW_COUNT
 };
-enum { RULES_ROW_FORMAT, RULES_ROW_WEATHER, RULES_ROW_TERRAIN, RULES_ROW_AI, RULES_ROW_SEED_MODE, RULES_ROW_SEED, RULES_ROW_COUNT };
+enum { RULES_ROW_FORMAT, RULES_ROW_COMBAT, RULES_ROW_WEATHER, RULES_ROW_TERRAIN, RULES_ROW_AI, RULES_ROW_SEED_MODE, RULES_ROW_SEED, RULES_ROW_COUNT };
 #define LAB_VISIBLE_ROWS 6
 static EWRAM_DATA u8 sLabMode = 0;
 static EWRAM_DATA u8 sLabSide = 0;
@@ -705,6 +706,46 @@ static EWRAM_DATA u8 sLabAutoOpenDecision = LAB_AUTO_UNDECIDED;
 static EWRAM_DATA u16 sLabLastSeed = 0;
 static EWRAM_DATA bool8 sLabHasLastSeed = FALSE;
 
+// ---------------------------------------------------------------- stamina combat (F017 spike, D023)
+// One energy bar: the battler's HP. Moves spend it; damage drains it as usual; 0 = fainted.
+// Spike numbers, tuned in the Lab: damaging move ~ power/6 % of max, status 5 %, Protect-type
+// and recovery moves free. A Pokémon's own move never takes it below 1.
+
+bool32 BattleLab_StaminaMode(void)
+{
+    return sLabInBattleFlag && gBattleLabRules.combat == LAB_COMBAT_STAMINA;
+}
+
+u32 BattleLab_EnergyCost(u32 move, u32 maxEnergy)
+{
+    u32 effect = GetMoveEffect(move), percent, cost;
+    if (move == MOVE_NONE || IsHealingMove(move)
+     || effect == EFFECT_PROTECT || effect == EFFECT_ENDURE || effect == EFFECT_MAT_BLOCK)
+        return 0;
+    if (GetMoveCategory(move) == DAMAGE_CATEGORY_STATUS)
+        percent = 5;
+    else
+        percent = GetMovePower(move) / 6;
+    if (percent == 0)
+        percent = 3;   // variable-power moves (power 0/1): a light cost
+    cost = maxEnergy * percent / 100;
+    return cost > 0 ? cost : 1;
+}
+
+void BattleLab_PayEnergy(u32 battler, u32 move)
+{
+    u32 hp = gBattleMons[battler].hp;
+    u32 cost = BattleLab_EnergyCost(move, gBattleMons[battler].maxHP);
+    if (cost == 0 || hp <= 1)
+        return;
+    hp = (hp > cost) ? hp - cost : 1;   // own moves never faint the user (D023)
+    DebugPrintf("LAB energy: %S pays %d for %S (%d -> %d)", GetSpeciesName(gBattleMons[battler].species),
+                cost, GetMoveName(move), gBattleMons[battler].hp, hp);
+    gBattleMons[battler].hp = hp;
+    BtlController_EmitSetMonData(battler, B_COMM_TO_CONTROLLER, REQUEST_HP_BATTLE, 0, sizeof(gBattleMons[battler].hp), &gBattleMons[battler].hp);
+    MarkBattlerForControllerExec(battler);
+}
+
 // ---------------------------------------------------------------- diagnostics (F012)
 
 u32 BattleLab_LastSeed(void)
@@ -833,7 +874,7 @@ static void LabSanitiseRules(struct LabRules *r)
     if (r->terrain >= LAB_TERRAIN_COUNT) r->terrain = 0;
     if (r->ai >= LAB_AI_COUNT) r->ai = 0;
     r->fixedSeed = r->fixedSeed ? TRUE : FALSE;
-    r->padding = 0;
+    if (r->combat >= LAB_COMBAT_COUNT) r->combat = LAB_COMBAT_CLASSIC;
 }
 
 static void LabLoadBuiltIn(struct LabScenarioRecord *rec)
@@ -1726,6 +1767,7 @@ static void BattleLab_HandleScenarioInput(void)
 static const u8 *const sLabRulesLabels[RULES_ROW_COUNT] =
 {
     [RULES_ROW_FORMAT]    = COMPOUND_STRING("Format"),
+    [RULES_ROW_COMBAT]    = COMPOUND_STRING("Combat"),
     [RULES_ROW_WEATHER]   = COMPOUND_STRING("Weather"),
     [RULES_ROW_TERRAIN]   = COMPOUND_STRING("Terrain"),
     [RULES_ROW_AI]        = COMPOUND_STRING("Foe AI"),
@@ -1769,6 +1811,7 @@ static void BattleLab_DrawRules(void)
         buf[0] = EOS;
         switch (row)
         {
+        case RULES_ROW_COMBAT:    StringAppend(buf, r->combat == LAB_COMBAT_STAMINA ? COMPOUND_STRING("Stamina") : COMPOUND_STRING("Classic")); changed = r->combat != sLabCurrent.rules.combat; break;
         case RULES_ROW_FORMAT:    StringAppend(buf, sLabFormatNames[r->format]);   changed = r->format != sLabCurrent.rules.format; break;
         case RULES_ROW_WEATHER:   StringAppend(buf, sLabWeatherNames[r->weather]); changed = r->weather != sLabCurrent.rules.weather; break;
         case RULES_ROW_TERRAIN:   StringAppend(buf, sLabTerrainNames[r->terrain]); changed = r->terrain != sLabCurrent.rules.terrain; break;
@@ -1848,6 +1891,7 @@ static void BattleLab_HandleRulesInput(void)
     switch (sLabRulesRow)
     {
     case RULES_ROW_FORMAT:    r->format  = (r->format  + LAB_FORMAT_COUNT  + delta) % LAB_FORMAT_COUNT;  break;
+    case RULES_ROW_COMBAT:    r->combat  = (r->combat  + LAB_COMBAT_COUNT  + delta) % LAB_COMBAT_COUNT;  break;
     case RULES_ROW_WEATHER:   r->weather = (r->weather + LAB_WEATHER_COUNT + delta) % LAB_WEATHER_COUNT; break;
     case RULES_ROW_TERRAIN:   r->terrain = (r->terrain + LAB_TERRAIN_COUNT + delta) % LAB_TERRAIN_COUNT; break;
     case RULES_ROW_AI:        r->ai      = (r->ai      + LAB_AI_COUNT      + delta) % LAB_AI_COUNT;      break;
