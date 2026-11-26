@@ -171,3 +171,5 @@
         - [F002–F005 local scripts](./features/F002-F005-local-scripts.md)
         - [F005b lean cuts](./features/F005b-lean-cuts.md)
         - [F006 baseline release](./features/F006-baseline-release.md)
+        - [F007 Battle Lab entry](./features/F007-battle-lab-entry.md)
+        - [F007b dev checkpoints](./features/F007b-dev-checkpoints.md)

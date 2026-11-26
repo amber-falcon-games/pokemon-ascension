@@ -40,10 +40,15 @@ On Android, any GBA emulator that loads `.gba` files works the same way.
 On an Apple Silicon Mac: `./scripts/setup.sh` once, then `./scripts/play.sh` (builds and opens mGBA). The ROM is written to `build/pokemon-ascension.gba` (never commit it). On other systems follow upstream's [INSTALL.md](INSTALL.md) and run `make`.
 
 ## Making a release (maintainer)
-1. Put your own Emerald dump at `.local/base/emerald.gba` (git-ignored, never uploaded).
-2. On an up-to-date `main`: `./scripts/release.sh 0.1.0`
-3. The script builds the release ROM, writes and verifies `dist/pokemon-ascension-v0.1.0.bps`, then asks before tagging `v0.1.0` and publishing the patch on GitHub (via `gh` if installed, otherwise it prints the upload link).
-4. Check the patch once in Rom Patcher JS against your dump before announcing it.
+Run `./scripts/release.sh` and follow the prompts. It:
+1. works out the version (0.1.0 first, then suggests the next) and lets you change it;
+2. checks you are on an up-to-date `main` (offers to pull);
+3. asks for your own Emerald dump the first time (drag the file into Terminal) and keeps a copy in `.local/base/` (git-ignored, never uploaded);
+4. builds the release ROM, opens it in mGBA with a smoke-test checklist and waits for your answer;
+5. creates and verifies `dist/pokemon-ascension-vX.Y.Z.bps`, opens Rom Patcher JS so you can check the patch the way players will, and waits for your answer;
+6. asks before tagging and publishing (via `gh` if installed, otherwise it opens the GitHub release page for you).
+
+Nothing is tagged or published until you say yes at the last step.
 
 ## Start development on Apple Silicon macOS
 

@@ -1,8 +1,8 @@
 # Project status
 
-Last updated: 2026-11-26 (Claude session: F005b done; F006 next).
+Last updated: 2026-11-26 (Claude session: PR #5 merged; F007 started).
 Current phase: 0 — scaffolding and foundation.
-Current feature: F006 baseline release 0.1.0 — tooling done; awaiting owner Mac run, smoke test and first release. F000, F001, F004a, F005b DONE; F002–F005 awaiting owner Mac run.
+Current feature: F007 Battle Lab entry (implementation next). F002–F005 DONE (owner verified on Mac 2026-11-26). F006: owner smoke test + `release.sh 0.1.0` pending.
 F000: DONE (owner accepted 2026-11-26).
 Next eligible feature: F007 Battle Lab entry (can start while the owner verifies 0.1.0).
 Last known-good playable build: none (pre-F006 bootstrap exception).
@@ -24,7 +24,7 @@ Expected: setup ends with "Ready to build."; play prints the SHA-1 and opens mGB
 Then, for release 0.1.0: run the smoke test in docs/features/F006-baseline-release.md, put your Emerald dump at `.local/base/emerald.gba`, and run `./scripts/release.sh 0.1.0`.
 
 ## Session handoff
-- `main`: upstream 1.17.2 + docs + F004a CI (PR #2, `520ffeb`). Nightly build/tests dispatched once to seed caches and badges.
-- Scripts for F002–F005 on `claude/sharp-euler-yfhti2` (PR pending/merged — check `git log main`).
-- Exact next action: owner's Mac run (above). In parallel: F005b lean cuts — enable upstream FREE_* switches for cut features, I_VS_SEEKER_CHARGING, reduce TOTAL_BOXES_COUNT to 10; spec first. Deeper removals (Secret Bases, TV, Contests, Mail, flavour NPCs, recorded-battle sector) are split into F005c before F015, when the space is needed.
-- Owner preferences: docs/DEVELOPMENT_WORKFLOW.md.
+- `main` at `879f7eb` (PR #5): release pipeline + macOS GNU make 4.x fix. Owner's first Mac build failed because macOS make 3.81 silently ignores header-generation failures; fixed, awaiting owner retry.
+- Owner dashboard: Ascension Mission Control artifact (https://claude.ai/artifact/TBcNe5AUVsVQBbduRuj2Wv). Update it with ArtifactData at each step (collections data/ascension/{features,actions,activity,state}); run `date -u` before writing timestamps.
+- Owner's Mac session can be messaged (owner granted trusted-device access); it cannot message back, so the owner relays its output.
+- Exact next action: implement F007 per docs/features/F007-battle-lab-entry.md (title L+SELECT entry, Lab shell menu, LAB-001 debug battle returning to the Lab, release exclusion check), on `claude/sharp-euler-yfhti2`.
