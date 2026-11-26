@@ -1,5 +1,5 @@
 # F007 — Battle Lab entry, shell menu and LAB-001 baseline battle
-Status: AWAITING_ACCEPTANCE (implemented; owner playtest needed)
+Status: DONE (owner playtested and accepted 2026-11-26)
 Dependencies: F006 tooling (merged); the owner's 0.1.0 Mac verification can run in parallel
 Owner decision IDs: D003 (Lab mandatory before combat changes)
 Branch / commit: `claude/sharp-euler-yfhti2`

@@ -174,3 +174,4 @@
         - [F006 baseline release](./features/F006-baseline-release.md)
         - [F007 Battle Lab entry](./features/F007-battle-lab-entry.md)
         - [F007b dev checkpoints](./features/F007b-dev-checkpoints.md)
+        - [F008 Battle Lab team builders](./features/F008-lab-team-builder.md)
