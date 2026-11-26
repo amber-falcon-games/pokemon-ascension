@@ -2,7 +2,7 @@
 
 `scripts/release.sh` uses the first `##` section below as the release notes, so the next release's section stays at the top.
 
-## 0.2.0 (unreleased) — Battle Lab foundation
+## 0.2.0 — 2026-11-26 — Battle Lab foundation
 **For players:** no gameplay changes. The 0.2.0 patch plays exactly like 0.1.0. Everything below is in dev builds only: release builds contain none of the Lab or checkpoint code, and its few small hooks into the battle engine compile to nothing (checked by the nightly CI build).
 
 **For development (dev builds):**
