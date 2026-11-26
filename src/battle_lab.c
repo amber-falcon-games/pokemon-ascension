@@ -702,6 +702,79 @@ s32 BattleLab_AutoOpenScenario(void)
 // normal title screen even after B is released. A soft reset (e.g. Lab Exit) clears EWRAM and decides again.
 enum { LAB_AUTO_UNDECIDED, LAB_AUTO_OPEN, LAB_AUTO_SKIP };
 static EWRAM_DATA u8 sLabAutoOpenDecision = LAB_AUTO_UNDECIDED;
+static EWRAM_DATA u16 sLabLastSeed = 0;
+static EWRAM_DATA bool8 sLabHasLastSeed = FALSE;
+
+// ---------------------------------------------------------------- diagnostics (F012)
+
+u32 BattleLab_LastSeed(void)
+{
+    return sLabHasLastSeed ? sLabLastSeed : 0;
+}
+
+bool32 BattleLab_HasLastSeed(void)
+{
+    return sLabHasLastSeed;
+}
+
+// Rules "Seed no." + A: replay the last battle's seed.
+bool32 BattleLab_UseLastSeed(void)
+{
+    if (!sLabHasLastSeed)
+        return FALSE;
+    gBattleLabRules.fixedSeed = TRUE;
+    gBattleLabRules.seed = sLabLastSeed;
+    return TRUE;
+}
+
+static const char *const sLabFormatLog[LAB_FORMAT_COUNT] = {"trainer 1v1", "trainer 2v2", "wild 1v1"};
+static const char *const sLabWeatherLog[LAB_WEATHER_COUNT] = {"none", "rain", "sun", "sand", "hail", "snow"};
+static const char *const sLabTerrainLog[LAB_TERRAIN_COUNT] = {"none", "electric", "grassy", "misty", "psychic"};
+static const char *const sLabAiLog[LAB_AI_COUNT] = {"scenario", "smart", "random"};
+
+// Battle log for mGBA's log window (Tools > View Logs). DebugPrintf is compiled out in release.
+void BattleLab_LogBattleStart(void)
+{
+    const struct LabRules *r = &gBattleLabRules;
+    LabEnsureScenario();
+    DebugPrintf("LAB start %S: %s, weather %s, terrain %s, AI %s, seed %d%s",
+                sLabCurrent.id, sLabFormatLog[r->format], sLabWeatherLog[r->weather],
+                sLabTerrainLog[r->terrain], sLabAiLog[r->ai], sLabLastSeed,
+                r->fixedSeed ? " (fixed)" : "");
+}
+
+static void LabLogBattlers(void)
+{
+    u32 battler;
+    for (battler = 0; battler < gBattlersCount; battler++)
+    {
+        const struct BattlePokemon *mon = &gBattleMons[battler];
+        DebugPrintf("  %s%d %S Lv%d HP %d/%d status 0x%x",
+                    IsOnPlayerSide(battler) ? "you" : "foe", battler,
+                    GetSpeciesName(mon->species), mon->level, mon->hp, mon->maxHP, mon->status1);
+    }
+}
+
+void BattleLab_LogTurnEnd(void)
+{
+    if (!sLabInBattleFlag)
+        return;
+    DebugPrintf("LAB turn %d", gBattleResults.battleTurnCounter + 1);
+    LabLogBattlers();
+}
+
+// Final state, logged by the battle just before it clears its data (battle_main.c hook), so a
+// decisive turn (a knockout, end-of-turn damage) is always in the log even though the battle
+// leaves before the turn-end hook.
+void BattleLab_LogBattleEnd(void)
+{
+    if (!sLabInBattleFlag)
+        return;
+    DebugPrintf("LAB end: %S after %d turn(s)",
+                BattleLab_ResultName(BattleLab_ResultFromOutcome(gBattleOutcome, sLabEndRequest == LAB_END_QUIT, sLabEndRequest == LAB_END_RESTART)),
+                BattleLab_TurnsPlayed(gBattleResults.battleTurnCounter));
+    LabLogBattlers();
+}
 
 bool32 BattleLab_ShouldAutoOpen(void)
 {
@@ -1713,9 +1786,30 @@ static void BattleLab_DrawRules(void)
         AddTextPrinterParameterized3(WIN_MENU, FONT_NARROW, 50, row * 16 + 1, sTextColorNormal, TEXT_SKIP_DRAW, buf);
     }
     CopyWindowToVram(WIN_MENU, COPYWIN_GFX);
-    BattleLab_PrintInfo(sLabRulesRow == RULES_ROW_SEED
-        ? COMPOUND_STRING("{LEFT_ARROW}{RIGHT_ARROW} +-1\nL/R +-100\n! = changed\nB: back")
-        : COMPOUND_STRING("{LEFT_ARROW}{RIGHT_ARROW} change\n! = changed\nB: back"));
+    buf[0] = EOS;
+    if (sLabRulesRow == RULES_ROW_SEED)
+    {
+        StringAppend(buf, COMPOUND_STRING("{LEFT_ARROW}{RIGHT_ARROW} +-1\nL/R +-100\n"));
+        if (sLabHasLastSeed)
+        {
+            StringAppend(buf, COMPOUND_STRING("Last: "));
+            LabAppendNumber(buf, sLabLastSeed, 5);
+            StringAppend(buf, COMPOUND_STRING("\nA: use it"));
+        }
+        StringAppend(buf, COMPOUND_STRING("\nB: back"));
+    }
+    else
+    {
+        StringAppend(buf, COMPOUND_STRING("{LEFT_ARROW}{RIGHT_ARROW} change\n! = changed\n"));
+        if (sLabHasLastSeed)
+        {
+            StringAppend(buf, COMPOUND_STRING("Last seed\n"));
+            LabAppendNumber(buf, sLabLastSeed, 5);
+            StringAppend(buf, gText_NewLine);
+        }
+        StringAppend(buf, COMPOUND_STRING("B: back"));
+    }
+    BattleLab_PrintInfo(buf);
     BattleLab_DrawTitle();
 }
 
@@ -1738,6 +1832,12 @@ static void BattleLab_HandleRulesInput(void)
         delta = 1;
     else if (JOY_REPEAT(DPAD_LEFT))
         delta = -1;
+    else if (JOY_NEW(A_BUTTON) && sLabRulesRow == RULES_ROW_SEED)
+    {
+        PlaySE(BattleLab_UseLastSeed() ? SE_SELECT : SE_FAILURE);
+        BattleLab_DrawRules();
+        return;
+    }
     else if (JOY_REPEAT(R_BUTTON) && sLabRulesRow == RULES_ROW_SEED)
         delta = 100;
     else if (JOY_REPEAT(L_BUTTON) && sLabRulesRow == RULES_ROW_SEED)
@@ -1854,8 +1954,12 @@ static void Task_BattleLab_StartBattle(u8 taskId)
 
     // A fixed seed covers building the parties too (personality: gender, etc.), so the
     // whole run replays, not just the battle.
-    if (gBattleLabRules.fixedSeed)
-        SeedRng(gBattleLabRules.seed);
+    // Every Lab battle runs from a known seed (F012): the fixed one, or a fresh one that is
+    // remembered so the battle can be replayed ("Use last seed" in Rules).
+    sLabLastSeed = gBattleLabRules.fixedSeed ? gBattleLabRules.seed : (Random() & 0xFFFF);
+    sLabHasLastSeed = TRUE;
+    SeedRng(sLabLastSeed);
+    BattleLab_LogBattleStart();
     BattleLab_SetupScenarioParties();
     sLabInBattleFlag = TRUE;
     sLabEndRequest = LAB_END_NONE;

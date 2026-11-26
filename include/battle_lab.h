@@ -106,10 +106,20 @@ void BattleLab_TrimToWildOpponent(void);
 #if ASCENSION_BATTLE_LAB
 bool32 BattleLab_IsLabBattle(void);
 bool32 BattleLab_ShouldAutoOpen(void);
+void BattleLab_LogTurnEnd(void);   // F012: per-turn battle log (mGBA log window); no-op outside Lab battles
+void BattleLab_LogBattleEnd(void); // F012: final state before the battle clears its data
 #else
 static inline bool32 BattleLab_IsLabBattle(void) { return FALSE; }
 static inline bool32 BattleLab_ShouldAutoOpen(void) { return FALSE; }
+static inline void BattleLab_LogTurnEnd(void) {}
+static inline void BattleLab_LogBattleEnd(void) {}
 #endif
+
+// Determinism and diagnostics (F012)
+u32 BattleLab_LastSeed(void);
+bool32 BattleLab_HasLastSeed(void);
+bool32 BattleLab_UseLastSeed(void);
+void BattleLab_LogBattleStart(void);
 
 // Scenarios (F011, D022): repository files injected into a reserved ROM block of a Lab ROM copy.
 // Block layout (tools/ascension/lab_scenario.py): 16-byte ASCII marker "ASCENSION-LAB-01",

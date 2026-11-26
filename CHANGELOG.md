@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased — F012 Battle Lab inspection and diagnostics (2026-11-26)
+- Dev builds: every Lab battle has a known seed (Rules shows the last one; A on Seed no. replays it); a turn-by-turn battle log goes to mGBA's log window. Fix: Lab Pokémon always obey (the Lab has no badges).
+
 ## Unreleased — F011 Battle Lab scenario files (2026-11-26)
 - Dev builds: Battle Lab scenarios are JSON files in `lab/scenarios/`; `./scripts/play.sh --lab` (or `--scenario ID`) builds a separate Lab ROM that opens straight into the Lab with them. Presets LAB-009 (6v6 trainer) and LAB-010 (over-levelled wild). No save memory used (D022).
 

@@ -17,7 +17,17 @@
 #include <string.h>
 #include <strings.h>
 
-static void quiet_log(struct mLogger *l, int c, enum mLogLevel lv, const char *f, va_list a) { (void) l; (void) c; (void) lv; (void) f; (void) a; }
+// Quiet by default; GBASHOT_GAME_LOG=1 prints the game's own debug output (mGBA "GBA Debug"
+// category, e.g. the Battle Lab turn log) to stderr.
+static void quiet_log(struct mLogger *l, int c, enum mLogLevel lv, const char *f, va_list a)
+{
+    (void) l; (void) lv;
+    if (getenv("GBASHOT_GAME_LOG") && strcmp(mLogCategoryName(c), "GBA Debug") == 0)
+    {
+        vfprintf(stderr, f, a);
+        fputc('\n', stderr);
+    }
+}
 static struct mLogger sQuiet = { .log = quiet_log };
 
 static int key_bits(const char *spec) {
