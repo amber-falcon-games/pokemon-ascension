@@ -16,6 +16,7 @@
 .env
 .env.local
 .local/
+.ci-cache-sha
 
 
 # --- Upstream (pokeemerald-expansion) ignore rules ---
