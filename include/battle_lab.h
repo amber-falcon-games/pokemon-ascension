@@ -120,6 +120,8 @@ void BattleLab_CycleBoost(u32 battler);
 void BattleLab_ClearBoost(u32 battler);
 void BattleLab_ShowMoveCost(u32 battler, u32 move);    // move menu: cost in the PP box, preview on the bar
 void BattleLab_EndMoveCostPreview(u32 battler);
+void BattleLab_AiTimerStart(void);                     // F017 measurement: AI decision time
+void BattleLab_AiTimerStop(u32 battler);
 bool32 BattleLab_ShouldAutoOpen(void);
 void BattleLab_LogTurnEnd(void);   // F012: per-turn battle log (mGBA log window); no-op outside Lab battles
 void BattleLab_LogBattleEnd(void); // F012: final state before the battle clears its data
@@ -135,6 +137,8 @@ static inline void BattleLab_CycleBoost(u32 battler) {}
 static inline void BattleLab_ClearBoost(u32 battler) {}
 static inline void BattleLab_ShowMoveCost(u32 battler, u32 move) {}
 static inline void BattleLab_EndMoveCostPreview(u32 battler) {}
+static inline void BattleLab_AiTimerStart(void) {}
+static inline void BattleLab_AiTimerStop(u32 battler) {}
 static inline bool32 BattleLab_IsLabBattle(void) { return FALSE; }
 static inline bool32 BattleLab_ShouldAutoOpen(void) { return FALSE; }
 static inline void BattleLab_LogTurnEnd(void) {}

@@ -3806,7 +3806,9 @@ static void HandleTurnActionSelectionState(void)
             bool32 isAiBattler = (gBattleTypeFlags & BATTLE_TYPE_HAS_AI || IsWildMonSmart()) && (BattlerHasAi(battler) && !(gBattleTypeFlags & BATTLE_TYPE_PALACE));
             if (isAiBattler)
             {
+                BattleLab_AiTimerStart();   // Pokémon Ascension (F017): Lab-only AI timing
                 ComputeAiBattlerDecisions(battler); // Do AI score computations here so we can use them in AI_TrySwitchOrUseItem
+                BattleLab_AiTimerStop(battler);
             }
             // fallthrough
         case STATE_BEFORE_ACTION_CHOSEN: // Choose an action.

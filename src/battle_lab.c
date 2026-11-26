@@ -932,6 +932,36 @@ void BattleLab_PayEnergy(u32 battler, u32 move)
 
 // ---------------------------------------------------------------- diagnostics (F012)
 
+// F017 measurement: how long an AI decision takes, timed with hardware timer 3 at 1/64 of the
+// CPU clock (timer 3 is only used by the link cable, never in Lab battles). 4389 ticks = 1 frame.
+static EWRAM_DATA u32 sLabAiTicksTotal = 0;
+static EWRAM_DATA u16 sLabAiTicksMax = 0;
+static EWRAM_DATA u16 sLabAiDecisions = 0;
+
+void BattleLab_AiTimerStart(void)
+{
+    if (!sLabInBattleFlag)
+        return;
+    REG_TM3CNT_H = 0;
+    REG_TM3CNT_L = 0;
+    REG_TM3CNT_H = TIMER_ENABLE | TIMER_64CLK;
+}
+
+void BattleLab_AiTimerStop(u32 battler)
+{
+    u32 ticks;
+    if (!sLabInBattleFlag)
+        return;
+    ticks = REG_TM3CNT_L;
+    REG_TM3CNT_H = 0;
+    sLabAiTicksTotal += ticks;
+    sLabAiDecisions++;
+    if (ticks > sLabAiTicksMax)
+        sLabAiTicksMax = ticks;
+    DebugPrintf("LAB ai: %S decided in %d ticks (%d.%02d frames)", GetSpeciesName(gBattleMons[battler].species),
+                ticks, ticks / 4389, (ticks % 4389) * 100 / 4389);
+}
+
 u32 BattleLab_LastSeed(void)
 {
     return sLabHasLastSeed ? sLabLastSeed : 0;
@@ -1033,6 +1063,9 @@ void BattleLab_LogBattleEnd(void)
 {
     if (!sLabInBattleFlag)
         return;
+    if (sLabAiDecisions)
+        DebugPrintf("LAB ai summary: %d decisions, mean %d ticks, max %d ticks (4389 ticks = 1 frame)",
+                    sLabAiDecisions, sLabAiTicksTotal / sLabAiDecisions, sLabAiTicksMax);
     DebugPrintf("LAB end: %S after %d turn(s)",
                 BattleLab_ResultName(BattleLab_ResultFromOutcome(gBattleOutcome, sLabEndRequest == LAB_END_QUIT, sLabEndRequest == LAB_END_RESTART)),
                 BattleLab_TurnsPlayed(gBattleResults.battleTurnCounter));
@@ -2230,6 +2263,9 @@ static void Task_BattleLab_StartBattle(u8 taskId)
     sLabInBattleFlag = TRUE;
     sLabEndRequest = LAB_END_NONE;
     sLabProtectedThisTurn = 0;
+    sLabAiTicksTotal = 0;
+    sLabAiTicksMax = 0;
+    sLabAiDecisions = 0;
     sLabNow = 0;
     sLabRegenAt = 0;
     memset(sLabRegenCarry, 0, sizeof(sLabRegenCarry));
