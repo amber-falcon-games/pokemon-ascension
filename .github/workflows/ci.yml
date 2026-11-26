@@ -43,6 +43,8 @@ jobs:
         run: .github/docs_validate/inclusive_summary.py
       - name: Project tool tests (patch tool)
         run: python3 -I test/ascension/test_bps.py
+      - name: Shell scripts parse
+        run: for f in scripts/*.sh scripts/lib/*.sh .github/ci/*.sh; do bash -n "$f" || exit 1; done
 
   build:
     needs: changes
@@ -117,7 +119,8 @@ jobs:
 
   # One status to require in branch protection.
   ci-ok:
-    if: always()
+    # Not on cancelled runs (a newer push supersedes them), so they show grey, not red.
+    if: ${{ !cancelled() }}
     needs: [changes, docs, build, test, test-changed]
     runs-on: ubuntu-24.04
     steps:

@@ -11,7 +11,7 @@ while IFS= read -r f; do
   case "$f" in
     docs/*|*.md|.github/ISSUE_TEMPLATE/*|.github/pull_request_template.md) ;;      # documentation
     test/test_runner*.c|test/*.h|test/**/*.h) mode=full ;;                          # test framework
-    test/ascension/*.py|tools/ascension/*.py) ;;                                  # project Python tools: run by the docs job
+    test/ascension/*.py|tools/ascension/*.py|scripts/*) ;;                        # project tooling: checked by the docs job                                  # project Python tools: run by the docs job
     test/*.c|test/*/*.c|test/*/*/*.c|test/*/*/*/*.c)
       [ "$mode" = docs ] && mode=tests
       [ -f "$f" ] && tests+=("$f") ;;                                                # changed or added test (skip deleted)
