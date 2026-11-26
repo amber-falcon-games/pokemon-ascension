@@ -569,6 +569,25 @@ int main(int argc, char *argv[])
     }
     if (nrunners > MAX_PROCESSES)
         nrunners = MAX_PROCESSES;
+
+    // Pokémon Ascension: optional sharding across machines (CI).
+    // TEST_SHARD_COUNT=M TEST_SHARD_INDEX=k makes this invocation run only the
+    // tests assigned to global runners [k*nrunners, (k+1)*nrunners) of M*nrunners
+    // (at most MAX_PROCESSES in total, matching include/test/test.h).
+    int shard_count = 1, shard_index = 0;
+    {
+        const char *c = getenv("TEST_SHARD_COUNT"), *k = getenv("TEST_SHARD_INDEX");
+        if (c && k)
+        {
+            shard_count = atoi(c);
+            shard_index = atoi(k);
+            if (shard_count < 1 || shard_index < 0 || shard_index >= shard_count || shard_count * nrunners > MAX_PROCESSES)
+            {
+                fprintf(stderr, "invalid TEST_SHARD_COUNT/TEST_SHARD_INDEX\n");
+                exit(2);
+            }
+        }
+    }
     runners_digits = ceil(log10(nrunners));
     runners = calloc(nrunners, sizeof(*runners));
     if (!runners)
@@ -659,8 +678,8 @@ int main(int argc, char *argv[])
             else if (patchelfpid == 0)
             {
                 char n_arg[5], i_arg[5];
-                snprintf(n_arg, sizeof(n_arg), "\\x%02x", nrunners);
-                snprintf(i_arg, sizeof(i_arg), "\\x%02x", i);
+                snprintf(n_arg, sizeof(n_arg), "\\x%02x", nrunners * shard_count);
+                snprintf(i_arg, sizeof(i_arg), "\\x%02x", shard_index * nrunners + i);
                 if (execlp("tools/patchelf/patchelf", "tools/patchelf/patchelf", rom_path, "gTestRunnerN", n_arg, "gTestRunnerI", i_arg, NULL) == -1)
                 {
                     perror("execlp patchelf failed");

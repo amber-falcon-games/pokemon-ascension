@@ -1,0 +1,50 @@
+name: Nightly tests
+
+# Runs once a day, only if main changed in the last 26 hours (D012); otherwise it
+# repeats the previous result so the README badge reflects the real state of main.
+# Also refreshes the build cache on main, which pull requests restore from.
+on:
+  schedule:
+    - cron: '47 2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-tests
+  cancel-in-progress: false
+
+env:
+  COMPARE: 0
+  UNUSED_ERROR: 1
+  DEPRECATED_ERROR: 1
+  GAME_VERSION: EMERALD
+
+jobs:
+  nightly:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Did main change today?
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORKFLOW_FILE: nightly-tests.yml
+        run: .github/ci/nightly-gate.sh
+      - id: setup
+        if: steps.gate.outputs.run == 'true'
+        uses: ./.github/actions/setup
+        with:
+          cache-family: test
+      - name: Nightly tests
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          make -j$(nproc) check
+      - name: Pack build cache
+        if: steps.gate.outputs.run == 'true'
+        run: .github/ci/save-build-cache.sh ~/build-cache.tar
+      - uses: actions/cache/save@v4
+        if: steps.gate.outputs.run == 'true'
+        with:
+          path: ~/build-cache.tar
+          key: ${{ steps.setup.outputs.cache-key }}
