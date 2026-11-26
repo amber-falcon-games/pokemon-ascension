@@ -1,0 +1,14 @@
+wait 240
+press START
+wait 240
+press START
+wait 600
+shot 01-title
+hold L+SELECT 8
+wait 150
+shot 02-lab
+press A
+wait 500
+shot 03-battle-intro
+wait 600
+shot 04-battle
