@@ -3704,6 +3704,13 @@ BattleScript_SelectingNotAllowedMoveGravity::
 	printselectionstring STRINGID_GRAVITYPREVENTSUSAGE
 	endselectionscript
 
+#ifndef RELEASE
+@ Pokémon Ascension (F017 spike): Battle Lab stamina battles only.
+BattleScript_SelectingExhaustedMove::
+	printselectionstring STRINGID_TOOEXHAUSTEDTOUSE
+	endselectionscript
+#endif
+
 BattleScript_SelectingNotAllowedStuffCheeks::
 	printselectionstring STRINGID_STUFFCHEEKSCANTSELECT
 	endselectionscript

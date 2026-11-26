@@ -1047,7 +1047,8 @@ static enum CancelerResult CancelerPPDeduction(struct BattleCalcValues *cv)
 
     gLastMoves[cv->battlerAtk] = gChosenMove;
 
-    if (MOVE_IS_PERMANENT(cv->battlerAtk, movePosition))
+    // (Stamina: PP is unchanged, and this emit would overwrite the energy update in the controller buffer.)
+    if (!BattleLab_StaminaMode() && MOVE_IS_PERMANENT(cv->battlerAtk, movePosition))
     {
         BtlController_EmitSetMonData(
             cv->battlerAtk,

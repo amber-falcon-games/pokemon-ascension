@@ -1488,6 +1488,16 @@ u32 TrySetCantSelectMoveBattleScript(enum BattlerId battler)
             limitations++;
     }
 
+#if ASCENSION_BATTLE_LAB
+    // Pokémon Ascension (F017 spike): an Exhausted Pokémon can't pick its heaviest moves.
+    if (BattleLab_ExhaustionLocksMove(battler, move))
+    {
+        gCurrentMove = move;
+        gSelectionBattleScripts[battler] = BattleScript_SelectingExhaustedMove;
+        limitations++;
+    }
+#endif
+
     if (dynamaxBypassCheck && zMoveBypassCheck && IsGravityPreventingMove(move))
     {
         if (SetCantSelectScript(battler, gCurrentMove, BattleScript_SelectingNotAllowedMoveGravityInPalace, BattleScript_SelectingNotAllowedMoveGravity))

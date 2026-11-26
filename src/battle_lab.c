@@ -848,10 +848,7 @@ static void LabTimelineRoundEnd(void)
     u32 battler;
     for (battler = 0; battler < gBattlersCount; battler++)
         if (LabBattlerOnField(battler))
-        {
-            LabChargeAction(battler, MOVE_NONE);
-            sLabPartyIndex[battler] = gBattlerPartyIndexes[battler];
-        }
+            LabChargeAction(battler, MOVE_NONE);   // party index is left for LabPlanRound to spot replacements
     sLabRoundPlanned = FALSE;
     memset(sLabBoost, 0, sizeof(sLabBoost));
 }

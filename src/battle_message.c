@@ -1,4 +1,5 @@
 #include "global.h"
+#include "config/ascension.h"
 #include "battle.h"
 #include "battle_anim.h"
 #include "battle_ai_record.h"
@@ -613,6 +614,9 @@ const u8 *const gBattleStringsTable[STRINGID_COUNT] =
     [STRINGID_PKMNMOVEBOUNCEDABILITY]               = COMPOUND_STRING("{B_DEF_NAME_WITH_PREFIX}'s {B_CURRENT_MOVE} was bounced back!"),
     [STRINGID_IMPOSTERTRANSFORM]                    = COMPOUND_STRING("{B_ATK_NAME_WITH_PREFIX} transformed into {B_DEF_NAME_WITH_PREFIX2}!"),
     [STRINGID_ASSAULTVESTDOESNTALLOW]               = COMPOUND_STRING("The effects of the {B_LAST_ITEM} prevent status moves from being used!\p"),
+#if ASCENSION_BATTLE_LAB
+    [STRINGID_TOOEXHAUSTEDTOUSE]                    = COMPOUND_STRING("{B_ATK_NAME_WITH_PREFIX} is too exhausted to use {B_CURRENT_MOVE}!\p"),
+#endif
     [STRINGID_GRAVITYPREVENTSUSAGE]                 = COMPOUND_STRING("{B_ATK_NAME_WITH_PREFIX} can't use {B_CURRENT_MOVE} because of gravity!\p"),
     [STRINGID_HEALBLOCKPREVENTSUSAGE]               = COMPOUND_STRING("{B_ATK_NAME_WITH_PREFIX} was prevented from healing!\p"),
     [STRINGID_NOTDONEYET]                           = COMPOUND_STRING("This move effect is not done yet!\p"),

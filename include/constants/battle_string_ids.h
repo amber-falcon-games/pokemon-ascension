@@ -725,6 +725,7 @@ enum StringID
     STRINGID_S,
     STRINGID_LOSTSOMEOFITSHP,
     STRINGID_BELCHCANTUSE,
+    STRINGID_TOOEXHAUSTEDTOUSE,   // Pokémon Ascension (F017 spike, Battle Lab only)
     STRINGID_COUNT
 };
 
