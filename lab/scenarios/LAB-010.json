@@ -1,0 +1,12 @@
+{
+  "id": "LAB-010",
+  "name": "Over-levelled wild",
+  "rules": { "format": "wild_single", "weather": "none", "terrain": "none", "ai": "scenario", "seed": null },
+  "player": [
+    { "species": "MARSHTOMP", "level": 25 },
+    { "species": "SWELLOW",   "level": 24 }
+  ],
+  "opponent": [
+    { "species": "TYRANITAR", "level": 70 }
+  ]
+}

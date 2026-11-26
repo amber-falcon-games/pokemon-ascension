@@ -1,73 +1,78 @@
-# F011 — Battle Lab: saved scenarios and preset registry
-Status: SPEC — OWNER DECISION NEEDED (storage option, below)
+# F011 — Battle Lab: scenario files and presets
+Status: AWAITING_ACCEPTANCE (implemented on a branch stacked on F010, D021; owner playtest after F010)
 Dependencies: F010
-Owner decision IDs: D003; D011 (Recorded Battle cut); new decision requested: Lab scenario storage
-Branch / commit: `feature/F011-lab-scenarios` (stacked on `feature/F010-lab-battle-loop`, D021)
+Owner decision IDs: D003, D021, **D022** (scenarios stay out of save memory: repository files injected into a Lab ROM copy)
+Branch / commit: `feature/F011-lab-scenarios` (based on `feature/F010-lab-battle-loop`)
 
 ## Objective and scope
-Reusable Battle Lab setups, of two kinds:
-- **Presets** live in the repository and ship in every dev build: LAB-001, LAB-009 (six-member trainer battle), LAB-010 (over-levelled wild encounter), and later one per combat feature, as BATTLE_LAB.md requires.
-- **Saved scenarios** are made in the Lab and kept on the cartridge, independent of the campaign save.
+Reusable Battle Lab setups that never touch save memory (D022, the owner's design):
+- **Scenario files** live in the repository: `lab/scenarios/<ID>.json`. Each holds the teams (species, level, moves, item, ability, nature, IVs, HP %, status, in battle), the rules (format, weather, terrain, AI, seed), an ID and a name. The format is in `lab/scenarios/README.md`.
+- **`./scripts/play.sh --lab`** builds the dev ROM and copies it to `build/pokemon-ascension-lab.gba`. It writes every scenario file into a reserved data block in that copy and opens it in mGBA, which goes **straight into the Battle Lab**. **`--scenario LAB-009`** does the same but opens with that scenario.
+  - Hold B while the Lab ROM boots to reach the title screen instead.
+  - The Lab ROM has its own `.sav`, so the campaign save is never used.
+- **Scenario menu** in the Lab lists the built-in LAB-001 plus every injected file. A loads one, and the title shows its ID. `!` and `(edited)` mean "different from the loaded scenario", and START on a team screen resets to it.
+- **Presets shipped now:**
+  - LAB-001: built in, baseline 1v1.
+  - LAB-009: six-member trainer battle, 6v6, Smart AI.
+  - LAB-010: over-levelled wild encounter, Marshtomp 25 and Swellow 24 vs a wild Tyranitar 70.
 
-Lab menu → **Scenario** opens a list of presets (`P` LAB-001 …) and saved slots (`1`–`N`, name or `empty`). In that list:
-- A loads the highlighted entry into the teams and rules.
-- SELECT on a saved slot offers Save here / Rename / Delete.
-- The title shows the loaded scenario's ID or name, plus `(edited)` once anything is changed.
-
-`./scripts/play.sh --scenario LAB-009` opens the Lab with that preset loaded (method below).
-
-## Storage options (owner decision)
-| | Option | Capacity | Notes |
-|---|---|---|---|
-| **A (recommended)** | Use the **Recorded Battle flash sector** (sector 31) in dev builds | 3,968 B, which fits **12 saved scenarios** | Recorded Battle is already cut (D011), so the sector is free. Upstream's `TryWriteSpecialSaveSector` reads and writes it, separately from the campaign save. Dev builds stop recording battles now; release builds are unchanged until F005c removes Recorded Battle everywhere. |
-| B | No cartridge storage: presets only, plus an on-screen export code to copy by hand | Unlimited presets, 0 saved | No save risk, but sharing or keeping a setup means writing down a long code. |
-| C | Space inside the campaign save | — | Rejected: about 300 B free in SaveBlock1, and a Lab scenario shouldn't live in the campaign. |
-
-**Scenario record (option A):** about 300 B each.
-- Header: magic `LAB1`, format version, checksum.
-- Name: 10 characters.
-- Both sides: 6 slots × 20 B.
-- Rules: 8 B.
-
-The sector carries a version byte. On a format change, older versions are migrated where possible and otherwise shown as `old format`, never silently misread. The format and migrations are documented in SAVE_COMPATIBILITY.md.
-
-**Presets:** written as data (`src/data/battle_lab_scenarios.h`: teams, details and rules per ID), so a new combat feature adds its LAB-xxx scenario in the same PR. The registry `docs/BATTLE_LAB_SCENARIOS.md` lists every preset.
-
-**`--scenario ID` method:** `play.sh` writes a small "open scenario ID" request into the Lab sector of the dev save file before starting mGBA. On the title screen, the Lab opens with that preset, and the request is cleared once used. This needs option A. Under option B, `--scenario` would only print which preset to pick in the menu.
+  Each new combat feature adds its LAB-xxx file in the same PR (BATTLE_LAB.md contract).
 
 ## Explicit exclusions
-- Sharing scenarios between machines other than by copying the `.sav` file.
-- Importing from other tools.
+- Saving a setup made in the Lab back to a file. That would need an emulator script reading memory and is a later, optional step. Until then a setup is written as a file, which takes about a minute with the README table.
+- Any cartridge or save storage (rejected in D022).
 
 ## Acceptance criteria
-- [ ] Presets LAB-001, LAB-009 and LAB-010 load from the Scenario menu and play as their registry entries describe.
-- [ ] (A) A saved scenario survives Exit, closing mGBA and rebuilding the ROM. 12 slots work: Save, Rename, Delete. The campaign save is byte-identical before and after (checked by `.sav` diff, sectors 0–29).
-- [ ] (A) `./scripts/play.sh --scenario LAB-009` opens the Lab with LAB-009 loaded.
-- [ ] Format version: a record from a different format version is reported, not loaded.
-- [ ] Release build: no Lab symbols, and Recorded Battle behaviour is unchanged in release.
+- [ ] `./scripts/play.sh --lab` opens the Lab directly. Scenario lists LAB-001, LAB-009 and LAB-010, and each one loads and plays as its file describes.
+- [ ] `./scripts/play.sh --scenario LAB-010` opens with LAB-010 loaded (wild Tyranitar 70).
+- [ ] A bad file (unknown species or move, level 101, unknown weather, an ID too long, a duplicate ID, or more than 14 files) stops `play.sh` with a message naming the file and the problem. No ROM is launched.
+- [ ] The campaign ROM and save are untouched: `build/pokemon-ascension.gba` and `.sav` don't change after a Lab session.
+- [ ] Release build: no Lab symbols and no reserved block.
 
 ## Technical approach and risks
-- `src/battle_lab_scenarios.c` holds the record encode/decode, checksum and the preset table.
-- The Lab Scenario screen reuses the F008 list UI.
-- Upstream touch (option A): `ASCENSION_BATTLE_LAB` builds compile out the Recorded Battle *save* call (`recorded_battle.c`), so the sector isn't overwritten. This is dev-only; release keeps upstream behaviour until F005c.
-- **Risk: corrupting the campaign save.** Mitigation: only upstream's special-sector API is used, which never touches sectors 0–29, and the acceptance `.sav` diff checks it.
+- **Game:** `gBattleLabScenarioBlock`, 4,096 B of ROM in dev builds only. It starts with the 16-byte ASCII marker `ASCENSION-LAB-01` and is 0xFF everywhere else.
+  - The header holds the version, the count and the scenario to auto-open.
+  - Then come up to 14 fixed-size 280 B records, using the same layout as `struct LabSlot` and `struct LabRules`.
+  - The Lab reads the block through a `volatile` pointer, because it is patched after the build. It never trusts the data: invalid species become empty slots, and invalid moves, items, abilities and ranges are reset to defaults. If a file lists no moves, the Pokémon gets its level-up moves.
+- **Tool:** `tools/ascension/lab_scenario.py check|inject`.
+  - Names such as `SWAMPERT` and `ICE_BEAM` are resolved by compiling a tiny probe against the project's own headers with the pinned ARM GCC, so the IDs always match the ROM being patched.
+  - The marker must appear exactly once.
+  - Writing is atomic (a temp file, then rename), and the input ROM is never modified.
+- **Title screen:** a one-condition hook. The Lab ROM opens the Lab automatically when its block asks for it; in release builds the check is a `static inline FALSE`.
+- **Risks:**
+  - The record layout is shared by C and Python. Mitigations: a `STATIC_ASSERT` on the 280 B record size, and a Python test of the byte layout.
+  - After an Exit, the Lab ROM reopens the Lab. That's by design; hold B at boot for the title screen.
 
 ## Automated tests and regression
-- Encode/decode round trip for every field.
-- Checksum and version rejection.
-- Presets build the documented parties.
-- Lab tests from F008–F010 stay green, and the full suite runs in CI.
+- **`test/ascension/test_lab_scenario.py`** (CI docs job): byte layout of a full record, errors (unknown name, level, weather, long ID, duplicates, too many files), injection into a marked ROM with the rest left untouched, a missing block refused, and the repository presets parsing (file name = ID).
+- **`test/ascension/battle_lab.c`** (now 20 tests): a plain dev ROM has only the built-in scenario and doesn't auto-open; selecting a scenario resets teams and rules; `!` and `(edited)` compare against the loaded scenario.
+- Full suite in CI.
 
 ## Manual playtest
-After implementation, with steps in the PR: load each preset, save two scenarios, exit and restart mGBA, load them, then rename and delete one. Finally, `play.sh --scenario LAB-009`.
+1. `./scripts/play.sh --lab`. mGBA opens straight into the Lab (title `BATTLE LAB · LAB-001`).
+2. Open Scenario and pick LAB-009, then Start battle: a 6v6 against a Smart AI.
+3. Back in the Lab, open Scenario and pick LAB-010, then Start battle: a wild Tyranitar Lv70.
+4. Close mGBA and run `./scripts/play.sh --scenario LAB-010`. It opens on LAB-010.
+5. Copy `lab/scenarios/LAB-010.json` to `LAB-011.json`, change `"id"` and a species, and run `./scripts/play.sh --scenario LAB-011`. Your new scenario appears.
+6. Run `./scripts/play.sh` and choose Continue. Your campaign save is as before.
 
 ## Resource budgets and save compatibility
-- Option A uses sector 31 in dev builds only: no campaign layout change, and release unchanged.
-- ROM: a few KB for code and presets.
-- EWRAM: a 3,968 B buffer, only while the Scenario screen is open (allocated, then freed).
+- Dev ROM vs F010: +6,126 B (the 4,096 B block plus about 2 KB of code); EWRAM +564 B (the loaded scenario and a scratch record). Release: 0.
+- **No save memory at all.** The campaign save layout and data are unchanged.
 
 ## Rollback
-Revert the PR. The sector simply holds stale Lab data, which the restored Recorded Battle code treats as an invalid recording, as upstream does for an empty sector.
+Revert the PR. Scenario files stay in the repository, unused.
 
 ## Evidence and acceptance
-Pending owner decision (A or B), then implementation.
+Implemented 2026-11-26 (Linux container):
+- `make -j8`: exit 0, no warnings.
+- Tests:
+  - `make check TESTS=test/ascension/battle_lab.c`: **20/20 PASS**.
+  - `python3 -I test/ascension/test_lab_scenario.py`: **4/4 OK**.
+- Real name resolution: `lab_scenario.py check lab/scenarios/*.json` gives `ok: 2 scenario(s)`. A bad file gives `error: unknown name(s): MOVE_NOT_A_MOVE, SPECIES_PIKACHUU`.
+- `./scripts/play.sh --scenario LAB-009` built the ROM and wrote `build/pokemon-ascension-lab.gba` (header `01 02 02 00`: version 1, 2 scenarios, open LAB-009). mGBA isn't installed in the container, so the launch itself was not run there.
+- Headless screenshots of the Lab ROM:
+  - It boots straight into `BATTLE LAB · LAB-009` with You: 6 and Foe: 6.
+  - Scenario lists LAB-001, LAB-009 (now) and LAB-010.
+  - Loading LAB-010 shows Marshtomp 25 and Swellow 24 vs a wild Tyranitar 70, with no `!` on the unedited slots.
+- Release: `nm pokeemerald-release.elf | grep -ci "BattleLab\\|Ascension_C"` = 0, and the `ASCENSION-LAB-01` marker appears 0 times in `pokeemerald-release.gba`.

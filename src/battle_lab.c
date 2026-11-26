@@ -97,9 +97,8 @@ static const struct MenuAction sLabMenuItems[LAB_MENU_COUNT] =
     [LAB_MENU_EXIT]          = {COMPOUND_STRING("Exit"),          {NULL}},
 };
 
-static const u8 sText_ScenarioSoon[] = _("Saved\nscenarios:\nF011.\nNow: LAB-001");
 static const u8 sText_TeamHelp[] = _("A: edit\nB: back\nSTART:\nreset all\n! = edited");
-static const u8 sText_ConfirmReset[] = _("Reset both\nteams to\nLAB-001?\n\nA: yes\nB: no");
+static const u8 sText_ConfirmReset[] = _("Reset both\nteams to the\nscenario?\n\nA: yes\nB: no");
 
 static const u16 sLabBackdrop = RGB(3, 5, 9);
 
@@ -109,8 +108,26 @@ EWRAM_DATA struct LabSlot gBattleLabTeams[LAB_SIDE_COUNT][PARTY_SIZE] = {0};
 EWRAM_DATA struct LabRules gBattleLabRules = {0};
 static EWRAM_DATA bool8 sLabInBattleFlag = FALSE;   // a Lab battle is running
 
+// ---------------------------------------------------------------- scenarios (F011, D022)
+// Scenarios come from repository files (lab/scenarios/*.json). tools/ascension/lab_scenario.py
+// writes them into this reserved block of a Lab ROM copy; the block is all 0xFF in the built
+// ROM, so a plain dev ROM has only the built-in LAB-001. Dev builds only; never in the save.
+#define LAB_BLOCK_MARKER_SIZE 16
+#define LAB_BLOCK_VERSION     1
+__attribute__((aligned(4))) const u8 gBattleLabScenarioBlock[LAB_SCENARIO_BLOCK_SIZE] =
+{
+    'A', 'S', 'C', 'E', 'N', 'S', 'I', 'O', 'N', '-', 'L', 'A', 'B', '-', '0', '1',
+    [LAB_BLOCK_MARKER_SIZE ... LAB_SCENARIO_BLOCK_SIZE - 1] = 0xFF,
+};
+STATIC_ASSERT(sizeof(struct LabScenarioRecord) == 280, LabScenarioRecordSize);
+
+static EWRAM_DATA struct LabScenarioRecord sLabCurrent = {0};   // what Reset returns to
+static EWRAM_DATA u8 sLabScenarioIndex = 0;                     // 0 = built-in LAB-001
+static EWRAM_DATA u8 sLabScenarioCursor = 0;
+EWRAM_DATA struct LabScenarioRecord gBattleLabScratchRecord = {0};
+
 // Team screen state (task-independent so it survives returning from a battle)
-enum { LAB_MODE_MAIN, LAB_MODE_TEAM, LAB_MODE_EDIT, LAB_MODE_LETTER, LAB_MODE_CONFIRM_RESET, LAB_MODE_RULES };
+enum { LAB_MODE_MAIN, LAB_MODE_TEAM, LAB_MODE_EDIT, LAB_MODE_LETTER, LAB_MODE_CONFIRM_RESET, LAB_MODE_RULES, LAB_MODE_SCENARIO };
 enum
 {
     EDIT_ROW_SPECIES, EDIT_ROW_LEVEL, EDIT_ROW_ACTIVE,
@@ -148,6 +165,9 @@ static void BattleLab_DrawTeam(void);
 static void BattleLab_DrawEditor(void);
 static void BattleLab_DrawLetters(void);
 static void BattleLab_ShowMainMenu(void);
+static void BattleLab_DrawScenarios(void);
+static void BattleLab_HandleScenarioInput(void);
+static void LabEnsureScenario(void);
 static void BattleLab_HandleTeamInput(void);
 static void BattleLab_HandleEditInput(void);
 static void BattleLab_HandleLetterInput(void);
@@ -159,8 +179,10 @@ void BattleLab_Open(void)
     sLabCursor = LAB_MENU_START;
     sLabNeedsFreshGame = TRUE;
     sLabMode = LAB_MODE_MAIN;
-    BattleLab_ResetTeams();
-    BattleLab_ResetRules();
+    {
+        s32 start = BattleLab_AutoOpenScenario();
+        BattleLab_SelectScenario(start > 0 ? start : 0);
+    }
     FadeOutBGM(4);
     BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 16, RGB_BLACK);
     SetMainCallback2(CB2_BattleLab_Init);
@@ -194,10 +216,9 @@ static u32 LabAbilitySlotFor(u32 species, u32 ability)
     return 0;
 }
 
-void BattleLab_ResetSlot(u32 side, u32 slot)
+static void LabSlotFromTrainer(u32 side, u32 slot, struct LabSlot *s)
 {
     const struct Trainer *trainer = BattleLab_ScenarioTrainer(side);
-    struct LabSlot *s = &gBattleLabTeams[side][slot];
     u32 i;
 
     memset(s, 0, sizeof(*s));
@@ -219,6 +240,12 @@ void BattleLab_ResetSlot(u32 side, u32 slot)
         s->nature = tm->nature < NUM_NATURES ? tm->nature : 0;
         s->ivs = tm->iv & 0x1F;
     }
+}
+
+void BattleLab_ResetSlot(u32 side, u32 slot)
+{
+    LabEnsureScenario();
+    gBattleLabTeams[side][slot] = sLabCurrent.teams[side][slot];
 }
 
 void BattleLab_ResetTeams(void)
@@ -540,14 +567,14 @@ static void LabBuildMonFromSlot(struct Pokemon *mon, const struct LabSlot *s)
 
 void BattleLab_ResetRules(void)
 {
-    memset(&gBattleLabRules, 0, sizeof(gBattleLabRules));
+    LabEnsureScenario();
+    gBattleLabRules = sLabCurrent.rules;
 }
 
 bool32 BattleLab_RulesEdited(void)
 {
-    const struct LabRules *r = &gBattleLabRules;
-    return r->format != LAB_FORMAT_TRAINER_SINGLE || r->weather != LAB_WEATHER_NONE
-        || r->terrain != LAB_TERRAIN_NONE || r->ai != LAB_AI_SCENARIO || r->fixedSeed;
+    LabEnsureScenario();
+    return memcmp(&gBattleLabRules, &sLabCurrent.rules, sizeof(gBattleLabRules)) != 0;
 }
 
 u64 BattleLab_OpponentAiFlags(void)
@@ -606,25 +633,189 @@ const u8 *BattleLab_ValidateStart(void)
 }
 
 // TRUE if any slot differs from the scenario (species, level, or in-battle setting).
+// TRUE if this slot differs from the loaded scenario (the "modified" build flag is ignored).
+bool32 BattleLab_SlotEdited(u32 side, u32 slot)
+{
+    struct LabSlot a = gBattleLabTeams[side][slot];
+    struct LabSlot b;
+    LabEnsureScenario();
+    b = sLabCurrent.teams[side][slot];
+    a.flags &= ~LAB_SLOT_MODIFIED;
+    b.flags &= ~LAB_SLOT_MODIFIED;
+    if (a.species == SPECIES_NONE && b.species == SPECIES_NONE)
+        return FALSE;
+    return memcmp(&a, &b, sizeof(a)) != 0;
+}
+
+// TRUE if anything differs from the loaded scenario.
 bool32 BattleLab_IsEdited(void)
 {
     u32 side, slot;
     if (BattleLab_RulesEdited())
         return TRUE;
     for (side = 0; side < LAB_SIDE_COUNT; side++)
-    {
-        const struct Trainer *trainer = BattleLab_ScenarioTrainer(side);
         for (slot = 0; slot < PARTY_SIZE; slot++)
-        {
-            const struct LabSlot *s = &gBattleLabTeams[side][slot];
-            bool32 scenarioHasMon = slot < trainer->partySize;
-            if (s->flags & LAB_SLOT_MODIFIED)
+            if (BattleLab_SlotEdited(side, slot))
                 return TRUE;
-            if (scenarioHasMon != LabSlotInBattle(s))
-                return TRUE;
-        }
-    }
     return FALSE;
+}
+
+// ---------------------------------------------------------------- scenario loading (F011)
+
+static const volatile u8 *LabBlock(void)
+{
+    // volatile: the block is patched after the build, so its contents must never be constant-folded.
+    return (const volatile u8 *)gBattleLabScenarioBlock;
+}
+
+static bool32 LabBlockValid(void)
+{
+    const volatile u8 *b = LabBlock();
+    u32 count = b[LAB_BLOCK_MARKER_SIZE + 1];
+    return b[LAB_BLOCK_MARKER_SIZE] == LAB_BLOCK_VERSION
+        && count <= LAB_MAX_BLOCK_SCENARIOS;
+}
+
+u32 BattleLab_BlockScenarioCount(void)
+{
+    return LabBlockValid() ? LabBlock()[LAB_BLOCK_MARKER_SIZE + 1] : 0;
+}
+
+u32 BattleLab_ScenarioCount(void)
+{
+    return 1 + BattleLab_BlockScenarioCount();
+}
+
+// Scenario to open with (0 = built-in), or -1 if the ROM doesn't ask to open the Lab.
+s32 BattleLab_AutoOpenScenario(void)
+{
+    u32 value;
+    if (!LabBlockValid())
+        return -1;
+    value = LabBlock()[LAB_BLOCK_MARKER_SIZE + 2];
+    if (value == 0 || value > BattleLab_ScenarioCount())
+        return -1;
+    return value - 1;
+}
+
+bool32 BattleLab_ShouldAutoOpen(void)
+{
+    return BattleLab_AutoOpenScenario() >= 0 && !JOY_HELD(B_BUTTON);   // hold B at boot for the title screen
+}
+
+static void LabCopyFromBlock(u32 blockIndex, struct LabScenarioRecord *out)
+{
+    const volatile u8 *src = LabBlock() + LAB_BLOCK_MARKER_SIZE + 4 + blockIndex * sizeof(struct LabScenarioRecord);
+    u8 *dst = (u8 *)out;
+    u32 i;
+    for (i = 0; i < sizeof(*out); i++)
+        dst[i] = src[i];
+}
+
+// Scenario files are checked by the tool, but the game never trusts the block: anything out of
+// range becomes empty or a safe default.
+static void LabSanitiseSlot(struct LabSlot *s)
+{
+    u32 i;
+    if (!BattleLab_IsSpeciesSelectable(s->species))
+    {
+        memset(s, 0, sizeof(*s));
+        s->level = LAB_DEFAULT_LEVEL;
+        s->ivs = MAX_PER_STAT_IVS;
+        s->hpPercent = 100;
+        return;
+    }
+    s->flags = (s->flags & LAB_SLOT_ACTIVE) | LAB_SLOT_MODIFIED;   // built from the fields
+    if (s->level < 1) s->level = 1;
+    if (s->level > MAX_LEVEL) s->level = MAX_LEVEL;
+    if (s->moves[0] == MOVE_NONE && s->moves[1] == MOVE_NONE && s->moves[2] == MOVE_NONE && s->moves[3] == MOVE_NONE)
+        LabFillLevelUpMoves(s);   // no moves in the file: the species' level-up moves
+    for (i = 0; i < MAX_MON_MOVES; i++)
+        if (s->moves[i] != MOVE_NONE && !BattleLab_IsMoveSelectable(s->moves[i]))
+            s->moves[i] = MOVE_NONE;
+    if (s->item != ITEM_NONE && !BattleLab_IsItemSelectable(s->item))
+        s->item = ITEM_NONE;
+    if (s->abilitySlot >= NUM_ABILITY_SLOTS || gSpeciesInfo[s->species].abilities[s->abilitySlot] == ABILITY_NONE)
+        s->abilitySlot = 0;
+    if (s->nature >= NUM_NATURES) s->nature = 0;
+    if (s->ivs > MAX_PER_STAT_IVS) s->ivs = MAX_PER_STAT_IVS;
+    if (s->hpPercent < 1 || s->hpPercent > 100) s->hpPercent = 100;
+    if (s->status >= LAB_STATUS_COUNT) s->status = LAB_STATUS_NONE;
+}
+
+static void LabSanitiseRules(struct LabRules *r)
+{
+    if (r->format >= LAB_FORMAT_COUNT) r->format = 0;
+    if (r->weather >= LAB_WEATHER_COUNT) r->weather = 0;
+    if (r->terrain >= LAB_TERRAIN_COUNT) r->terrain = 0;
+    if (r->ai >= LAB_AI_COUNT) r->ai = 0;
+    r->fixedSeed = r->fixedSeed ? TRUE : FALSE;
+    r->padding = 0;
+}
+
+static void LabLoadBuiltIn(struct LabScenarioRecord *rec)
+{
+    u32 side, slot;
+    memset(rec, 0, sizeof(*rec));
+    StringCopy(rec->id, COMPOUND_STRING("LAB-001"));
+    StringCopy(rec->name, COMPOUND_STRING("Baseline 1v1"));
+    for (side = 0; side < LAB_SIDE_COUNT; side++)
+        for (slot = 0; slot < PARTY_SIZE; slot++)
+            LabSlotFromTrainer(side, slot, &rec->teams[side][slot]);
+}
+
+// Loads scenario `index` (0 = built-in LAB-001, 1.. = the ROM block) as the current one and
+// resets the teams and rules to it. Returns FALSE (and loads nothing) for a bad index.
+bool32 BattleLab_SelectScenario(u32 index)
+{
+    u32 side, slot;
+    if (index >= BattleLab_ScenarioCount())
+        return FALSE;
+    if (index == 0)
+    {
+        LabLoadBuiltIn(&sLabCurrent);
+    }
+    else
+    {
+        LabCopyFromBlock(index - 1, &sLabCurrent);
+        sLabCurrent.id[sizeof(sLabCurrent.id) - 1] = EOS;
+        sLabCurrent.name[sizeof(sLabCurrent.name) - 1] = EOS;
+        LabSanitiseRules(&sLabCurrent.rules);
+        for (side = 0; side < LAB_SIDE_COUNT; side++)
+            for (slot = 0; slot < PARTY_SIZE; slot++)
+                LabSanitiseSlot(&sLabCurrent.teams[side][slot]);
+    }
+    sLabScenarioIndex = index;
+    BattleLab_ResetTeams();
+    BattleLab_ResetRules();
+    return TRUE;
+}
+
+static void LabEnsureScenario(void)
+{
+    if (sLabCurrent.id[0] == 0 || sLabCurrent.id[0] == EOS)
+    {
+        LabLoadBuiltIn(&sLabCurrent);
+        sLabScenarioIndex = 0;
+    }
+}
+
+// Scenario id / name for the menu (index 0 = built-in).
+static void LabScenarioLabel(u32 index, u8 *id, u8 *name)
+{
+    struct LabScenarioRecord *tmp;
+    if (index == 0)
+    {
+        StringCopy(id, COMPOUND_STRING("LAB-001"));
+        StringCopy(name, COMPOUND_STRING("Baseline 1v1"));
+        return;
+    }
+    tmp = &gBattleLabScratchRecord;
+    LabCopyFromBlock(index - 1, tmp);
+    tmp->id[sizeof(tmp->id) - 1] = EOS;
+    tmp->name[sizeof(tmp->name) - 1] = EOS;
+    StringCopy(id, tmp->id);
+    StringCopy(name, tmp->name);
 }
 
 // Builds one side's battle party from the Lab slots, in place: the scenario party is created
@@ -787,8 +978,11 @@ static void BattleLab_DrawTitle(void)
     u8 *buf = gStringVar3;
 
     buf[0] = EOS;
-    StringAppend(buf, BattleLab_IsEdited() ? COMPOUND_STRING("BATTLE LAB · LAB-001 (edited)")
-                                           : COMPOUND_STRING("BATTLE LAB · LAB-001 baseline 1v1"));
+    LabEnsureScenario();
+    StringAppend(buf, COMPOUND_STRING("BATTLE LAB · "));
+    StringAppend(buf, sLabCurrent.id);
+    if (BattleLab_IsEdited())
+        StringAppend(buf, COMPOUND_STRING(" (edited)"));
     // Last battle's result (F010), e.g. "· Won 4t".
     if (sLabLastResult != LAB_RESULT_NONE)
     {
@@ -878,7 +1072,7 @@ static void BattleLab_DrawTeam(void)
                 color = sTextColorDim;
             }
             StringAppend(buf, GetSpeciesName(s->species));
-            if (s->flags & LAB_SLOT_MODIFIED)
+            if (BattleLab_SlotEdited(sLabSide, slot))
                 StringAppend(buf, COMPOUND_STRING("!"));
         }
         AddTextPrinterParameterized3(WIN_MENU, FONT_NARROW, 0, slot * 16 + 1, color, TEXT_SKIP_DRAW, buf);
@@ -1386,6 +1580,64 @@ const u8 *BattleLab_ResultName(u32 result)
     return result < LAB_RESULT_COUNT ? sLabResultNames[result] : sLabResultNames[LAB_RESULT_NONE];
 }
 
+// ---------------------------------------------------------------- scenario screen (F011)
+
+static void BattleLab_DrawScenarios(void)
+{
+    u32 count = BattleLab_ScenarioCount();
+    u32 top = 0, i;
+    u8 *buf = gStringVar4;
+    u8 name[32];
+
+    if (sLabScenarioCursor >= LAB_VISIBLE_ROWS)
+        top = sLabScenarioCursor - LAB_VISIBLE_ROWS + 1;
+    FillWindowPixelBuffer(WIN_MENU, PIXEL_FILL(1));
+    for (i = 0; i < LAB_VISIBLE_ROWS && top + i < count; i++)
+    {
+        u32 index = top + i;
+        buf[0] = (index == sLabScenarioCursor) ? CHAR_RIGHT_ARROW : CHAR_SPACE;
+        LabScenarioLabel(index, buf + 1, name);
+        if (index == sLabScenarioIndex)
+            StringAppend(buf, COMPOUND_STRING(" (now)"));
+        AddTextPrinterParameterized3(WIN_MENU, FONT_NARROW, 0, i * 16 + 1, sTextColorNormal, TEXT_SKIP_DRAW, buf);
+    }
+    CopyWindowToVram(WIN_MENU, COPYWIN_GFX);
+
+    LabScenarioLabel(sLabScenarioCursor, buf, name);
+    buf[0] = EOS;
+    StringAppend(buf, name);
+    StringAppend(buf, count > 1 ? COMPOUND_STRING("\nA: load\nB: back") : COMPOUND_STRING("\nMore: play.sh\n--lab\nB: back"));
+    FillWindowPixelBuffer(WIN_INFO, PIXEL_FILL(1));
+    AddTextPrinterParameterized3(WIN_INFO, FONT_SMALL, 0, 1, sTextColorNormal, TEXT_SKIP_DRAW, buf);
+    CopyWindowToVram(WIN_INFO, COPYWIN_GFX);
+}
+
+static void BattleLab_HandleScenarioInput(void)
+{
+    u32 count = BattleLab_ScenarioCount();
+    if (JOY_REPEAT(DPAD_UP))
+        sLabScenarioCursor = (sLabScenarioCursor + count - 1) % count;
+    else if (JOY_REPEAT(DPAD_DOWN))
+        sLabScenarioCursor = (sLabScenarioCursor + 1) % count;
+    else if (JOY_NEW(A_BUTTON))
+    {
+        PlaySE(SE_SELECT);
+        BattleLab_SelectScenario(sLabScenarioCursor);
+        sLabLastResult = LAB_RESULT_NONE;
+        BattleLab_ShowMainMenu();
+        return;
+    }
+    else if (JOY_NEW(B_BUTTON))
+    {
+        PlaySE(SE_SELECT);
+        BattleLab_ShowMainMenu();
+        return;
+    }
+    else
+        return;
+    BattleLab_DrawScenarios();
+}
+
 // ---------------------------------------------------------------- rules screen (F009)
 
 static const u8 *const sLabRulesLabels[RULES_ROW_COUNT] =
@@ -1434,11 +1686,11 @@ static void BattleLab_DrawRules(void)
         buf[0] = EOS;
         switch (row)
         {
-        case RULES_ROW_FORMAT:    StringAppend(buf, sLabFormatNames[r->format]);   changed = r->format != 0; break;
-        case RULES_ROW_WEATHER:   StringAppend(buf, sLabWeatherNames[r->weather]); changed = r->weather != 0; break;
-        case RULES_ROW_TERRAIN:   StringAppend(buf, sLabTerrainNames[r->terrain]); changed = r->terrain != 0; break;
-        case RULES_ROW_AI:        StringAppend(buf, sLabAiNames[r->ai]);           changed = r->ai != 0; break;
-        case RULES_ROW_SEED_MODE: StringAppend(buf, r->fixedSeed ? COMPOUND_STRING("Fixed") : COMPOUND_STRING("Random")); changed = r->fixedSeed; break;
+        case RULES_ROW_FORMAT:    StringAppend(buf, sLabFormatNames[r->format]);   changed = r->format != sLabCurrent.rules.format; break;
+        case RULES_ROW_WEATHER:   StringAppend(buf, sLabWeatherNames[r->weather]); changed = r->weather != sLabCurrent.rules.weather; break;
+        case RULES_ROW_TERRAIN:   StringAppend(buf, sLabTerrainNames[r->terrain]); changed = r->terrain != sLabCurrent.rules.terrain; break;
+        case RULES_ROW_AI:        StringAppend(buf, sLabAiNames[r->ai]);           changed = r->ai != sLabCurrent.rules.ai; break;
+        case RULES_ROW_SEED_MODE: StringAppend(buf, r->fixedSeed ? COMPOUND_STRING("Fixed") : COMPOUND_STRING("Random")); changed = r->fixedSeed != sLabCurrent.rules.fixedSeed || (r->fixedSeed && r->seed != sLabCurrent.rules.seed); break;
         case RULES_ROW_SEED:
             if (r->fixedSeed)
                 LabAppendNumber(buf, r->seed, 5);
@@ -1516,6 +1768,9 @@ static void Task_BattleLab_Input(u8 taskId)
     case LAB_MODE_RULES:
         BattleLab_HandleRulesInput();
         return;
+    case LAB_MODE_SCENARIO:
+        BattleLab_HandleScenarioInput();
+        return;
     case LAB_MODE_CONFIRM_RESET:
         if (JOY_NEW(A_BUTTON))
         {
@@ -1554,7 +1809,9 @@ static void Task_BattleLab_Input(u8 taskId)
         BattleLab_DrawRules();
         break;
     case LAB_MENU_SCENARIO:
-        BattleLab_PrintInfo(sText_ScenarioSoon);
+        sLabMode = LAB_MODE_SCENARIO;
+        sLabScenarioCursor = sLabScenarioIndex;
+        BattleLab_DrawScenarios();
         break;
     case LAB_MENU_START:
     {
