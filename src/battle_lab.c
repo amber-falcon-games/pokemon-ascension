@@ -834,12 +834,14 @@ static bool32 LabBattlerOnField(u32 battler)
 }
 
 static void LabEnsureExhaustedTint(void);
+static void LabEnsureEnergyBars(void);
 
 static void LabPlanRound(void)
 {
     u32 battler, earliest = 0xFFFFFFFF;
     sLabRoundPlanned = TRUE;
     LabEnsureExhaustedTint();
+    LabEnsureEnergyBars();
     sLabPrevActors = sLabActors;
     sLabActors = 0;
     sLabCharged = 0;
@@ -996,24 +998,132 @@ static void LabEnsureExhaustedTint(void)
         CreateTask(Task_LabExhaustedTint, 4);
 }
 
-// Dual: the player's EXP bar shows energy (opponents have no second bar in the spike; their
-// state shows through the EX badge, the tint and the battle log).
+// Dual: every battler gets its own energy bar, a separate 64x8 strip (two 32x8 sprites) attached
+// to its healthbox: under the foe's box, above yours. The EXP bar keeps showing experience.
+// Colours come from the healthbox palette: blue fill (red when Exhausted); the empty part that
+// energy can still refill is dark, and the part above the health cap is darker still.
+#define LAB_ENBAR_TAG 0xA5D0
+#define LAB_ENBAR_W 46            // fill width in pixels
+static EWRAM_DATA u8 sLabEnBarSprite[MAX_BATTLERS_COUNT][2] = {0};
+
+static void LabEnBarPixel(u8 *tiles, s32 x, s32 y, u32 color)   // 64x8 buffer: tiles 0-3 left half, 4-7 right
+{
+    u8 *b;
+    if (x < 0 || x >= 64 || y < 0 || y >= 8)
+        return;
+    b = &tiles[(x / 8) * 32 + y * 4 + (x % 8) / 2];
+    if (x & 1)
+        *b = (*b & 0x0F) | (color << 4);
+    else
+        *b = (*b & 0xF0) | color;
+}
+
+static void SpriteCB_LabEnBar(struct Sprite *sprite)
+{
+    u32 battler = sprite->data[0], healthbox = gHealthboxSpriteIds[battler];
+    if (!BattleLab_DualMode() || healthbox >= MAX_SPRITES || !gSprites[healthbox].inUse)
+    {
+        sprite->invisible = TRUE;
+        return;
+    }
+    sprite->x = gSprites[healthbox].x + sprite->data[1];
+    sprite->y = gSprites[healthbox].y + sprite->data[2];
+    sprite->x2 = gSprites[healthbox].x2;
+    sprite->y2 = gSprites[healthbox].y2;
+    sprite->invisible = gSprites[healthbox].invisible || gBattleMons[battler].hp == 0;
+}
+
 static void LabDrawEnergyBarValue(u32 battler, u32 value)
 {
-    u32 healthbox = gHealthboxSpriteIds[battler];
-    if (!IsOnPlayerSide(battler) || IsDoubleBattle())
+    static const u8 sEn[2][5] = {{7, 4, 6, 4, 7}, {5, 7, 7, 5, 5}};   // "E", "N" in 3x5
+    u8 tiles[64 * 8 / 2] ALIGNED(4);
+    u32 i, x, y, fill, capFill, max = LabEnergyMax(battler), cap = LabEnergyCap(battler);
+    u32 color = BattleLab_IsExhausted(battler) ? 14 : 11, shade = BattleLab_IsExhausted(battler) ? 14 : 15;
+    if (sLabEnBarSprite[battler][0] >= MAX_SPRITES || max == 0)
         return;
-    LoadBattleBarGfx(3);
-    SetBattleBarStruct(battler, healthbox, LabEnergyMax(battler), value, 0);
-    MoveBattleBar(battler, healthbox, EXP_BAR, 0);
+    fill = value * LAB_ENBAR_W / max;
+    if (value > 0 && fill == 0)
+        fill = 1;
+    capFill = cap * LAB_ENBAR_W / max;
+    memset(tiles, 0, sizeof(tiles));
+    // "EN" label, dark outline then cream letters
+    for (i = 0; i < 2; i++)
+        for (y = 0; y < 5; y++)
+            for (x = 0; x < 3; x++)
+                if (sEn[i][y] & (4 >> x))
+                {
+                    s32 dx, dy;
+                    for (dy = -1; dy <= 1; dy++)
+                        for (dx = -1; dx <= 1; dx++)
+                            LabEnBarPixel(tiles, 2 + i * 4 + x + dx, 1 + y + dy, 1);
+                }
+    for (i = 0; i < 2; i++)
+        for (y = 0; y < 5; y++)
+            for (x = 0; x < 3; x++)
+                if (sEn[i][y] & (4 >> x))
+                    LabEnBarPixel(tiles, 2 + i * 4 + x, 1 + y, 2);
+    // bar frame (dark) x 11..60, rows 1..6; inside x 12..57+, rows 2..5
+    for (x = 11; x < 13 + LAB_ENBAR_W + 1; x++)
+        for (y = 1; y <= 6; y++)
+            LabEnBarPixel(tiles, x, y, 1);
+    for (x = 0; x < LAB_ENBAR_W; x++)
+        for (y = 2; y <= 5; y++)
+        {
+            u32 c;
+            if (x < fill)
+                c = (y <= 3) ? color : shade;
+            else if (x < capFill)
+                c = 6;    // empty, can refill
+            else
+                c = 8;    // beyond the health cap: can't refill until health returns
+            LabEnBarPixel(tiles, 13 + x, y, c);
+        }
+    CpuCopy32(tiles, (void *)(OBJ_VRAM0 + gSprites[sLabEnBarSprite[battler][0]].oam.tileNum * TILE_SIZE_4BPP), 128);
+    CpuCopy32(tiles + 128, (void *)(OBJ_VRAM0 + gSprites[sLabEnBarSprite[battler][1]].oam.tileNum * TILE_SIZE_4BPP), 128);
+}
+
+static void LabEnsureEnergyBars(void)
+{
+    static const struct OamData sOam = {.shape = SPRITE_SHAPE(32x8), .size = SPRITE_SIZE(32x8), .priority = 1};
+    u32 battler, half;
+    if (!BattleLab_DualMode())
+        return;
+    for (battler = 0; battler < gBattlersCount; battler++)
+    {
+        u32 healthbox = gHealthboxSpriteIds[battler];
+        if (sLabEnBarSprite[battler][0] < MAX_SPRITES && gSprites[sLabEnBarSprite[battler][0]].inUse
+         && gSprites[sLabEnBarSprite[battler][0]].callback == SpriteCB_LabEnBar)
+            continue;
+        if (healthbox >= MAX_SPRITES)
+            continue;
+        for (half = 0; half < 2; half++)
+        {
+            u8 blank[128] ALIGNED(4) = {0};
+            struct SpriteSheet sheet = {.data = blank, .size = 128, .tag = LAB_ENBAR_TAG + battler * 2 + half};
+            struct SpriteTemplate tmpl = {.tileTag = LAB_ENBAR_TAG + battler * 2 + half, .paletteTag = TAG_NONE, .oam = &sOam,
+                                          .anims = gDummySpriteAnimTable, .images = NULL, .affineAnims = gDummySpriteAffineAnimTable,
+                                          .callback = SpriteCB_LabEnBar};
+            u32 spriteId;
+            if (LoadSpriteSheet(&sheet) == 0)
+                return;
+            spriteId = CreateSprite(&tmpl, 0, 0, 0);
+            if (spriteId >= MAX_SPRITES)
+                return;
+            gSprites[spriteId].oam.paletteNum = gSprites[healthbox].oam.paletteNum;
+            gSprites[spriteId].data[0] = battler;
+            // Foe: just under its healthbox. Player: just above it.
+            gSprites[spriteId].data[1] = (IsOnPlayerSide(battler) ? 16 : 8) + half * 32;
+            gSprites[spriteId].data[2] = IsOnPlayerSide(battler) ? -18 : 15;
+            sLabEnBarSprite[battler][half] = spriteId;
+            SpriteCB_LabEnBar(&gSprites[spriteId]);
+        }
+        LabDrawEnergyBarValue(battler, *LabEnergyPtr(battler));
+    }
 }
 
 bool32 BattleLab_DrawEnergyBar(u32 battler, u32 healthboxSpriteId)
 {
-    if (!BattleLab_DualMode() || !IsOnPlayerSide(battler) || IsDoubleBattle())
-        return FALSE;
-    LabDrawEnergyBarValue(battler, *LabEnergyPtr(battler));
-    return TRUE;
+    return FALSE;   // the EXP bar shows experience again; energy has its own bar
 }
 
 static void LabSyncEnergy(u32 battler)
@@ -1438,7 +1548,7 @@ static void LabShowRegenPopup(u32 battler, u32 amount)
     if (LoadSpriteSheet(&sheet) == 0xFFFF)
         return;
     x = gSprites[healthbox].x + gSprites[healthbox].x2 + 32;   // just above the healthbox's right side
-    y = gSprites[healthbox].y + gSprites[healthbox].y2 - 16;
+    y = gSprites[healthbox].y + gSprites[healthbox].y2 - (IsOnPlayerSide(battler) && BattleLab_DualMode() ? 30 : 16);   // above your energy bar
     spriteId = CreateSprite(&tmpl, x, y, 0);
     if (spriteId >= MAX_SPRITES)
     {
@@ -1589,7 +1699,11 @@ void BattleLab_LogTurnEnd(void)
         LabTimelineRoundEnd();
         LabQueueRoundMessages();
         for (battler = 0; battler < gBattlersCount; battler++)
+        {
             LabRefreshEnergyLabel(battler);   // damage may have tipped someone into Exhausted
+            if (BattleLab_DualMode())
+                LabDrawEnergyBarValue(battler, *LabEnergyPtr(battler));   // and moved the health cap
+        }
     }
     DebugPrintf("LAB turn %d", gBattleResults.battleTurnCounter + 1);
     LabLogBattlers();
@@ -2823,6 +2937,7 @@ static void Task_BattleLab_StartBattle(u8 taskId)
     sLabAiDecisions = 0;
     sLabNow = 0;
     memset(sLabPopupSprite, 0xFF, sizeof(sLabPopupSprite));
+    memset(sLabEnBarSprite, 0xFF, sizeof(sLabEnBarSprite));
     sLabTintedMask = 0;
     sLabMessage[0] = EOS;
     sLabWasExhausted = 0;
