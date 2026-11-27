@@ -161,6 +161,19 @@ Owner decisions: keep refining the prototype (no go/no-go yet). Make battles lon
   - Headless LAB-014: Blissey's Soft-Boiled costs 66 energy, so healing drains her (330 → 108 over three heals). Metagross's hits cap her energy ("capped by health 264 → 232").
   - Headless LAB-015: still a one-hit KO (Giga Impact on Ninjask). Tune Damage lower in the Lab.
 
+## Iteration 4 (D025, 2026-11-27)
+- **Dual bars is now the default** in LAB-011/012/013 (×1 energy, 50% damage, 100% cost). Stamina mode is still in Rules for comparison. LAB-014/015 were removed as duplicates.
+- **End-of-round messages:**
+  - "X is exhausted! It slows right down..."
+  - "X got its second wind!"
+  - "X's stamina was sapped by the blow!" (health capped its energy)
+- **Regen:**
+  - Benched Pokémon recover +8% energy per 1,000 clock units, up to their health cap.
+  - Active regen in Dual is +3% per 1,000.
+  - The whole-HUD green regen flash is removed.
+- **Exhausted badge:** dark label background with a white "EX", blinking with the normal label every half second.
+- **Headless runs (mashing the first move):** LAB-011 now lasts 7 turns (was 1–3). The energy cap triggered in all three scenarios, and the new messages show on screen.
+
 ## Explicit exclusions
 - Final balance: F019.
 - The polished timeline UI: F018.

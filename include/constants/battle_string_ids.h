@@ -726,6 +726,7 @@ enum StringID
     STRINGID_LOSTSOMEOFITSHP,
     STRINGID_BELCHCANTUSE,
     STRINGID_TOOEXHAUSTEDTOUSE,   // Pokémon Ascension (F017 spike, Battle Lab only)
+    STRINGID_LABMESSAGE,          // Pokémon Ascension (F017 spike): end-of-round Lab messages (text built at run time)
     STRINGID_COUNT
 };
 

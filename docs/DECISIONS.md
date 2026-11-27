@@ -49,6 +49,11 @@ Decided:
   - **Explanations:** battle messages say why something happened (a Boost was used; the Pokémon is faster and acts again; it is Exhausted).
   - **In Stamina (one bar):** healing stays free for now, and the Exhausted death spiral stays. Future ideas for healing: it reduces Speed, it is less effective, or it fails more on repeated use.
   - **Dual bars, to be tested as the likely direction:** separate health and energy bars. Damage takes health (0 = fainted); moves spend energy. Lost health caps energy capacity (a hard hit saps stamina, like a boxer's). Healing costs energy and restores health, so spamming it exhausts the Pokémon. Built as a third Lab combat mode, "Dual bars".
+- D025 (2026-11-27): Health and energy are separate. Owner, after playtesting Dual bars: "Energy and Health definitely need separating." Dual bars is the model F018–F019 build on.
+  - **Energy gets its own bar in the healthbox.** Reusing the EXP bar is only a prototype shortcut; the real version keeps the EXP bar for experience.
+  - **Exhausted is announced** with a message.
+  - **Regen is shown subtly.** The prototype's whole-HUD green flash was dropped as distracting.
+  - **Benched Pokémon recover energy, but only up to their health cap,** so the cap can be felt and switching has a purpose.
 
 To be raised at F015 (not decided): how to recover save space for an expanded move library — see SAVE_COMPATIBILITY.md options S1–S5.
 

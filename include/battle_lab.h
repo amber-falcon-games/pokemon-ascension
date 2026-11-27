@@ -135,6 +135,8 @@ void BattleLab_MoveMenuFrame(u32 battler);             // blinks the cost previe
 const void *BattleLab_HealthbarLabelGfx(u32 battler, const void *hpLabel);   // "EN" (or red "EX" when Exhausted) in stamina battles
 const u8 *BattleLab_UsedMoveText(u32 attacker, const u8 *defaultText);   // "X used Y!" plus why (boost, acts again, exhausted)
 void BattleLab_AiTimerStart(void);                     // F017 measurement: AI decision time
+bool32 BattleLab_TakePendingMessage(void);             // end of round: a Lab message to print?
+const u8 *BattleLab_PendingMessageText(void);
 void BattleLab_AiTimerStop(u32 battler);
 bool32 BattleLab_ShouldAutoOpen(void);
 void BattleLab_LogTurnEnd(void);   // F012: per-turn battle log (mGBA log window); no-op outside Lab battles

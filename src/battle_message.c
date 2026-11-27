@@ -2805,6 +2805,11 @@ void BufferStringBattle(enum StringID stringID, enum BattlerId battler)
     case STRINGID_TRAINERSLIDE:
         stringPtr = gBattleStruct->trainerSlideMsg;
         break;
+#if ASCENSION_BATTLE_LAB
+    case STRINGID_LABMESSAGE:   // Pokémon Ascension (F017 spike): "X is exhausted!" etc.
+        stringPtr = BattleLab_PendingMessageText();
+        break;
+#endif
     default: // load a string from the table
         if (stringID >= STRINGID_COUNT)
         {

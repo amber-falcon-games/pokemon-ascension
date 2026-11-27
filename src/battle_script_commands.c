@@ -1,4 +1,5 @@
 #include "global.h"
+#include "battle_lab.h"
 #include "battle.h"
 #include "battle_hold_effects.h"
 #include "battle_message.h"
@@ -12069,6 +12070,11 @@ void BS_EndTurnEvents(void)
     if (gBattleOutcome != 0)
         return;
 
+#if ASCENSION_BATTLE_LAB
+    if (BattleLab_TakePendingMessage())   // Pokémon Ascension (F017 spike): "X is exhausted!" etc.
+        BattleScriptCall(BattleScript_LabMessageRet);
+    else
+#endif
     if (gBattleTypeFlags & BATTLE_TYPE_PALACE)
         BattleScriptCall(BattleScript_PalacePrintFlavorTextRet);
     else if (gBattleTypeFlags & BATTLE_TYPE_ARENA && gBattleStruct->eventState.arenaTurn == 0)

@@ -730,6 +730,7 @@ bool32 BattleLab_DualMode(void)
 }
 
 static EWRAM_DATA u16 sLabEnergy[2][PARTY_SIZE] = {0};
+static EWRAM_DATA u8 sLabSapped = 0;         // battler mask: health capped energy this round (message)
 static EWRAM_DATA u16 sLabEnergyMax[2][PARTY_SIZE] = {0};
 
 static u16 *LabEnergyPtr(u32 battler)
@@ -1365,6 +1366,7 @@ static void LabRegenEnergy(void)
             if (gBattleMons[battler].hp > 0 && *energy > LabEnergyCap(battler))
             {
                 DebugPrintf("LAB energy: %S capped by health (%d -> %d)", GetSpeciesName(gBattleMons[battler].species), *energy, LabEnergyCap(battler));
+                sLabSapped |= 1u << battler;
                 *energy = LabEnergyCap(battler);
                 LabSyncEnergy(battler);
             }
@@ -1379,17 +1381,101 @@ static void LabRegenEnergy(void)
             sLabRegenCarry[battler] = 0;
             continue;
         }
-        sLabRegenCarry[battler] += LabEnergyMax(battler) * LAB_REGEN_PERCENT * elapsed;   // units of 1/(100*SCALE) HP
+        sLabRegenCarry[battler] += LabEnergyMax(battler) * (BattleLab_DualMode() ? 3 : LAB_REGEN_PERCENT) * elapsed;   // units of 1/(100*SCALE) HP
         gain = sLabRegenCarry[battler] / (100 * LAB_TIMELINE_SCALE);
         sLabRegenCarry[battler] %= 100 * LAB_TIMELINE_SCALE;
         if (gain == 0)
             continue;
         hp = (hp + gain < maxHp) ? hp + gain : maxHp;
         *energy = hp;
-        LabPulseSpritePalette(gHealthboxSpriteIds[battler], RGB(8, 31, 8));   // regen: green flash on the bar
         LabSyncEnergy(battler);
     }
     sLabProtectedThisTurn = 0;
+}
+
+// End-of-round messages (owner, 2026-11-27): "X is exhausted!", "X got its second wind!" and
+// "X's stamina was sapped by the blow!". Built here, printed by the end-of-turn script.
+static EWRAM_DATA u8 sLabMessage[200] = {0};
+static EWRAM_DATA u8 sLabWasExhausted = 0;   // battler mask, for the exhausted / second-wind messages
+
+static void LabQueueMessage(u32 battler, const u8 *what)
+{
+    u8 nick[POKEMON_NAME_LENGTH + 1];
+    if (StringLength(sLabMessage) + 40 >= sizeof(sLabMessage))
+        return;
+    if (sLabMessage[0] != EOS)
+        StringAppend(sLabMessage, COMPOUND_STRING("\p"));
+    if (!IsOnPlayerSide(battler))
+        StringAppend(sLabMessage, COMPOUND_STRING("The opposing "));
+    GetMonData(GetBattlerMon(battler), MON_DATA_NICKNAME, nick);
+    StringGet_Nickname(nick);
+    StringAppend(sLabMessage, nick);
+    StringAppend(sLabMessage, what);
+}
+
+bool32 BattleLab_TakePendingMessage(void)
+{
+    return BattleLab_StaminaMode() && sLabMessage[0] != EOS;
+}
+
+const u8 *BattleLab_PendingMessageText(void)
+{
+    // Copied out so the next round can queue new messages while this one prints.
+    StringCopy(gStringVar4, sLabMessage);
+    sLabMessage[0] = EOS;
+    return gStringVar4;
+}
+
+static void LabQueueRoundMessages(void)
+{
+    u32 battler;
+    for (battler = 0; battler < gBattlersCount; battler++)
+    {
+        u32 bit = 1u << battler;
+        bool32 exhausted = gBattleMons[battler].hp > 0 && BattleLab_IsExhausted(battler);
+        if (sLabSapped & bit)
+            LabQueueMessage(battler, COMPOUND_STRING("'s stamina\nwas sapped by the blow!"));
+        if (exhausted && !(sLabWasExhausted & bit))
+            LabQueueMessage(battler, COMPOUND_STRING(" is exhausted!\nIt slows right down..."));
+        else if (!exhausted && (sLabWasExhausted & bit) && gBattleMons[battler].hp > 0)
+            LabQueueMessage(battler, COMPOUND_STRING(" got its\nsecond wind!"));
+        if (exhausted)
+            sLabWasExhausted |= bit;
+        else
+            sLabWasExhausted &= ~bit;
+    }
+    sLabSapped = 0;
+}
+
+// Dual: Pokémon on the bench catch their breath (+8% of max energy per 1000 clock units),
+// but only up to the cap their health allows, so a battered Pokémon can't fully recover.
+#define LAB_BENCH_REGEN_PERCENT 8
+static EWRAM_DATA u32 sLabBenchRegenAt = 0;
+static void LabBenchRegen(void)
+{
+    u32 side, i, battler, elapsed = sLabNow - sLabBenchRegenAt;
+    sLabBenchRegenAt = sLabNow;
+    for (side = 0; side < 2; side++)
+    {
+        struct Pokemon *party = side == 0 ? gParties[B_TRAINER_PLAYER] : gParties[B_TRAINER_OPPONENT_A];
+        for (i = 0; i < PARTY_SIZE; i++)
+        {
+            u32 hp = GetMonData(&party[i], MON_DATA_HP), maxHp = GetMonData(&party[i], MON_DATA_MAX_HP);
+            u32 max = sLabEnergyMax[side][i], cap, gain;
+            bool32 active = FALSE;
+            if (hp == 0 || maxHp == 0 || max == 0)
+                continue;
+            for (battler = 0; battler < gBattlersCount; battler++)
+                if ((IsOnPlayerSide(battler) ? 0 : 1) == side && gBattlerPartyIndexes[battler] == i)
+                    active = TRUE;
+            if (active)
+                continue;
+            cap = max / 2 + max * hp / maxHp / 2;
+            gain = max * LAB_BENCH_REGEN_PERCENT * elapsed / (100 * LAB_TIMELINE_SCALE);
+            if (sLabEnergy[side][i] < cap)
+                sLabEnergy[side][i] = (sLabEnergy[side][i] + gain < cap) ? sLabEnergy[side][i] + gain : cap;
+        }
+    }
 }
 
 void BattleLab_LogTurnEnd(void)
@@ -1399,8 +1485,11 @@ void BattleLab_LogTurnEnd(void)
     if (BattleLab_StaminaMode())
     {
         u32 battler;
+        if (BattleLab_DualMode())
+            LabBenchRegen();
         LabRegenEnergy();
         LabTimelineRoundEnd();
+        LabQueueRoundMessages();
         for (battler = 0; battler < gBattlersCount; battler++)
             LabRefreshEnergyLabel(battler);   // damage may have tipped someone into Exhausted
     }
@@ -2636,6 +2725,10 @@ static void Task_BattleLab_StartBattle(u8 taskId)
     sLabAiDecisions = 0;
     sLabNow = 0;
     sLabTintedMask = 0;
+    sLabMessage[0] = EOS;
+    sLabWasExhausted = 0;
+    sLabSapped = 0;
+    sLabBenchRegenAt = 0;
     sLabRegenAt = 0;
     memset(sLabRegenCarry, 0, sizeof(sLabRegenCarry));
     sLabRoundPlanned = FALSE;
