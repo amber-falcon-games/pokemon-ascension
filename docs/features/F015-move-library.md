@@ -31,6 +31,20 @@ Every Pokémon's battle moves come from a **talent tree** for its evolution line
   - Contests are disabled with it, as already listed for cutting in D011. The rest of F005c (Secret Bases, TV, Mail and so on) still waits.
 - **Migration:** no saves have been released since 0.1.0 with a different layout. Dev saves start a new game (SAVE_COMPATIBILITY.md is updated, and `test/save.c` sizes change with the documented layout).
 
+## Storage design (worked out 2026-11-27)
+| Data | Bits | Where |
+|---|---|---|
+| Branch choices: 2 bits × 8 branches | 16 | Upstream spare bits (`talentChoicesA–D`, `MON_DATA_TALENT_CHOICES`). **Done**, no layout change. |
+| TM "jump ahead" per branch: node index reached early, 3 bits × 8 | 24 | Contest data (below) |
+| Joined global branches: chain id 6 + start position 6 + branch slot replaced 3, × up to 3 | 45 | Contest data (below) |
+
+- **Contest data reused:** the condition stats (Cool, Beauty, Cute, Smart, Tough; 40 bits), sheen (8 bits) and the contest ribbon tiers (15 bits), 63 bits in all.
+  - The fields stay where they are, so save size and layout are unchanged.
+  - Contests and Pokéblock feeding must no longer write them. Those entry points are switched off in this step (Contest Hall entry, Pokéblock feeder), and the rest of the cut waits for F005c.
+- **Global-chain growth without storing a level:**
+  - The generator records each move's *typical level*: the median level at which species learn it naturally.
+  - A Pokémon on a joined chain has the furthest chain move whose typical level it has reached, never earlier than the move it joined at.
+
 ## Explicit exclusions
 - Hand-tuning every line. The owner does that over time, and the generator only provides a first pass.
 - Move info and the in-battle Pokédex: F016. Energy balance: F019.
