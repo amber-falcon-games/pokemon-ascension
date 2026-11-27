@@ -825,7 +825,7 @@ void HandleInputChooseMove(enum BattlerId battler)
     else if (JOY_NEW(DPAD_RIGHT) && !gBattleStruct->zmove.viewing)
     {
         if (!(gMoveSelectionCursor[battler] & 1)
-         && (gMoveSelectionCursor[battler] ^ 1) < gNumberOfMovesToChoose)
+         && moveInfo->moves[gMoveSelectionCursor[battler] ^ 1] != MOVE_NONE)
         {
             MoveSelectionDestroyCursorAt(gMoveSelectionCursor[battler]);
             gMoveSelectionCursor[battler] ^= 1;
@@ -838,6 +838,33 @@ void HandleInputChooseMove(enum BattlerId battler)
             TryMoveSelectionDisplayMoveDescription(battler);
             TryChangeZTrigger(battler, gMoveSelectionCursor[battler]);
         }
+    }
+    else if (JOY_NEW(DPAD_UP) && !gBattleStruct->zmove.viewing && !(gMoveSelectionCursor[battler] & 2)
+          && gMoveSelectionCursor[battler] >= 4)
+    {
+        // Pokémon Ascension (F014): up from the top row turns to the previous page (its bottom row).
+        u32 slot = (gMoveSelectionCursor[battler] & ~3) - 4 + 2 + (gMoveSelectionCursor[battler] & 1);
+        if (moveInfo->moves[slot] == MOVE_NONE)
+            slot &= ~1;
+        MoveSelectionDestroyCursorAt(gMoveSelectionCursor[battler] & 3);
+        gMoveSelectionCursor[battler] = slot;
+        PlaySE(SE_SELECT);
+        ReloadMoveNames(battler);
+        TryMoveSelectionDisplayMoveDescription(battler);
+    }
+    else if (JOY_NEW(DPAD_DOWN) && !gBattleStruct->zmove.viewing && (gMoveSelectionCursor[battler] & 2)
+          && (gMoveSelectionCursor[battler] & ~3) + 4 < MAX_BATTLE_MOVES
+          && moveInfo->moves[(gMoveSelectionCursor[battler] & ~3) + 4] != MOVE_NONE)
+    {
+        // Pokémon Ascension (F014): down from the bottom row turns to the next page (its top row).
+        u32 slot = (gMoveSelectionCursor[battler] & ~3) + 4 + (gMoveSelectionCursor[battler] & 1);
+        if (moveInfo->moves[slot] == MOVE_NONE)
+            slot &= ~1;
+        MoveSelectionDestroyCursorAt(gMoveSelectionCursor[battler] & 3);
+        gMoveSelectionCursor[battler] = slot;
+        PlaySE(SE_SELECT);
+        ReloadMoveNames(battler);
+        TryMoveSelectionDisplayMoveDescription(battler);
     }
     else if (JOY_NEW(DPAD_UP) && !gBattleStruct->zmove.viewing)
     {
@@ -858,7 +885,7 @@ void HandleInputChooseMove(enum BattlerId battler)
     else if (JOY_NEW(DPAD_DOWN) && !gBattleStruct->zmove.viewing)
     {
         if (!(gMoveSelectionCursor[battler] & 2)
-         && (gMoveSelectionCursor[battler] ^ 2) < gNumberOfMovesToChoose)
+         && moveInfo->moves[gMoveSelectionCursor[battler] ^ 2] != MOVE_NONE)
         {
             MoveSelectionDestroyCursorAt(gMoveSelectionCursor[battler]);
             gMoveSelectionCursor[battler] ^= 2;
@@ -1671,18 +1698,27 @@ static void MoveSelectionDisplayMoveNames(enum BattlerId battler)
 {
     s32 i;
     struct ChooseMoveStruct *moveInfo = (struct ChooseMoveStruct *)(&gBattleResources->bufferA[battler][4]);
+    // Pokémon Ascension (F014): up to MAX_BATTLE_MOVES moves, shown four at a time. The page is the
+    // cursor's group of four; arrows mark the pages above and below.
+    u32 base = gMoveSelectionCursor[battler] & ~3;
+    bool32 pageAbove = base > 0, pageBelow = base + 4 < MAX_BATTLE_MOVES && moveInfo->moves[base + 4] != MOVE_NONE;
     gNumberOfMovesToChoose = 0;
 
-    for (i = 0; i < MAX_MON_MOVES; i++)   // four name windows (F014 scrolls the list through them)
+    for (i = 0; i < MAX_MON_MOVES; i++)   // four name windows
     {
+        enum Move move = moveInfo->moves[base + i];
         MoveSelectionDestroyCursorAt(i);
         if (IsGimmickSelected(battler, GIMMICK_DYNAMAX) || GetActiveGimmick(battler) == GIMMICK_DYNAMAX)
-            StringCopy(gDisplayedStringBattle, GetMoveName(GetMaxMove(battler, moveInfo->moves[i])));
+            StringCopy(gDisplayedStringBattle, GetMoveName(GetMaxMove(battler, move)));
         else
-            StringCopy(gDisplayedStringBattle, GetMoveName(moveInfo->moves[i]));
+            StringCopy(gDisplayedStringBattle, GetMoveName(move));
+        if (i == 1 && pageAbove)
+            StringAppend(gDisplayedStringBattle, COMPOUND_STRING(" {UP_ARROW}"));
+        if (i == 3 && pageBelow)
+            StringAppend(gDisplayedStringBattle, COMPOUND_STRING(" {DOWN_ARROW}"));
         // Prints on windows B_WIN_MOVE_NAME_1, B_WIN_MOVE_NAME_2, B_WIN_MOVE_NAME_3, B_WIN_MOVE_NAME_4
         BattlePutTextOnWindow(gDisplayedStringBattle, i + B_WIN_MOVE_NAME_1);
-        if (moveInfo->moves[i] != MOVE_NONE)
+        if (move != MOVE_NONE)
             gNumberOfMovesToChoose++;
     }
 }
