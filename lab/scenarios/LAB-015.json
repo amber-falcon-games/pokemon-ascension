@@ -1,0 +1,11 @@
+{
+  "id": "LAB-015",
+  "name": "Dual: fast vs slow",
+  "rules": { "format": "trainer_single", "combat": "dual", "energy": 1, "damage": 50, "cost": 100, "ai": "smart", "seed": 1234 },
+  "player": [
+    { "species": "NINJASK", "level": 50, "moves": ["X_SCISSOR", "SWORDS_DANCE", "PROTECT", "AERIAL_ACE"], "ability": 1 }
+  ],
+  "opponent": [
+    { "species": "SLAKING", "level": 50, "moves": ["GIGA_IMPACT", "BODY_SLAM", "EARTHQUAKE", "SLACK_OFF"] }
+  ]
+}

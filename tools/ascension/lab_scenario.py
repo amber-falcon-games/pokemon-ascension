@@ -38,7 +38,7 @@ FORMATS = ["trainer_single", "trainer_double", "wild_single"]
 WEATHERS = ["none", "rain", "sun", "sand", "hail", "snow"]
 TERRAINS = ["none", "electric", "grassy", "misty", "psychic"]
 AIS = ["scenario", "smart", "random"]
-COMBATS = ["classic", "stamina"]   # F017 spike (D023)
+COMBATS = ["classic", "stamina", "dual"]   # F017 spike (D023; dual = separate health and energy bars)
 ENERGY_SCALES = {1: 0, 1.5: 1, 2: 2, 3: 3}        # max energy multiplier -> 2-bit index
 DAMAGE_SCALES = {100: 0, 75: 1, 50: 2, 33: 3}     # damage percent
 COST_SCALES = {100: 0, 75: 1, 50: 2, 25: 3}       # energy cost percent
@@ -53,11 +53,11 @@ def pick_scale(value, table, default, what):
 
 
 def pack_combat(rules, where):
-    """The combat byte: bit 0 Classic/Stamina, bits 1-2 energy, 3-4 damage, 5-6 cost."""
+    """The combat byte: bits 0-1 Classic/Stamina/Dual, 2-3 energy, 4-5 damage, 6-7 cost."""
     return (pick(rules.get("combat"), COMBATS, f"{where} combat")
-            | pick_scale(rules.get("energy"), ENERGY_SCALES, 1, f"{where} energy") << 1
-            | pick_scale(rules.get("damage"), DAMAGE_SCALES, 100, f"{where} damage") << 3
-            | pick_scale(rules.get("cost"), COST_SCALES, 100, f"{where} cost") << 5)
+            | pick_scale(rules.get("energy"), ENERGY_SCALES, 1, f"{where} energy") << 2
+            | pick_scale(rules.get("damage"), DAMAGE_SCALES, 100, f"{where} damage") << 4
+            | pick_scale(rules.get("cost"), COST_SCALES, 100, f"{where} cost") << 6)
 STATUSES = ["none", "poison", "toxic", "burn", "paralysis", "sleep", "freeze"]
 ABILITY_SLOTS = {1: 0, 2: 1, "1": 0, "2": 1, "hidden": 2}
 

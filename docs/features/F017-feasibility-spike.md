@@ -144,6 +144,23 @@ Owner decisions: keep refining the prototype (no go/no-go yet). Make battles lon
    - use a softer slowdown (×0.5)
 3. The fading "+N" number on regen needs a small text-sprite helper. Moved to F018 together with the turn-order strip.
 
+## Iteration 3 (D024, 2026-11-27)
+- **Messages.** The "used" message explains the action. For example:
+  - "Ninjask used X-Scissor with boosted Power!"
+  - "Ninjask is faster and acts again: X-Scissor!" (when it acted in the last round as well and the foe acted in neither)
+  - "The exhausted Ninjask slowly used X-Scissor..."
+- **Exhausted visuals.** A white badge with a red "EX" replaces the bar label. The Pokémon's sprite has a dull purple tint that slowly pulses ("panting") for as long as it is Exhausted.
+- **Dual bars (Rules → Combat: Dual bars).**
+  - Health and energy are separate. Damage takes health (and the Damage rule applies). Moves spend energy, which regenerates.
+  - Energy capacity is 50% plus 50% × the health share.
+  - Healing costs 20% of max energy.
+  - A move that costs more energy than is left is locked; with nothing affordable, the Pokémon uses Struggle.
+  - The Energy rule scales max energy only.
+  - **Spike UI:** the player's EXP bar shows energy (it is still labelled EXP), and the health bar's label becomes EX when Exhausted. Opponents have no energy bar: their state shows through the EX badge, the tint and the battle log ("EN x/y"). A full two-bar healthbox for both sides is F018 work.
+  - New scenarios: LAB-014 (Dual: tire the boss) and LAB-015 (Dual: fast vs slow), at ×1 energy, 50% damage and 100% cost.
+  - Headless LAB-014: Blissey's Soft-Boiled costs 66 energy, so healing drains her (330 → 108 over three heals). Metagross's hits cap her energy ("capped by health 264 → 232").
+  - Headless LAB-015: still a one-hit KO (Giga Impact on Ninjask). Tune Damage lower in the Lab.
+
 ## Explicit exclusions
 - Final balance: F019.
 - The polished timeline UI: F018.

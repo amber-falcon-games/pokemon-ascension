@@ -42,6 +42,13 @@ Decided:
   - **AI**: trainer AI is smarter than wild AI (upstream already works this way).
   - **Pace**: about 4–6 actions per Pokémon in normal battles; bosses run longer, and "tire them out, then strike" is a real tactic.
   - Exact numbers are tuned in the Battle Lab. The F017 spike prototypes the model Lab-only before F018–F019.
+- D024 (2026-11-27): Owner refinements to D023 after two Lab playtests, with the spike prototype still being refined (go/no-go deferred).
+  - **Opening round:** everyone picks a move before anything happens; after that, the timeline. A replacement for a fainted Pokémon may act straight away.
+  - **Exhausted:** Speed ×0.25, with a clear badge and a visual change to the Pokémon.
+  - **Longer battles:** option c (more energy, less damage, lower costs), tuned in the Lab.
+  - **Explanations:** battle messages say why something happened (a Boost was used; the Pokémon is faster and acts again; it is Exhausted).
+  - **In Stamina (one bar):** healing stays free for now, and the Exhausted death spiral stays. Future ideas for healing: it reduces Speed, it is less effective, or it fails more on repeated use.
+  - **Dual bars, to be tested as the likely direction:** separate health and energy bars. Damage takes health (0 = fainted); moves spend energy. Lost health caps energy capacity (a hard hit saps stamina, like a boxer's). Healing costs energy and restores health, so spamming it exhausts the Pokémon. Built as a third Lab combat mode, "Dual bars".
 
 To be raised at F015 (not decided): how to recover save space for an expanded move library — see SAVE_COMPATIBILITY.md options S1–S5.
 
