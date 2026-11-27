@@ -1,4 +1,5 @@
 #include "global.h"
+#include "ascension_moves.h"
 #include "malloc.h"
 #include "battle_anim.h"
 #include "battle_interface.h"
@@ -4583,12 +4584,15 @@ static void CreateInGameTradePokemonInternal(u8 whichPlayerMon, u8 whichInGameTr
     SetMonData(pokemon, MON_DATA_OT_NAME, inGameTrade->otName);
     SetMonData(pokemon, MON_DATA_OT_GENDER, &inGameTrade->otGender);
     SetMonData(pokemon, MON_DATA_ABILITY_NUM, &inGameTrade->abilityNum);
-    SetMonData(pokemon, MON_DATA_BEAUTY, &inGameTrade->conditions[1]);
-    SetMonData(pokemon, MON_DATA_CUTE, &inGameTrade->conditions[2]);
-    SetMonData(pokemon, MON_DATA_COOL, &inGameTrade->conditions[0]);
-    SetMonData(pokemon, MON_DATA_SMART, &inGameTrade->conditions[3]);
-    SetMonData(pokemon, MON_DATA_TOUGH, &inGameTrade->conditions[4]);
-    SetMonData(pokemon, MON_DATA_SHEEN, &inGameTrade->sheen);
+    if (!ASCENSION_MOVE_LIST)   // Pokémon Ascension (F015): the condition fields hold talent-tree data
+    {
+        SetMonData(pokemon, MON_DATA_BEAUTY, &inGameTrade->conditions[1]);
+        SetMonData(pokemon, MON_DATA_CUTE, &inGameTrade->conditions[2]);
+        SetMonData(pokemon, MON_DATA_COOL, &inGameTrade->conditions[0]);
+        SetMonData(pokemon, MON_DATA_SMART, &inGameTrade->conditions[3]);
+        SetMonData(pokemon, MON_DATA_TOUGH, &inGameTrade->conditions[4]);
+        SetMonData(pokemon, MON_DATA_SHEEN, &inGameTrade->sheen);
+    }
     SetMonData(pokemon, MON_DATA_MET_LOCATION, &metLocation);
 
     mailNum = 0;

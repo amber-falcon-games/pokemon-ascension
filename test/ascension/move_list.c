@@ -103,3 +103,47 @@ TEST("Talent tree: a branch choice is saved with the Pokémon and picks that opt
     EXPECT_EQ(Ascension_GetTalentChoice(&mon, 7), 3);
     EXPECT_EQ(Ascension_GetTalentChoice(&mon, branch), 2);
 }
+
+static bool32 ListHas(struct Pokemon *mon, u16 move)
+{
+    u16 list[MAX_BATTLE_MOVES];
+    u32 i, n = Ascension_BuildTalentList(mon, list);
+    for (i = 0; i < n; i++)
+        if (list[i] == move)
+            return TRUE;
+    return FALSE;
+}
+
+TEST("Teaching (D027): a move ahead in its own tree jumps the branch there")
+{
+    struct Pokemon mon;
+    CreateMon(&mon, SPECIES_PIKACHU, 20, 0, OTID_STRUCT_PRESET(0));
+    EXPECT(!ListHas(&mon, MOVE_THUNDERBOLT));
+    EXPECT_EQ(Ascension_TeachMove(&mon, MOVE_THUNDERBOLT, 0), TALENT_TEACH_JUMPED);
+    EXPECT(ListHas(&mon, MOVE_THUNDERBOLT));
+    EXPECT(!ListHas(&mon, MOVE_ELECTRO_BALL));            // the branch moved on
+    EXPECT_EQ(Ascension_TeachMove(&mon, MOVE_THUNDERBOLT, 0), TALENT_TEACH_ALREADY_KNOWN);
+}
+
+TEST("Teaching (D027): a move it has grown past is refused")
+{
+    struct Pokemon mon;
+    CreateMon(&mon, SPECIES_PIKACHU, 40, 0, OTID_STRUCT_PRESET(0));
+    EXPECT_EQ(Ascension_TeachMove(&mon, MOVE_DISCHARGE, 0), TALENT_TEACH_GROWN_PAST);
+    EXPECT_EQ(Ascension_TeachMove(&mon, MOVE_THUNDERBOLT, 0), TALENT_TEACH_ALREADY_KNOWN);
+}
+
+TEST("Teaching (D027): a move outside its tree joins that move's global chain, then grows with level")
+{
+    struct Pokemon mon;
+    u32 level = 10;
+    CreateMon(&mon, SPECIES_PIKACHU, 10, 0, OTID_STRUCT_PRESET(0));
+    EXPECT(!ListHas(&mon, MOVE_EMBER));
+    EXPECT_EQ(Ascension_TeachMove(&mon, MOVE_EMBER, 0), TALENT_TEACH_JOINED);
+    EXPECT(ListHas(&mon, MOVE_EMBER));
+    level = 100;
+    SetMonData(&mon, MON_DATA_LEVEL, &level);
+    EXPECT(!ListHas(&mon, MOVE_EMBER));                   // grew along the fire chain
+    EXPECT_EQ(Ascension_TeachMove(&mon, MOVE_SURF, 0), TALENT_TEACH_JOINED);
+    EXPECT_EQ(Ascension_TeachMove(&mon, MOVE_ICE_BEAM, 0), TALENT_TEACH_NO_ROOM);   // two joins at most
+}

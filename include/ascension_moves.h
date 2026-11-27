@@ -16,7 +16,23 @@ struct TalentNode { u8 level; u8 count; u16 moves[TALENT_MAX_CHOICES]; };
 struct TalentBranch { u8 nodeCount; const struct TalentNode *nodes; };
 struct TalentTree { u8 branchCount; const struct TalentBranch *branches; };
 extern const struct TalentTree gTalentTrees[];
-extern const u16 *const gTalentGlobalChains[];
+struct TalentGlobalMove { u16 move; u8 level; };   // level: the move's typical (median) learn level
+extern const struct TalentGlobalMove *const gTalentGlobalChains[];
+
+// Teaching a move (TM, tutor, egg) per D027.
+enum TalentTeachResult
+{
+    TALENT_TEACH_JUMPED,        // in its own tree, ahead: the branch jumps to it
+    TALENT_TEACH_JOINED,        // not in its own tree: it joins the global chain at that move
+    TALENT_TEACH_ALREADY_KNOWN, // it is the branch's current move
+    TALENT_TEACH_GROWN_PAST,    // in its own tree but already grown past it: refused
+    TALENT_TEACH_NO_ROOM,       // would join a chain but has no free join slot
+    TALENT_TEACH_CANNOT,        // move is in no tree or chain
+};
+#define TALENT_MAX_JOINS 2
+// replaceSlot: which battle-list position a joined chain takes when the list is full (0-7).
+enum TalentTeachResult Ascension_TeachMove(struct Pokemon *mon, u16 move, u32 replaceSlot);
+u32 Ascension_BuildTalentList(struct Pokemon *mon, u16 moves[MAX_BATTLE_MOVES]);
 
 struct Pokemon;
 struct BattlePokemon;
