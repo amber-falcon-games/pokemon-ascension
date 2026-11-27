@@ -1,4 +1,5 @@
 #include "global.h"
+#include "ascension_moves.h"
 #include "battle.h"
 #include "battle_ai_main.h"
 #include "battle_ai_util.h"
@@ -1482,6 +1483,7 @@ static u32 GetBattlerMonData(enum BattlerId battler, struct Pokemon *party, u32 
             battleMon.moves[size] = GetMonData(&party[monId], MON_DATA_MOVE1 + size);
             battleMon.pp[size] = GetMonData(&party[monId], MON_DATA_PP1 + size);
         }
+        Ascension_FillExtraBattleMoves(&party[monId], battleMon.moves, battleMon.pp);   // Pokémon Ascension (F014): battle-only slots
         battleMon.ppBonuses = GetMonData(&party[monId], MON_DATA_PP_BONUSES);
         battleMon.friendship = GetMonData(&party[monId], MON_DATA_FRIENDSHIP);
         battleMon.experience = GetMonData(&party[monId], MON_DATA_EXP);

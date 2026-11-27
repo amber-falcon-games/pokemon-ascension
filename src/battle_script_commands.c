@@ -3890,7 +3890,7 @@ static void Cmd_yesnoboxlearnmove(void)
         if (!gPaletteFade.active && gMain.callback2 == BattleMainCB2)
         {
             u8 movePosition = GetMoveSlotToReplace();
-            if (movePosition == MAX_MON_MOVES)
+            if (movePosition == MAX_BATTLE_MOVES)
             {
                 gBattleScripting.learnMoveState = 5;
             }
@@ -4106,7 +4106,7 @@ static void Cmd_updatebattlermoves(void)
          {
             s32 i;
             struct BattlePokemon *bufferPoke = (struct BattlePokemon *) &gBattleResources->bufferB[battler][4];
-            for (i = 0; i < MAX_MON_MOVES; i++)
+            for (i = 0; i < MAX_BATTLE_MOVES; i++)
             {
                 gBattleMons[battler].moves[i] = bufferPoke->moves[i];
                 gBattleMons[battler].pp[i] = bufferPoke->pp[i];
@@ -4846,7 +4846,7 @@ static void Cmd_useitemonopponent(void)
 bool32 CanUseLastResort(enum BattlerId battler)
 {
     u32 moveIndex;
-    for (moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         enum Move move = gBattleMons[battler].moves[moveIndex];
         // Assumes that an empty slot cannot have a non-empty slot after it
@@ -5656,7 +5656,7 @@ static void Cmd_tryconversiontypechange(void)
     if (B_UPDATED_CONVERSION >= GEN_6)
     {
         // Changes user's type to its first move's type
-        for (moveChecked = 0; moveChecked < MAX_MON_MOVES; moveChecked++)
+        for (moveChecked = 0; moveChecked < MAX_BATTLE_MOVES; moveChecked++)
         {
             if (gBattleMons[gBattlerAttacker].moves[moveChecked] != MOVE_NONE)
             {
@@ -5678,7 +5678,7 @@ static void Cmd_tryconversiontypechange(void)
     else
     {
         // Randomly changes user's type to one of its moves' type
-        while (validMoves < MAX_MON_MOVES)
+        while (validMoves < MAX_BATTLE_MOVES)
         {
             if (gBattleMons[gBattlerAttacker].moves[validMoves] == MOVE_NONE)
                 break;
@@ -5713,7 +5713,7 @@ static void Cmd_tryconversiontypechange(void)
         {
             do
             {
-                while ((moveChecked = MOD(Random(), MAX_MON_MOVES)) >= validMoves);
+                while ((moveChecked = MOD(Random(), MAX_BATTLE_MOVES)) >= validMoves);
 
                 moveType = GetMoveType(gBattleMons[gBattlerAttacker].moves[moveChecked]);
 
@@ -5978,7 +5978,7 @@ static void Cmd_transformdataexecution(void)
             battleMonAttacker[i] = battleMonTarget[i];
 
         gBattleMons[gBattlerAttacker].volatiles.overwrittenAbility = GetBattlerAbility(gBattlerTarget);
-        for (i = 0; i < MAX_MON_MOVES; i++)
+        for (i = 0; i < MAX_BATTLE_MOVES; i++)
         {
             u32 pp = GetMovePP(gBattleMons[gBattlerAttacker].moves[i]);
             if (pp < 5)
@@ -6048,13 +6048,13 @@ static void Cmd_mimicattackcopy(void)
     {
         int i;
 
-        for (i = 0; i < MAX_MON_MOVES; i++)
+        for (i = 0; i < MAX_BATTLE_MOVES; i++)
         {
             if (gBattleMons[gBattlerAttacker].moves[i] == gLastMoves[gBattlerTarget])
                 break;
         }
 
-        if (i == MAX_MON_MOVES)
+        if (i == MAX_BATTLE_MOVES)
         {
             gChosenMove = 0xFFFF;
             gBattleMons[gBattlerAttacker].moves[gCurrMovePos] = gLastMoves[gBattlerTarget];
@@ -6090,13 +6090,13 @@ static void Cmd_disablelastusedattack(void)
 
     s32 i;
 
-    for (i = 0; i < MAX_MON_MOVES; i++)
+    for (i = 0; i < MAX_BATTLE_MOVES; i++)
     {
         if (gBattleMons[gBattlerTarget].moves[i] == gLastMoves[gBattlerTarget])
             break;
     }
     if (gBattleMons[gBattlerTarget].volatiles.disabledMove == MOVE_NONE
-        && i != MAX_MON_MOVES && gBattleMons[gBattlerTarget].pp[i] != 0)
+        && i != MAX_BATTLE_MOVES && gBattleMons[gBattlerTarget].pp[i] != 0)
     {
         PREPARE_MOVE_BUFFER(gBattleTextBuff1, gBattleMons[gBattlerTarget].moves[i])
 
@@ -6123,7 +6123,7 @@ static void Cmd_trysetencore(void)
 
     if (IsMaxMove(gLastMoves[gBattlerTarget]) && !(GetActiveGimmick(gBattlerTarget) == GIMMICK_DYNAMAX))
     {
-        for (i = 0; i < MAX_MON_MOVES; i++)
+        for (i = 0; i < MAX_BATTLE_MOVES; i++)
         {
             if (gBattleMons[gBattlerTarget].moves[i] == gBattleStruct->dynamax.baseMoves[gBattlerTarget])
                 break;
@@ -6131,7 +6131,7 @@ static void Cmd_trysetencore(void)
     }
     else
     {
-        for (i = 0; i < MAX_MON_MOVES; i++)
+        for (i = 0; i < MAX_BATTLE_MOVES; i++)
         {
             if (gBattleMons[gBattlerTarget].moves[i] == gLastMoves[gBattlerTarget])
                 break;
@@ -6141,7 +6141,7 @@ static void Cmd_trysetencore(void)
     if (gLastMoves[gBattlerTarget] == MOVE_NONE
      || gLastMoves[gBattlerTarget] == MOVE_UNAVAILABLE
      || IsMoveEncoreBanned(gLastMoves[gBattlerTarget])
-     || i == MAX_MON_MOVES
+     || i == MAX_BATTLE_MOVES
      || gBattleMons[gBattlerTarget].pp[i] == 0
      || gBattleMons[gBattlerTarget].volatiles.encoredMove != MOVE_NONE
      || GetMoveEffect(gChosenMoveByBattler[gBattlerTarget]) == EFFECT_SHELL_TRAP)
@@ -6304,7 +6304,7 @@ static void Cmd_copymovepermanently(void)
     {
         s32 i;
 
-        for (i = 0; i < MAX_MON_MOVES; i++)
+        for (i = 0; i < MAX_BATTLE_MOVES; i++)
         {
             if (GetMoveEffect(gBattleMons[gBattlerAttacker].moves[i]) == EFFECT_SKETCH)
                 continue;
@@ -6312,7 +6312,7 @@ static void Cmd_copymovepermanently(void)
                 break;
         }
 
-        if (i != MAX_MON_MOVES)
+        if (i != MAX_BATTLE_MOVES)
         {
             gBattlescriptCurrInstr = cmd->failInstr;
         }
@@ -6374,7 +6374,7 @@ static void Cmd_tryspiteppreduce(void)
         // Get move slot to reduce PP.
         if (IsMaxMove(gLastMoves[gBattlerTarget]))
         {
-            for (i = 0; i < MAX_MON_MOVES; i++)
+            for (i = 0; i < MAX_BATTLE_MOVES; i++)
             {
                 if (gBattleStruct->dynamax.baseMoves[gBattlerTarget] == gBattleMons[gBattlerTarget].moves[i])
                     break;
@@ -6382,14 +6382,14 @@ static void Cmd_tryspiteppreduce(void)
         }
         else
         {
-            for (i = 0; i < MAX_MON_MOVES; i++)
+            for (i = 0; i < MAX_BATTLE_MOVES; i++)
             {
                 if (gLastMoves[gBattlerTarget] == gBattleMons[gBattlerTarget].moves[i])
                     break;
             }
         }
 
-        if (i != MAX_MON_MOVES && gBattleMons[gBattlerTarget].pp[i] > (B_CAN_SPITE_FAIL >= GEN_4 ? 0 : 1))
+        if (i != MAX_BATTLE_MOVES && gBattleMons[gBattlerTarget].pp[i] > (B_CAN_SPITE_FAIL >= GEN_4 ? 0 : 1))
         {
             s32 ppToDeduct = B_PP_REDUCED_BY_SPITE >= GEN_4 ? 4 : (Random() & 3) + 2;
             // G-Max Depletion only deducts 2 PP.
@@ -6408,7 +6408,8 @@ static void Cmd_tryspiteppreduce(void)
             gBattleMons[gBattlerTarget].pp[i] -= ppToDeduct;
 
             // if (MOVE_IS_PERMANENT(gBattlerTarget, i)), but backwards
-            if (!(gBattleMons[gBattlerTarget].volatiles.mimickedMoves & (1u << i))
+            if (i < MAX_MON_MOVES   // Pokémon Ascension (F014): battle-only slots are not saved
+                && !(gBattleMons[gBattlerTarget].volatiles.mimickedMoves & (1u << i))
                 && !(gBattleMons[gBattlerTarget].volatiles.transformed))
             {
                 BtlController_EmitSetMonData(gBattlerTarget, B_COMM_TO_CONTROLLER, REQUEST_PPMOVE1_BATTLE + i, 0, sizeof(gBattleMons[gBattlerTarget].pp[i]), &gBattleMons[gBattlerTarget].pp[i]);
@@ -7380,19 +7381,19 @@ static void Cmd_tryimprison(void)
             if (!IsBattlerAlly(gBattlerAttacker, battler))
             {
                 s32 attackerMoveId;
-                for (attackerMoveId = 0; attackerMoveId < MAX_MON_MOVES; attackerMoveId++)
+                for (attackerMoveId = 0; attackerMoveId < MAX_BATTLE_MOVES; attackerMoveId++)
                 {
                     s32 i;
-                    for (i = 0; i < MAX_MON_MOVES; i++)
+                    for (i = 0; i < MAX_BATTLE_MOVES; i++)
                     {
                         if (gBattleMons[gBattlerAttacker].moves[attackerMoveId] == gBattleMons[battler].moves[i]
                             && gBattleMons[gBattlerAttacker].moves[attackerMoveId] != MOVE_NONE)
                             break;
                     }
-                    if (i != MAX_MON_MOVES)
+                    if (i != MAX_BATTLE_MOVES)
                         break;
                 }
-                if (attackerMoveId != MAX_MON_MOVES)
+                if (attackerMoveId != MAX_BATTLE_MOVES)
                 {
                     gBattleMons[gBattlerAttacker].volatiles.imprison = TRUE;
                     gBattlescriptCurrInstr = cmd->nextInstr;
@@ -9447,7 +9448,7 @@ void BS_ItemRestorePP(void)
     else
     {
         i = 0;
-        loopEnd = MAX_MON_MOVES;
+        loopEnd = MAX_BATTLE_MOVES;
     }
 
     // Check if the recipient is an active battler.
@@ -10604,12 +10605,12 @@ void BS_UpdateChoiceMoveOnLvlUp(void)
             battler = 2;
 
         u32 moveIndex;
-        for (moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+        for (moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
             if (gBattleMons[battler].moves[moveIndex] == gBattleStruct->choicedMove[battler])
                 break;
         }
-        if (moveIndex == MAX_MON_MOVES)
+        if (moveIndex == MAX_BATTLE_MOVES)
             gBattleStruct->choicedMove[battler] = MOVE_NONE;
     }
     gBattlescriptCurrInstr = cmd->nextInstr;
@@ -11179,7 +11180,7 @@ void BS_TryInstruct(void)
         gCalledMove = move;
         u32 moveIndex;
         bool32 foundMove = FALSE;
-        for (moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+        for (moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
             if (gBattleMons[gBattlerTarget].moves[moveIndex] == gCalledMove)
             {

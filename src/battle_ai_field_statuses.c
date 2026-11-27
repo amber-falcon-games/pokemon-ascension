@@ -51,7 +51,7 @@ static bool32 HasBattlerTerrainBoostMove(enum BattlerId battler, enum BattleTerr
         return FALSE;
 
     enum Move *moves = GetMovesArray(battler);
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         enum Move move = moves[moveIndex];
         if (GetMoveEffect(move) == EFFECT_TERRAIN_BOOST
@@ -231,7 +231,7 @@ static bool32 HasLightSensitiveMove(enum BattlerId battler)
 {
     enum Move *moves = GetMovesArray(battler);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (moves[moveIndex] != MOVE_NONE && moves[moveIndex] != MOVE_UNAVAILABLE && IsLightSensitiveMove(moves[moveIndex]))
             return TRUE;
@@ -509,7 +509,7 @@ static enum FieldEffectOutcome BenefitsFromTrickRoom(enum BattlerId battler)
     if (gFieldTimers.terrain != B_TERRAIN_PSYCHIC)
     {
         enum Move *aiMoves = GetMovesArray(battler);
-        for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+        for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
             enum Move move = aiMoves[moveIndex];
             if (GetBattleMovePriority(battler, gAiLogicData->abilities[battler], move) > 0 && !(GetMovePriority(move) > 0 && IsBattleMoveStatus(move)))

@@ -1634,7 +1634,7 @@ u32 CheckMoveLimitations(enum BattlerId battler, u8 unusableMoves, u32 check)
 
     gPotentialItemEffectBattler = battler;
 
-    for (i = 0; i < MAX_MON_MOVES; i++)
+    for (i = 0; i < MAX_BATTLE_MOVES; i++)
     {
         move = gBattleMons[battler].moves[i];
         moveEffect = GetMoveEffect(move);
@@ -1730,7 +1730,7 @@ u32 CheckMoveLimitations(enum BattlerId battler, u8 unusableMoves, u32 check)
 bool32 AreAllMovesUnusable(enum BattlerId battler)
 {
     u32 unusable = CheckMoveLimitations(battler, 0, MOVE_LIMITATIONS_ALL);
-    u32 allMovesMask = ((1 << MAX_MON_MOVES) - 1);
+    u32 allMovesMask = ((1 << MAX_BATTLE_MOVES) - 1);
 
     if (unusable == allMovesMask) // All moves are unusable.
     {
@@ -1756,12 +1756,12 @@ u8 GetImprisonedMovesCount(enum BattlerId battler, enum Move move)
         if (battlerSide != GetBattlerSide(i) && gBattleMons[i].volatiles.imprison)
         {
             s32 j;
-            for (j = 0; j < MAX_MON_MOVES; j++)
+            for (j = 0; j < MAX_BATTLE_MOVES; j++)
             {
                 if (move == gBattleMons[i].moves[j])
                     break;
             }
-            if (j < MAX_MON_MOVES)
+            if (j < MAX_BATTLE_MOVES)
                 imprisonedMoves++;
         }
     }
@@ -2161,14 +2161,14 @@ static void ForewarnChooseMove(enum BattlerId battler)
         enum Move moveId;
     };
     u32 i, j, bestId, count;
-    struct Forewarn *data = Alloc(sizeof(struct Forewarn) * MAX_BATTLERS_COUNT * MAX_MON_MOVES);
+    struct Forewarn *data = Alloc(sizeof(struct Forewarn) * MAX_BATTLERS_COUNT * MAX_BATTLE_MOVES);
 
     // Put all moves
     for (count = 0, i = 0; i < MAX_BATTLERS_COUNT; i++)
     {
         if (IsBattlerAlive(i) && !IsBattlerAlly(i, battler))
         {
-            for (j = 0; j < MAX_MON_MOVES; j++)
+            for (j = 0; j < MAX_BATTLE_MOVES; j++)
             {
                 if (gBattleMons[i].moves[j] == MOVE_NONE)
                     continue;
@@ -3237,7 +3237,7 @@ u32 AbilityBattleEffects(enum AbilityEffect caseID, enum BattlerId battler, enum
                 {
                     if (IsBattlerAlive(i) && !IsBattlerAlly(i, battler))
                     {
-                        for (j = 0; j < MAX_MON_MOVES; j++)
+                        for (j = 0; j < MAX_BATTLE_MOVES; j++)
                         {
                             move = gBattleMons[i].moves[j];
                             enum BattleMoveEffects moveEffect = GetMoveEffect(move);
@@ -5709,7 +5709,7 @@ enum Obedience GetAttackerObedienceForAction(void)
             return DISOBEYS_LOAFS;
         else // use a random move
             do
-                gCurrMovePos = gChosenMovePos = MOD(Random(), MAX_MON_MOVES);
+                gCurrMovePos = gChosenMovePos = MOD(Random(), MAX_BATTLE_MOVES);
             while ((1u << gCurrMovePos) & calc);
         return DISOBEYS_RANDOM_MOVE;
     }
@@ -5998,7 +5998,7 @@ u32 GetMoveSlot(enum Move *moves, enum Move move)
 {
     u32 i;
 
-    for (i = 0; i < MAX_MON_MOVES; i++)
+    for (i = 0; i < MAX_BATTLE_MOVES; i++)
     {
         if (moves[i] == move)
             break;
@@ -6297,7 +6297,7 @@ static inline u32 CalcMoveBasePower(struct DamageContext *ctx)
         break;
     case EFFECT_TRUMP_CARD:
         i = GetMoveSlot(gBattleMons[battlerAtk].moves, ctx->chosenMove);
-        if (i != MAX_MON_MOVES)
+        if (i != MAX_BATTLE_MOVES)
         {
             if (gBattleMons[battlerAtk].pp[i] >= ARRAY_COUNT(sTrumpCardPowerTable))
                 basePower = sTrumpCardPowerTable[ARRAY_COUNT(sTrumpCardPowerTable) - 1];
@@ -8729,7 +8729,7 @@ enum Species GetBattleFormChangeTargetSpecies(enum BattlerId battler, enum FormC
         .level = gBattleMons[battler].level,
     };
 
-    for (u32 i = 0; i < MAX_MON_MOVES; i++)
+    for (u32 i = 0; i < MAX_MON_MOVES; i++)   // form changes look at the saved moves only
         ctx.moves[i] = gBattleMons[battler].moves[i];
 
     return GetFormChangeTargetSpecies_Internal(ctx);

@@ -756,7 +756,7 @@ void TryPutLinkBattleTvShowOnAir(void)
         }
     }
 
-    for (sum = 0, i = 0, j = 0; j < MAX_MON_MOVES; j++)
+    for (sum = 0, i = 0, j = 0; j < MAX_BATTLE_MOVES; j++)
     {
         if (sum < movePoints->points[zero][playerBestMonId * 4 + j])
         {
@@ -1264,7 +1264,7 @@ static void AddPointsOnFainting(void)
 static void TrySetBattleSeminarShow(void)
 {
     s32 i;
-    s32 dmgByMove[MAX_MON_MOVES];
+    s32 dmgByMove[MAX_BATTLE_MOVES];
     u16 powerOverride;
     u16 currMoveSaved;
 
@@ -1298,7 +1298,7 @@ static void TrySetBattleSeminarShow(void)
     dmgByMove[gMoveSelectionCursor[gBattlerAttacker]] = gBattleStruct->moveDamage[gBattlerTarget]; // TODO: Not sure
     currMoveSaved = gCurrentMove;
     u16 storedMoveResultFlags = gBattleStruct->moveResultFlags[gBattlerTarget];
-    for (i = 0; i < MAX_MON_MOVES; i++)
+    for (i = 0; i < MAX_BATTLE_MOVES; i++)
     {
         gCurrentMove = gBattleMons[gBattlerAttacker].moves[i];
         powerOverride = 0;
@@ -1326,7 +1326,7 @@ static void TrySetBattleSeminarShow(void)
         }
     }
 
-    for (i = 0; i < MAX_MON_MOVES; i++)
+    for (i = 0; i < MAX_BATTLE_MOVES; i++)
     {
         if (i != gMoveSelectionCursor[gBattlerAttacker] && dmgByMove[i] > dmgByMove[gMoveSelectionCursor[gBattlerAttacker]])
         {
@@ -1338,7 +1338,7 @@ static void TrySetBattleSeminarShow(void)
             else
                 bestMoveId = 1;
 
-            for (i = 0; i < MAX_MON_MOVES; i++)
+            for (i = 0; i < MAX_BATTLE_MOVES; i++)
             {
                 if (i != gMoveSelectionCursor[gBattlerAttacker] && dmgByMove[i] > dmgByMove[bestMoveId])
                     bestMoveId = i;

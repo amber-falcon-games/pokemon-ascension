@@ -345,7 +345,7 @@ struct BattlePokemon
     u16 speed;
     u16 spAttack;
     u16 spDefense;
-    enum Move moves[MAX_MON_MOVES];
+    enum Move moves[MAX_BATTLE_MOVES];
     u32 hpIV:5;
     u32 attackIV:5;
     u32 defenseIV:5;
@@ -356,7 +356,7 @@ struct BattlePokemon
     s8 statStages[NUM_BATTLE_STATS];
     enum Ability ability;
     enum Type types[3];
-    u8 pp[MAX_MON_MOVES];
+    u8 pp[MAX_BATTLE_MOVES];
     u16 hp;
     u8 level;
     u8 friendship;

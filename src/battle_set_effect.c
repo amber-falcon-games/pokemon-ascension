@@ -769,13 +769,13 @@ static void HandleSetEffectEerieSpell(struct BattleCalcValues *cv, struct SetEff
         moveToReduce = gBattleStruct->dynamax.baseMoves[se->effectBattler];
 
     u32 i;
-    for (i = 0; i < MAX_MON_MOVES; i++)
+    for (i = 0; i < MAX_BATTLE_MOVES; i++)
     {
         if (moveToReduce == gBattleMons[se->effectBattler].moves[i])
             break;
     }
 
-    if (i != MAX_MON_MOVES && gBattleMons[se->effectBattler].pp[i] != 0)
+    if (i != MAX_BATTLE_MOVES && gBattleMons[se->effectBattler].pp[i] != 0)
     {
         u32 ppToDeduct = 3;
 
@@ -786,7 +786,8 @@ static void HandleSetEffectEerieSpell(struct BattleCalcValues *cv, struct SetEff
         ConvertIntToDecimalStringN(gBattleTextBuff2, ppToDeduct, STR_CONV_MODE_LEFT_ALIGN, 1);
         PREPARE_BYTE_NUMBER_BUFFER(gBattleTextBuff2, 1, ppToDeduct)
         gBattleMons[se->effectBattler].pp[i] -= ppToDeduct;
-        if (!(gBattleMons[se->effectBattler].volatiles.mimickedMoves & (1u << i))
+        if (i < MAX_MON_MOVES   // Pokémon Ascension (F014): battle-only slots are not saved
+                && !(gBattleMons[se->effectBattler].volatiles.mimickedMoves & (1u << i))
             && !(gBattleMons[se->effectBattler].volatiles.transformed))
         {
             BtlController_EmitSetMonData(se->effectBattler, B_COMM_TO_CONTROLLER, REQUEST_PPMOVE1_BATTLE + i, 0, sizeof(gBattleMons[se->effectBattler].pp[i]), &gBattleMons[se->effectBattler].pp[i]);

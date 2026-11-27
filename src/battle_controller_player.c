@@ -1008,7 +1008,7 @@ static u32 UNUSED HandleMoveInputUnused(enum BattlerId battler)
 
 void HandleMoveSwitching(enum BattlerId battler)
 {
-    u8 perMovePPBonuses[MAX_MON_MOVES];
+    u8 perMovePPBonuses[MAX_BATTLE_MOVES];
     struct ChooseMoveStruct moveStruct;
     u8 totalPPBonuses;
 
@@ -1673,7 +1673,7 @@ static void MoveSelectionDisplayMoveNames(enum BattlerId battler)
     struct ChooseMoveStruct *moveInfo = (struct ChooseMoveStruct *)(&gBattleResources->bufferA[battler][4]);
     gNumberOfMovesToChoose = 0;
 
-    for (i = 0; i < MAX_MON_MOVES; i++)
+    for (i = 0; i < MAX_MON_MOVES; i++)   // four name windows (F014 scrolls the list through them)
     {
         MoveSelectionDestroyCursorAt(i);
         if (IsGimmickSelected(battler, GIMMICK_DYNAMAX) || GetActiveGimmick(battler) == GIMMICK_DYNAMAX)
