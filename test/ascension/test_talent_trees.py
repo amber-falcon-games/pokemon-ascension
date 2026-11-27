@@ -40,5 +40,16 @@ class TalentTrees(unittest.TestCase):
         self.assertEqual(dragon["nodes"][0]["level"], 36)   # Dragon Claw comes with evolving at 36
 
 
+
+
+class CompiledHeader(unittest.TestCase):
+    def test_committed_header_matches_the_json(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = os.path.join(d, "talent_trees.h")
+            tt.compile_header(tt.JSON_OUT, out)
+            self.assertEqual(open(out).read(), open(tt.H_OUT).read(),
+                             "run: python3 tools/ascension/talent_trees.py compile")
+
+
 if __name__ == "__main__":
     unittest.main()

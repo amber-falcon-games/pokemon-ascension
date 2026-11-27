@@ -10,8 +10,20 @@
 #if TESTING
 extern bool8 gAscensionMoveListTestOverride;
 #endif
+// Talent trees (F015, D027): generated ROM tables, see tools/ascension/talent_trees.py.
+#define TALENT_MAX_CHOICES 4
+struct TalentNode { u8 level; u8 count; u16 moves[TALENT_MAX_CHOICES]; };
+struct TalentBranch { u8 nodeCount; const struct TalentNode *nodes; };
+struct TalentTree { u8 branchCount; const struct TalentBranch *branches; };
+extern const struct TalentTree gTalentTrees[];
+extern const u16 *const gTalentGlobalChains[];
+
 struct Pokemon;
 struct BattlePokemon;
+// The move a tree branch gives at a level (MOVE_NONE before its first node), with the choice made
+// at branch points (index into the node's options).
+u16 Ascension_TalentBranchMove(u32 species, u32 branch, u32 level, u32 choice);
+u32 Ascension_TalentBranchCount(u32 species);
 u32 Ascension_FillExtraBattleMoves(struct Pokemon *mon, enum Move moves[MAX_BATTLE_MOVES], u8 pp[MAX_BATTLE_MOVES]);
 
 #endif // GUARD_ASCENSION_MOVES_H

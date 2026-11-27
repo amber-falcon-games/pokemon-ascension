@@ -24,6 +24,9 @@ rom_src="$ROM_OUT"
 rm -f "$rom_src" "$ROM_COPY"
 [ "$clean" = 1 ] && { info "Cleaning previous build outputs"; "$MAKE_BIN" tidy >/dev/null; }
 jobs="$(cpu_count)"
+# Talent trees (F015): your edits to data/ascension/talent_trees.json are checked and compiled into the game.
+python3 "$ROOT/tools/ascension/talent_trees.py" check >/dev/null || die "data/ascension/talent_trees.json has errors: run python3 tools/ascension/talent_trees.py check"
+python3 "$ROOT/tools/ascension/talent_trees.py" compile >/dev/null
 info "make -j$jobs $target ${tc:+(project toolchain)}"
 start=$(date +%s)
 log="$ROOT/build/last-build.log"; mkdir -p "$ROOT/build"
