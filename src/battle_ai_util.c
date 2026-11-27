@@ -260,7 +260,7 @@ void SaveBattlerData(enum BattlerId battlerId)
         gAiThinkingStruct->saved[battlerId].ability = gBattleMons[battlerId].ability;
         gAiThinkingStruct->saved[battlerId].heldItem = gBattleMons[battlerId].item;
         gAiThinkingStruct->saved[battlerId].species = gBattleMons[battlerId].species;
-        for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+        for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
             gAiThinkingStruct->saved[battlerId].moves[moveIndex] = gBattleMons[battlerId].moves[moveIndex];
     }
     // Save and restore types even for AI controlled battlers in case it gets changed during move evaluation process.
@@ -337,7 +337,7 @@ static bool32 ShouldFailForIllusion(enum Species illusionSpecies, enum BattlerId
         return FALSE;
 
     // Don't fall for Illusion if the mon used a move it cannot know.
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         enum Move move = gBattleHistory->usedMoves[battlerId][moveIndex];
         if (move == MOVE_NONE)
@@ -400,7 +400,7 @@ void SetBattlerData(enum BattlerId battlerId)
         if (gAiPartyData->mons[side][gBattlerPartyIndexes[battlerId]].heldEffect == 0)
             gBattleMons[battlerId].item = ITEM_NONE;
 
-        for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+        for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
             if (gAiPartyData->mons[side][gBattlerPartyIndexes[battlerId]].moves[moveIndex] == 0)
                 gBattleMons[battlerId].moves[moveIndex] = MOVE_NONE;
@@ -416,7 +416,7 @@ void RestoreBattlerData(enum BattlerId battlerId)
         gBattleMons[battlerId].ability = gAiThinkingStruct->saved[battlerId].ability;
         gBattleMons[battlerId].item = gAiThinkingStruct->saved[battlerId].heldItem;
         gBattleMons[battlerId].species = gAiThinkingStruct->saved[battlerId].species;
-        for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+        for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
             gBattleMons[battlerId].moves[moveIndex] = gAiThinkingStruct->saved[battlerId].moves[moveIndex];
     }
     gBattleMons[battlerId].types[0] = gAiThinkingStruct->saved[battlerId].types[0];
@@ -493,7 +493,7 @@ bool32 IsTruantMonVulnerable(enum BattlerId battlerAI, enum BattlerId opposingBa
 {
     enum Move predictedMove = GetPredictedMove(battlerAI, opposingBattler, gAiLogicData);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         enum Move move = gBattleHistory->usedMoves[opposingBattler][moveIndex];
         enum BattleMoveEffects effect = GetMoveEffect(move);
@@ -1332,8 +1332,12 @@ u32 GetBestNoOfHitsToKO(enum BattlerId battlerAtk, enum BattlerId battlerDef, en
     enum Move *moves = GetMovesArray(battlerAtk);
     u32 moveLimitations = aiData->moveLimitations[battlerAtk];
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations))
             continue;
 
@@ -1482,8 +1486,12 @@ bool32 CanTargetFaintAi(enum BattlerId battlerDef, enum BattlerId battlerAtk)
     enum Move *moves = GetMovesArray(battlerDef);
     u32 moveLimitations = aiData->moveLimitations[battlerDef];
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations))
             continue;
 
@@ -1500,7 +1508,7 @@ u32 NoOfHitsForTargetToFaintBattler(enum BattlerId battlerDef, enum BattlerId ba
     u32 currNumberOfHits;
     u32 leastNumberOfHits = UNKNOWN_NO_OF_HITS;
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         currNumberOfHits = GetNoOfHitsToKOBattler(battlerDef, battlerAtk, moveIndex, calcContext, considerEndure);
         if (currNumberOfHits != 0)
@@ -1522,7 +1530,7 @@ u32 NoOfHitsForTargetToFaintBattlerWithMod(enum BattlerId battlerDef, enum Battl
     if (hpCheck > gBattleMons[battlerAtk].maxHP)
         hpCheck = gBattleMons[battlerAtk].maxHP;
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         damageDealt = AI_GetDamage(battlerDef, battlerAtk, moveIndex, AI_DEFENDING, gAiLogicData);
         if (damageDealt == 0)
@@ -1547,16 +1555,20 @@ void GetBestDmgMovesFromBattler(enum BattlerId battlerAtk, enum BattlerId battle
 
     if (CanAIFaintTarget(battlerAtk, battlerDef, 1))
     {
-        for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+        for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
+            if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+                continue;
             if (CanIndexMoveFaintTarget(battlerAtk, battlerDef, moveIndex, calcContext))
                 bestMoves[countBestMoves++] = moves[moveIndex];
         }
     }
     else
     {
-        for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+        for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
+            if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+                continue;
             if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations)
             || (GetMovePower(moves[moveIndex]) == 0)
             || (AI_GetDamage(battlerAtk, battlerDef, moveIndex, calcContext, aiData) == 0))
@@ -1581,18 +1593,22 @@ u32 GetMoveIndex(enum BattlerId battler, enum Move move)
 {
     enum Move *moves = GetMovesArray(battler);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (moves[moveIndex] == move)
             return moveIndex;
     }
 
-    return MAX_MON_MOVES;
+    return MAX_BATTLE_MOVES;
 }
 
 bool32 IsBestDmgMove(enum BattlerId battlerAtk, enum BattlerId battlerDef, enum DamageCalcContext calcContext, enum Move move)
 {
-    enum Move bestMoves[MAX_MON_MOVES] = {MOVE_NONE};
+    enum Move bestMoves[MAX_BATTLE_MOVES] = {MOVE_NONE};
     u32 index = GetMoveIndex(battlerAtk, move);
 
     if (CanIndexMoveFaintTarget(battlerAtk, battlerDef, index, calcContext))
@@ -1600,7 +1616,7 @@ bool32 IsBestDmgMove(enum BattlerId battlerAtk, enum BattlerId battlerDef, enum 
 
     GetBestDmgMovesFromBattler(battlerAtk, battlerDef, calcContext, bestMoves);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (bestMoves[moveIndex] == move)
             return TRUE;
@@ -1611,11 +1627,11 @@ bool32 IsBestDmgMove(enum BattlerId battlerAtk, enum BattlerId battlerDef, enum 
 
 bool32 BestDmgMoveHasEffect(enum BattlerId battlerAtk, enum BattlerId battlerDef, enum DamageCalcContext calcContext, enum BattleMoveEffects moveEffect)
 {
-    enum Move bestMoves[MAX_MON_MOVES] = {MOVE_NONE};
+    enum Move bestMoves[MAX_BATTLE_MOVES] = {MOVE_NONE};
 
     GetBestDmgMovesFromBattler(battlerAtk, battlerDef, calcContext, bestMoves);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (bestMoves[moveIndex] == MOVE_NONE)
             break;
@@ -1634,8 +1650,12 @@ u32 GetBestDmgFromBattler(enum BattlerId battler, enum BattlerId battlerTarget, 
     enum Move *moves = GetMovesArray(battler);
     u32 moveLimitations = aiData->moveLimitations[battler];
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations))
             continue;
 
@@ -1656,8 +1676,12 @@ bool32 CanAIFaintTarget(enum BattlerId battlerAtk, enum BattlerId battlerDef, u3
     u16 *moves = gBattleMons[battlerAtk].moves;
     u32 moveLimitations = aiData->moveLimitations[battlerAtk];
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations))
             continue;
 
@@ -1687,8 +1711,12 @@ bool32 CanBattlerKOTargetIgnoringSturdy(enum BattlerId battlerAtk, enum BattlerI
     enum Move *moves = GetMovesArray(battlerAtk);
     u32 moveLimitations = aiData->moveLimitations[battlerAtk];
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations))
             continue;
         dmg = AI_GetDamage(battlerAtk, battlerDef, moveIndex, AI_ATTACKING, aiData);
@@ -1702,7 +1730,7 @@ bool32 CanBattlerKOTargetIgnoringSturdy(enum BattlerId battlerAtk, enum BattlerI
 bool32 CanTargetMoveFaintAi(enum Move move, enum BattlerId battlerDef, enum BattlerId battlerAtk, u32 nHits)
 {
     u32 indexSlot = GetMoveSlot(GetMovesArray(battlerDef), move);
-    if (indexSlot < MAX_MON_MOVES)
+    if (indexSlot < MAX_BATTLE_MOVES)
     {
         u32 hitsToKO = GetNoOfHitsToKO(AI_GetDamage(battlerDef, battlerAtk, indexSlot, AI_DEFENDING, gAiLogicData), gBattleMons[battlerAtk].hp);
         if (hitsToKO <= nHits && hitsToKO != 0 && !(CanEndureHit(battlerDef, battlerAtk, move) && hitsToKO == 1))
@@ -1723,8 +1751,12 @@ bool32 CanTargetFaintAiWithMod(enum BattlerId battlerDef, enum BattlerId battler
     if (hpCheck > gBattleMons[battlerAtk].maxHP)
         hpCheck = gBattleMons[battlerAtk].maxHP;
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations))
             continue;
 
@@ -2567,26 +2599,32 @@ enum Move *GetMovesArray(enum BattlerId battler)
 u32 GetBattlerMoveIndexWithEffect(enum BattlerId battler, enum BattleMoveEffects effect)
 {
     enum Move *moves = GetMovesArray(battler);
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+            continue;
         if (GetMoveEffect(moves[moveIndex]) == effect)
             return moveIndex;
     }
-    return MAX_MON_MOVES;
+    return MAX_BATTLE_MOVES;
 }
 
 static u32 GetUsableMoveIndexWithEffect(enum BattlerId battler, enum BattleMoveEffects effect, u32 moveLimitations)
 {
     enum Move *moves = GetMovesArray(battler);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         enum Move battlerMove = moves[moveIndex];
         if (!IsMoveUnusable(moveIndex, battlerMove, moveLimitations) && GetMoveEffect(battlerMove) == effect)
             return moveIndex;
     }
 
-    return MAX_MON_MOVES;
+    return MAX_BATTLE_MOVES;
 }
 
 static bool32 CanMoveIndexHitAnyOpponent(enum BattlerId battler, u32 moveIndex, struct AiLogicData *aiData)
@@ -2634,7 +2672,7 @@ bool32 ShouldBeatUpForRageFist(enum BattlerId battlerAtk, enum BattlerId battler
 
     u32 rageFistMoveIndex = GetUsableMoveIndexWithEffect(battlerAtkPartner, EFFECT_RAGE_FIST, aiData->moveLimitations[battlerAtkPartner]);
 
-    return (rageFistMoveIndex != MAX_MON_MOVES
+    return (rageFistMoveIndex != MAX_BATTLE_MOVES
          && CanMoveIndexHitAnyOpponent(battlerAtkPartner, rageFistMoveIndex, aiData));
 }
 
@@ -2679,10 +2717,10 @@ bool32 ShouldTriggerSpicySprayForBurn(enum BattlerId battlerAtk, enum Move move,
 
 bool32 HasPhysicalBestMove(enum BattlerId battlerAtk, enum BattlerId battlerDef, enum DamageCalcContext calcContext)
 {
-    enum Move atkBestMoves[MAX_MON_MOVES] = {MOVE_NONE};
+    enum Move atkBestMoves[MAX_BATTLE_MOVES] = {MOVE_NONE};
     GetBestDmgMovesFromBattler(battlerAtk, battlerDef, calcContext, atkBestMoves);
     bool32 bestMoveIsPhysical = TRUE;
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (atkBestMoves[moveIndex] == MOVE_NONE)
         {
@@ -2704,7 +2742,7 @@ bool32 HasOnlyMovesWithCategory(enum BattlerId battlerId, enum DamageCategory ca
 {
     enum Move *moves = GetMovesArray(battlerId);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (onlyOffensive && IsBattleMoveStatus(moves[moveIndex]))
             continue;
@@ -2719,7 +2757,7 @@ bool32 HasMoveWithCategory(enum BattlerId battler, enum DamageCategory category)
 {
     enum Move *moves = GetMovesArray(battler);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (moves[moveIndex] != MOVE_NONE && moves[moveIndex] != MOVE_UNAVAILABLE && GetBattleMoveCategory(moves[moveIndex]) == category)
             return TRUE;
@@ -2731,7 +2769,7 @@ bool32 HasMoveWithType(enum BattlerId battler, enum Type type)
 {
     enum Move *moves = GetMovesArray(battler);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (moves[moveIndex] != MOVE_NONE && moves[moveIndex] != MOVE_UNAVAILABLE && GetMoveType(moves[moveIndex]) == type)
             return TRUE;
@@ -2744,7 +2782,7 @@ bool32 HasMoveWithEffect(enum BattlerId battler, enum BattleMoveEffects effect)
 {
     enum Move *moves = GetMovesArray(battler);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (moves[moveIndex] != MOVE_NONE && moves[moveIndex] != MOVE_UNAVAILABLE && GetMoveEffect(moves[moveIndex]) == effect)
             return TRUE;
@@ -2757,7 +2795,7 @@ bool32 HasMoveWithAIEffect(enum BattlerId battler, u32 aiEffect)
 {
     enum Move *moves = GetMovesArray(battler);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (moves[moveIndex] != MOVE_NONE && moves[moveIndex] != MOVE_UNAVAILABLE)
         {
@@ -2793,7 +2831,7 @@ bool32 HasBattlerSideMoveWithAIEffect(enum BattlerId battler, u32 aiEffect)
 bool32 HasBattlerSideUsedMoveWithEffect(enum BattlerId battler, enum BattleMoveEffects effect)
 {
     u32 aiEffect = GetAIEffectGroup(effect);
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (GetMoveEffect(gBattleHistory->usedMoves[battler][moveIndex]) == effect)
             return TRUE;
@@ -2823,8 +2861,12 @@ bool32 HasNonVolatileMoveEffect(enum BattlerId battlerId, enum MoveEffect effect
 {
     enum Move *moves = GetMovesArray(battlerId);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (GetMoveNonVolatileStatus(moves[moveIndex]) == effect)
             return TRUE;
     }
@@ -2836,7 +2878,7 @@ bool32 IsPowerBasedOnStatus(enum BattlerId battlerId, enum BattleMoveEffects eff
 {
     enum Move *moves = GetMovesArray(battlerId);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (moves[moveIndex] != MOVE_NONE && moves[moveIndex] != MOVE_UNAVAILABLE
             && GetMoveEffect(moves[moveIndex]) == effect
@@ -2851,7 +2893,7 @@ bool32 HasMoveWithAdditionalEffect(enum BattlerId battlerId, enum MoveEffect mov
 {
     enum Move *moves = GetMovesArray(battlerId);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (moves[moveIndex] != MOVE_NONE && moves[moveIndex] != MOVE_UNAVAILABLE
             && MoveHasAdditionalEffect(moves[moveIndex], moveEffect))
@@ -2874,7 +2916,7 @@ bool32 HasMoveWithCriticalHitChance(enum BattlerId battlerId)
 {
     enum Move *moves = GetMovesArray(battlerId);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (moves[moveIndex] != MOVE_NONE && moves[moveIndex] != MOVE_UNAVAILABLE
             && GetMoveCriticalHitStage(moves[moveIndex]) > 0)
@@ -2888,7 +2930,7 @@ bool32 HasMoveWithMoveEffectExcept(enum BattlerId battlerId, enum MoveEffect mov
 {
     enum Move *moves = GetMovesArray(battlerId);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (moves[moveIndex] != MOVE_NONE && moves[moveIndex] != MOVE_UNAVAILABLE
             && GetMoveEffect(moves[moveIndex]) != exception
@@ -2903,7 +2945,7 @@ bool32 HasMove(enum BattlerId battlerId, enum Move move)
 {
     enum Move *moves = GetMovesArray(battlerId);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (moves[moveIndex] != MOVE_NONE && moves[moveIndex] != MOVE_UNAVAILABLE && moves[moveIndex] == move)
             return TRUE;
@@ -2916,7 +2958,7 @@ bool32 HasAnyKnownMove(enum BattlerId battlerId)
 {
     enum Move *moves = GetMovesArray(battlerId);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (moves[moveIndex] != MOVE_NONE)
             return TRUE;
@@ -2930,7 +2972,7 @@ bool32 HasMoveThatLowersOwnStats(enum BattlerId battlerId)
     enum Move aiMove;
     enum Move *moves = GetMovesArray(battlerId);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         aiMove = moves[moveIndex];
         if (aiMove != MOVE_NONE && aiMove != MOVE_UNAVAILABLE)
@@ -2952,7 +2994,7 @@ bool32 HasMoveThatRaisesOwnStats(enum BattlerId battlerId)
     enum Move aiMove;
     enum Move *moves = GetMovesArray(battlerId);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         aiMove = moves[moveIndex];
         if (aiMove != MOVE_NONE && aiMove != MOVE_UNAVAILABLE)
@@ -2974,8 +3016,12 @@ bool32 HasMoveWithLowAccuracy(enum BattlerId battlerAtk, enum BattlerId battlerD
     enum Move *moves = GetMovesArray(battlerAtk);
     u32 moveLimitations = gAiLogicData->moveLimitations[battlerAtk];
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations))
             continue;
 
@@ -3001,8 +3047,12 @@ bool32 HasSleepMoveWithLowAccuracy(enum BattlerId battlerAtk, enum BattlerId bat
     enum Move *moves = GetMovesArray(battlerAtk);
     u32 moveLimitations = gAiLogicData->moveLimitations[battlerAtk];
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations))
             continue;
 
@@ -3017,7 +3067,7 @@ bool32 HasHealingEffect(enum BattlerId battlerId)
 {
     enum Move *moves = GetMovesArray(battlerId);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (moves[moveIndex] != MOVE_NONE && moves[moveIndex] != MOVE_UNAVAILABLE && IsHealingMove(moves[moveIndex]))
             return TRUE;
@@ -3044,7 +3094,7 @@ bool32 HasTrappingMoveEffect(enum BattlerId battler)
 {
     enum Move *moves = GetMovesArray(battler);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (moves[moveIndex] != MOVE_NONE && moves[moveIndex] != MOVE_UNAVAILABLE && IsTrappingMove(moves[moveIndex]))
             return TRUE;
@@ -3056,7 +3106,7 @@ bool32 HasTrappingMoveEffect(enum BattlerId battler)
 bool32 HasThawingMove(enum BattlerId battler)
 {
     enum Move *moves = GetMovesArray(battler);
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (moves[moveIndex] != MOVE_NONE && moves[moveIndex] != MOVE_UNAVAILABLE && MoveThawsUser(moves[moveIndex]))
             return TRUE;
@@ -3068,8 +3118,10 @@ bool32 HasMoveUsableWhileAsleep(enum BattlerId battler)
 {
     enum Move *moves = GetMovesArray(battler);
     u32 moveLimitations = gAiLogicData->moveLimitations[battler];
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+            continue;
         if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations))
             continue;
         if (IsUsableWhileAsleepEffect(GetMoveEffect(moves[moveIndex])))
@@ -3194,7 +3246,7 @@ bool32 HasDamagingMove(enum BattlerId battler)
 {
     enum Move *moves = GetMovesArray(battler);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (moves[moveIndex] != MOVE_NONE && moves[moveIndex] != MOVE_UNAVAILABLE && GetMovePower(moves[moveIndex]) > 0)
             return TRUE;
@@ -3210,7 +3262,7 @@ bool32 HasDamagingMoveOfType(enum BattlerId battler, enum Type type)
     enum Ability ability = aiData->abilities[battler];
     enum HoldEffect holdEffect = aiData->holdEffects[battler];
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (moves[moveIndex] != MOVE_NONE && moves[moveIndex] != MOVE_UNAVAILABLE && GetMovePower(moves[moveIndex]) > 0)
         {
@@ -3233,8 +3285,12 @@ bool32 HasMoveWithFlag(enum BattlerId battler, MoveFlag getFlag)
     enum Move *moves = GetMovesArray(battler);
     u32 moveLimitations = gAiLogicData->moveLimitations[battler];
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations))
             continue;
 
@@ -4659,7 +4715,7 @@ static bool32 HasMoveThatChangesKOThreshold(enum BattlerId battlerId, u32 noOfHi
 {
     enum Move *moves = GetMovesArray(battlerId);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (moves[moveIndex] == MOVE_NONE || moves[moveIndex] == MOVE_UNAVAILABLE)
             continue;
@@ -4889,12 +4945,12 @@ void IncreaseBurnScore(enum BattlerId battlerAtk, enum BattlerId battlerDef, enu
             || (!(gAiThinkingStruct->aiFlags[battlerAtk] & AI_FLAG_OMNISCIENT) // Not Omniscient but expects physical attacker
                 && GetSpeciesBaseAttack(gBattleMons[battlerDef].species) >= GetSpeciesBaseSpAttack(gBattleMons[battlerDef].species) + 10))
         {
-            enum Move defBestMoves[MAX_MON_MOVES] = {MOVE_NONE};
+            enum Move defBestMoves[MAX_BATTLE_MOVES] = {MOVE_NONE};
             bool32 hasPhysical = FALSE;
 
             GetBestDmgMovesFromBattler(battlerAtk, battlerDef, AI_DEFENDING, defBestMoves);
 
-            for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+            for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
             {
                 if (defBestMoves[moveIndex] == MOVE_NONE)
                     break;
@@ -4947,11 +5003,11 @@ void IncreaseSleepScore(enum BattlerId battlerAtk, enum BattlerId battlerDef, en
 
     if (((gAiThinkingStruct->aiFlags[battlerAtk] & AI_FLAG_TRY_TO_FAINT) && CanAIFaintTarget(battlerAtk, battlerDef, 0)))
     {
-        enum Move bestMoves[MAX_MON_MOVES] = {MOVE_NONE};
+        enum Move bestMoves[MAX_BATTLE_MOVES] = {MOVE_NONE};
 
         GetBestDmgMovesFromBattler(battlerAtk, battlerDef, AI_ATTACKING, bestMoves);
 
-        for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+        for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
             if ((GetMoveEffect(bestMoves[moveIndex]) != EFFECT_FOCUS_PUNCH) && (bestMoves[moveIndex] != MOVE_NONE))
                 return;
@@ -5002,12 +5058,12 @@ void IncreaseFrostbiteScore(enum BattlerId battlerAtk, enum BattlerId battlerDef
             || (!(gAiThinkingStruct->aiFlags[battlerAtk] & AI_FLAG_OMNISCIENT) // Not Omniscient but expects special attacker
                 && GetSpeciesBaseSpAttack(gBattleMons[battlerDef].species) >= GetSpeciesBaseAttack(gBattleMons[battlerDef].species) + 10))
         {
-            enum Move defBestMoves[MAX_MON_MOVES] = {MOVE_NONE};
+            enum Move defBestMoves[MAX_BATTLE_MOVES] = {MOVE_NONE};
             bool32 hasSpecial = FALSE;
 
             GetBestDmgMovesFromBattler(battlerAtk, battlerDef, AI_DEFENDING, defBestMoves);
 
-            for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+            for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
             {
                 if (defBestMoves[moveIndex] == MOVE_NONE)
                     break;
@@ -5276,8 +5332,8 @@ void SetAIUsingGimmick(enum BattlerId battler, enum AIConsiderGimmick use)
 
 struct AltTeraCalcs
 {
-    struct SimulatedDamage takenWithTera[MAX_MON_MOVES];
-    struct SimulatedDamage dealtWithoutTera[MAX_MON_MOVES];
+    struct SimulatedDamage takenWithTera[MAX_BATTLE_MOVES];
+    struct SimulatedDamage dealtWithoutTera[MAX_BATTLE_MOVES];
 };
 
 enum AIConsiderGimmick ShouldTeraFromCalcs(enum BattlerId battler, enum BattlerId opposingBattler, struct AltTeraCalcs *altCalcs);
@@ -5305,7 +5361,7 @@ void DecideTerastal(enum BattlerId battler)
 
     struct SimulatedDamage noDmg = {0};
 
-    uq4_12_t effectivenessTakenWithTera[MAX_MON_MOVES];
+    uq4_12_t effectivenessTakenWithTera[MAX_BATTLE_MOVES];
 
     enum Move *aiMoves = GetMovesArray(battler);
     enum Move *oppMoves = GetMovesArray(opposingBattler);
@@ -5325,7 +5381,7 @@ void DecideTerastal(enum BattlerId battler)
         .terrain = gFieldTimers.terrain,
     };
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         aiCalcNoTera.move = aiMoves[moveIndex];
         if (!IsMoveUnusable(moveIndex, aiCalcNoTera.move, gAiLogicData->moveLimitations[battler]) && !IsBattleMoveStatus(aiCalcNoTera.move))
@@ -5353,7 +5409,7 @@ void DecideTerastal(enum BattlerId battler)
     if (res == USE_GIMMICK)
     {
         // Damage calcs for damage received assumed we wouldn't tera. Adjust that so that further AI decisions are more accurate.
-        for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+        for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
             gAiLogicData->simulatedDmg[opposingBattler][battler][moveIndex] = altCalcs.takenWithTera[moveIndex];
             gAiLogicData->effectiveness[opposingBattler][battler][moveIndex] = effectivenessTakenWithTera[moveIndex];
@@ -5362,7 +5418,7 @@ void DecideTerastal(enum BattlerId battler)
     else
     {
         // Damage calcs for damage dealt assumed we would tera. Adjust that so that further AI decisions are more accurate.
-        for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+        for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
             gAiLogicData->simulatedDmg[battler][opposingBattler][moveIndex] = altCalcs.dealtWithoutTera[moveIndex];
     }
 
@@ -5401,7 +5457,7 @@ enum AIConsiderGimmick ShouldTeraFromCalcs(enum BattlerId battler, enum BattlerI
     bool32 hasKoWithout = FALSE;
     enum Move killingMove = MOVE_NONE;
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (dealtWithTera[moveIndex].median >= oppHp)
         {
@@ -5419,7 +5475,7 @@ enum AIConsiderGimmick ShouldTeraFromCalcs(enum BattlerId battler, enum BattlerI
     bool32 savedFromKo = FALSE;
     bool32 getsKodRegardlessBySingleMove = FALSE;
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (takenWithoutTera[moveIndex].maximum >= aiHp && takenWithTera[moveIndex].maximum >= aiHp)
             getsKodRegardlessBySingleMove = TRUE;
@@ -5433,7 +5489,7 @@ enum AIConsiderGimmick ShouldTeraFromCalcs(enum BattlerId battler, enum BattlerI
 
     // Check whether opponent can punish tera by ko'ing
     enum Move hardPunishingMove = MOVE_NONE;
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (takenWithTera[moveIndex].maximum >= aiHp)
         {
@@ -5447,7 +5503,7 @@ enum AIConsiderGimmick ShouldTeraFromCalcs(enum BattlerId battler, enum BattlerI
     // (e.g. a weakness becomes a resistance, a 4x weakness becomes neutral, etc)
     bool32 takesBigHit = FALSE;
     bool32 savedFromAllBigHits = TRUE;
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (takenWithoutTera[moveIndex].median > aiHp/2)
         {
@@ -5459,7 +5515,7 @@ enum AIConsiderGimmick ShouldTeraFromCalcs(enum BattlerId battler, enum BattlerI
 
     // Check for any benefit whatsoever. Only used for the last possible mon that could tera.
     bool32 anyOffensiveBenefit = FALSE;
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (dealtWithTera[moveIndex].median > dealtWithoutTera[moveIndex].median)
             anyOffensiveBenefit = TRUE;
@@ -5467,7 +5523,7 @@ enum AIConsiderGimmick ShouldTeraFromCalcs(enum BattlerId battler, enum BattlerI
 
     bool32 anyDefensiveBenefit = FALSE;
     bool32 anyDefensiveDrawback = FALSE;
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (takenWithTera[moveIndex].median < takenWithoutTera[moveIndex].median)
             anyDefensiveBenefit = TRUE;

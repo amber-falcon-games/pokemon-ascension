@@ -269,7 +269,7 @@ enum VolatileFlags
     F(VOLATILE_STOCKPILE_BEFORE_DEF,        stockpileBeforeDef,            (u32, MAX_STAT_STAGE)) \
     F(VOLATILE_STOCKPILE_BEFORE_SP_DEF,     stockpileBeforeSpDef,          (u32, MAX_STAT_STAGE)) \
     F(VOLATILE_SUBSTITUTE_HP,               substituteHP,                  (u32, UINT8_MAX)) \
-    F(VOLATILE_ENCORED_MOVE_POS,            encoredMovePos,                (u32, MAX_BITS(MAX_MON_MOVES))) \
+    F(VOLATILE_ENCORED_MOVE_POS,            encoredMovePos,                (u32, MAX_BITS(MAX_BATTLE_MOVES))) \
     F(VOLATILE_DISABLE_TIMER,               disableTimer,                  (u32, B_DISABLE_TIMER)) \
     F(VOLATILE_ENCORE_TIMER,                encoreTimer,                   (u32, B_ENCORE_TIMER)) \
     F(VOLATILE_PERISH_SONG_TIMER,           perishSongTimer,               (u32, B_PERISH_SONG_TIMER)) \
@@ -278,7 +278,7 @@ enum VolatileFlags
     F(VOLATILE_METRONOME_ITEM_COUNTER,      metronomeItemCounter,          (u32, UINT8_MAX)) \
     F(VOLATILE_BATTLER_PREVENTING_ESCAPE,   battlerPreventingEscape,       (enum BattlerId, MAX_BITS(MAX_BATTLERS_COUNT))) \
     F(VOLATILE_BATTLER_WITH_SURE_HIT,       battlerWithSureHit,            (enum BattlerId, MAX_BATTLERS_COUNT)) \
-    F(VOLATILE_MIMICKED_MOVES,              mimickedMoves,                 (u32, MAX_BITS(MAX_MON_MOVES))) \
+    F(VOLATILE_MIMICKED_MOVES,              mimickedMoves,                 (u32, MAX_BITS(MAX_BATTLE_MOVES))) \
     F(VOLATILE_RECHARGE_TIMER,              rechargeTimer,                 (u32, 2)) \
     F(VOLATILE_AUTOTOMIZE_COUNT,            autotomizeCount,               (u32, UINT8_MAX)) \
     F(VOLATILE_SLOW_START_TIMER,            slowStartTimer,                (u32, B_SLOW_START_TIMER)) \
@@ -292,7 +292,7 @@ enum VolatileFlags
     F(VOLATILE_THROAT_CHOP_TIMER,           throatChopTimer,               (u32, B_THROAT_CHOP_TIMER)) \
     F(VOLATILE_WRAP_TURNS,                  wrapTurns,                     (u32, B_WRAP_TURNS)) \
     F(VOLATILE_SYRUP_BOMB_TIMER,            syrupBombTimer,                (u32, B_SYRUP_BOMB_TIMER)) \
-    F(VOLATILE_USED_MOVES,                  usedMoves,                     (u32, MAX_BITS(MAX_MON_MOVES))) \
+    F(VOLATILE_USED_MOVES,                  usedMoves,                     (u32, MAX_BITS(MAX_BATTLE_MOVES))) \
     F(VOLATILE_TRUANT_COUNTER,              truantCounter,                 (u32, 1)) \
     F(VOLATILE_TRUANT_SWITCH_IN_HACK,       truantSwitchInHack,            (u32, 1)) \
     F(VOLATILE_TAR_SHOT,                    tarShot,                       (u32, 1)) \

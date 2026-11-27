@@ -20,13 +20,13 @@ void RecordKnownMove(enum BattlerId battler, enum Move move)
 {
     s32 moveIndex;
 
-    for (moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (gBattleMons[battler].moves[moveIndex] == move)
             break;
     }
 
-    if (moveIndex < MAX_MON_MOVES && gBattleHistory->usedMoves[battler][moveIndex] == MOVE_NONE)
+    if (moveIndex < MAX_BATTLE_MOVES && gBattleHistory->usedMoves[battler][moveIndex] == MOVE_NONE)
     {
         gBattleHistory->usedMoves[battler][moveIndex] = move;
         gAiPartyData->mons[GetBattlerSide(battler)][gBattlerPartyIndexes[battler]].moves[moveIndex] = move;
@@ -35,7 +35,7 @@ void RecordKnownMove(enum BattlerId battler, enum Move move)
 
 void RecordAllMoves(enum BattlerId battler)
 {
-    memcpy(gAiPartyData->mons[GetBattlerSide(battler)][gBattlerPartyIndexes[battler]].moves, gBattleMons[battler].moves, MAX_MON_MOVES * sizeof(u16));
+    memcpy(gAiPartyData->mons[GetBattlerSide(battler)][gBattlerPartyIndexes[battler]].moves, gBattleMons[battler].moves, sizeof(gBattleMons[battler].moves));
 }
 
 void RecordAbilityBattle(enum BattlerId battlerId, enum Ability abilityId)

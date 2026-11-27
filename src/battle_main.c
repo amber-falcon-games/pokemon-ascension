@@ -3908,7 +3908,7 @@ static void HandleTurnActionSelectionState(void)
                         moveInfo.monTypes[1] = gBattleMons[battler].types[1];
                         moveInfo.monTypes[2] = gBattleMons[battler].types[2];
 
-                        for (i = 0; i < MAX_MON_MOVES; i++)
+                        for (i = 0; i < MAX_BATTLE_MOVES; i++)
                         {
                             moveInfo.moves[i] = gBattleMons[battler].moves[i];
                             moveInfo.currentPP[i] = gBattleMons[battler].pp[i];

@@ -522,13 +522,13 @@ static enum CancelerResult CancelerChoiceLock(struct BattleCalcValues *cv)
         *choicedMoveAtk = gChosenMove;
 
     u32 moveIndex;
-    for (moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (gBattleMons[cv->battlerAtk].moves[moveIndex] == *choicedMoveAtk)
             break;
     }
 
-    if (moveIndex == MAX_MON_MOVES)
+    if (moveIndex == MAX_BATTLE_MOVES)
         *choicedMoveAtk = MOVE_NONE;
 
     return CANCELER_RESULT_SUCCESS;
@@ -6079,7 +6079,7 @@ static enum Move GetSleepTalkMove(void)
      && !(gBattleMons[gBattlerAttacker].status1 & STATUS1_SLEEP))
         return move;
 
-    for (i = 0; i < MAX_MON_MOVES; i++)
+    for (i = 0; i < MAX_BATTLE_MOVES; i++)
     {
         if (IsMoveSleepTalkBanned(gBattleMons[gBattlerAttacker].moves[i])
             || gBattleMoveEffects[GetMoveEffect(gBattleMons[gBattlerAttacker].moves[i])].twoTurnEffect)
@@ -6094,7 +6094,7 @@ static enum Move GetSleepTalkMove(void)
     gBattleMons[gBattlerAttacker].volatiles.usedMoves |= 1u << gCurrMovePos;
     do
     {
-        movePosition = MOD(Random(), MAX_MON_MOVES);
+        movePosition = MOD(Random(), MAX_BATTLE_MOVES);
     } while ((1u << movePosition) & unusableMovesBits);
 
     move = gBattleMons[gBattlerAttacker].moves[movePosition];

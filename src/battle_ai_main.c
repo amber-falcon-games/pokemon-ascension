@@ -181,7 +181,7 @@ void BattleAI_SetupAIData(u8 defaultScoreMoves, enum BattlerId battler)
     moveLimitations = gAiLogicData->moveLimitations[battler];
 
     // Conditional score reset, unlike Ruby.
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (moveLimitations & (1u << moveIndex))
             SET_SCORE(battler, moveIndex, 0);
@@ -687,8 +687,10 @@ void Ai_UpdateSwitchInData(enum BattlerId battler)
             gBattleHistory->abilities[battler] = aiMon->ability;
         if (aiMon->heldEffect)
             gBattleHistory->itemEffects[battler] = aiMon->heldEffect;
-        for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+        for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
+            if (aiMon->moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+                continue;
             if (aiMon->moves[moveIndex])
                 gBattleHistory->usedMoves[battler][moveIndex] = aiMon->moves[moveIndex];
         }
@@ -715,8 +717,10 @@ void Ai_UpdateFaintData(enum BattlerId battler)
 
 void RecordMovesBasedOnStab(enum BattlerId battler)
 {
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+        if (gBattleMons[battler].moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+            continue;
         enum Move playerMove = gBattleMons[battler].moves[moveIndex];
         if (IsSpeciesOfType(gBattleMons[battler].species, GetMoveType(playerMove)) && GetMovePower(playerMove) != 0)
             RecordKnownMove(battler, playerMove);
@@ -725,8 +729,10 @@ void RecordMovesBasedOnStab(enum BattlerId battler)
 
 void RecordStatusMoves(enum BattlerId battler)
 {
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+        if (gBattleMons[battler].moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+            continue;
         enum Move playerMove = gBattleMons[battler].moves[moveIndex];
         if (ShouldRecordStatusMove(playerMove))
             RecordKnownMove(battler, playerMove);
@@ -805,8 +811,12 @@ void CalcBattlerAiMovesData(struct AiLogicData *aiData, enum BattlerId battlerAt
         .terrain = terrain,
     };
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         struct SimulatedDamage dmg = {0};
         aiCalc.typeEffectiveness = Q_4_12(0.0);
         aiCalc.move = moves[moveIndex];
@@ -973,15 +983,15 @@ static void DoAIScoreProcessing(enum BattlerId battlerAtk, enum BattlerId battle
 
 static struct ChosenAction ChooseMoveOrAction_Singles(enum BattlerId battler)
 {
-    u8 currentMoveArray[MAX_MON_MOVES];
-    u8 consideredMoveArray[MAX_MON_MOVES];
+    u8 currentMoveArray[MAX_BATTLE_MOVES];
+    u8 consideredMoveArray[MAX_BATTLE_MOVES];
     u32 numOfBestMoves;
     enum BattlerId opposingBattler = GetOppositeBattler(battler);
     gAiLogicData->partnerMove = MOVE_NONE;   // no ally
 
     DoAIScoreProcessing(battler, opposingBattler);
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         gAiBattleData->finalScore[battler][opposingBattler][moveIndex] = gAiThinkingStruct->score[moveIndex];
     }
@@ -990,7 +1000,7 @@ static struct ChosenAction ChooseMoveOrAction_Singles(enum BattlerId battler)
     currentMoveArray[0] = gAiThinkingStruct->score[0];
     consideredMoveArray[0] = 0;
 
-    for (u32 moveIndex = 1; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 1; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (gBattleMons[battler].moves[moveIndex] != MOVE_NONE)
         {
@@ -1026,8 +1036,8 @@ static struct ChosenAction ChooseMoveOrAction_Doubles(enum BattlerId battlerAtk)
     s32 bestMovePointsForTarget[MAX_BATTLERS_COUNT];
     u8 mostViableTargetsArray[MAX_BATTLERS_COUNT];
     u8 actionOrMoveIndex[MAX_BATTLERS_COUNT];
-    s32 mostViableMovesScores[MAX_MON_MOVES];
-    u8 mostViableMovesIndices[MAX_MON_MOVES];
+    s32 mostViableMovesScores[MAX_BATTLE_MOVES];
+    u8 mostViableMovesIndices[MAX_BATTLE_MOVES];
     u32 mostViableTargetsNo;
     u32 mostViableMovesNo;
     s32 mostMovePoints;
@@ -1046,7 +1056,7 @@ static struct ChosenAction ChooseMoveOrAction_Doubles(enum BattlerId battlerAtk)
             mostViableMovesScores[0] = gAiThinkingStruct->score[0];
             mostViableMovesIndices[0] = 0;
             mostViableMovesNo = 1;
-            for (u32 moveIndex = 1; moveIndex < MAX_MON_MOVES; moveIndex++)
+            for (u32 moveIndex = 1; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
             {
                 if (gBattleMons[battlerAtk].moves[moveIndex] != 0)
                 {
@@ -1081,7 +1091,7 @@ static struct ChosenAction ChooseMoveOrAction_Doubles(enum BattlerId battlerAtk)
                 bestMovePointsForTarget[battlerDef] = -1;
             }
 
-            for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+            for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
             {
                 gAiBattleData->finalScore[battlerAtk][battlerDef][moveIndex] = gAiThinkingStruct->score[moveIndex];
             }
@@ -1164,7 +1174,7 @@ static inline void BattleAI_DoAIProcessing(struct AiThinkingStruct *aiThink, enu
             aiThink->score[aiThink->movesetIndex] = 0;
         }
         aiThink->movesetIndex++;
-    } while (aiThink->movesetIndex < MAX_MON_MOVES && !(aiThink->aiAction & AI_ACTION_DO_NOT_ATTACK));
+    } while (aiThink->movesetIndex < MAX_BATTLE_MOVES && !(aiThink->aiAction & AI_ACTION_DO_NOT_ATTACK));
 
     aiThink->movesetIndex = 0;
 }
@@ -1172,20 +1182,20 @@ static inline void BattleAI_DoAIProcessing(struct AiThinkingStruct *aiThink, enu
 void BattleAI_DoAIProcessing_PredictedSwitchin(struct AiThinkingStruct *aiThink, struct AiLogicData *aiData, enum BattlerId battlerAtk, enum BattlerId battlerDef)
 {
     struct BattlePokemon switchoutCandidate = gBattleMons[battlerDef];
-    struct SimulatedDamage simulatedDamageSwitchout[MAX_MON_MOVES];
-    uq4_12_t effectivenessSwitchout[MAX_MON_MOVES];
-    u8 moveAccuracySwitchout[MAX_MON_MOVES];
+    struct SimulatedDamage simulatedDamageSwitchout[MAX_BATTLE_MOVES];
+    uq4_12_t effectivenessSwitchout[MAX_BATTLE_MOVES];
+    u8 moveAccuracySwitchout[MAX_BATTLE_MOVES];
 
     struct BattlePokemon switchinCandidate;
-    struct SimulatedDamage simulatedDamageSwitchin[MAX_MON_MOVES];
-    uq4_12_t effectivenessSwitchin[MAX_MON_MOVES];
-    u8 moveAccuracySwitchin[MAX_MON_MOVES];
+    struct SimulatedDamage simulatedDamageSwitchin[MAX_BATTLE_MOVES];
+    uq4_12_t effectivenessSwitchin[MAX_BATTLE_MOVES];
+    u8 moveAccuracySwitchin[MAX_BATTLE_MOVES];
 
     struct Pokemon *party = GetBattlerParty(battlerDef);
     struct BattlePokemon *savedBattleMons = AllocSaveBattleMons();
 
     // Store battler moves data to save time over recalculating it
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         simulatedDamageSwitchout[moveIndex] = aiData->simulatedDmg[battlerAtk][battlerDef][moveIndex];
         effectivenessSwitchout[moveIndex] = aiData->effectiveness[battlerAtk][battlerDef][moveIndex];
@@ -1265,14 +1275,14 @@ void BattleAI_DoAIProcessing_PredictedSwitchin(struct AiThinkingStruct *aiThink,
             aiThink->score[aiThink->movesetIndex] = 0;
         }
         aiThink->movesetIndex++;
-    } while (aiThink->movesetIndex < MAX_MON_MOVES && !(aiThink->aiAction & AI_ACTION_DO_NOT_ATTACK));
+    } while (aiThink->movesetIndex < MAX_BATTLE_MOVES && !(aiThink->aiAction & AI_ACTION_DO_NOT_ATTACK));
 
     aiThink->movesetIndex = 0;
 
     // Restore original battler data and moves
     FreeRestoreBattleMons(savedBattleMons);
     SetBattlerAiData(battlerDef, aiData);
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         aiData->simulatedDmg[battlerAtk][battlerDef][moveIndex] = simulatedDamageSwitchout[moveIndex];
         aiData->effectiveness[battlerAtk][battlerDef][moveIndex] = effectivenessSwitchout[moveIndex];
@@ -1362,8 +1372,10 @@ static s32 AI_CheckBadMove(enum BattlerId battlerAtk, enum BattlerId battlerDef,
      && effectiveness < UQ_4_12(2.0) && (gBattleMons[battlerDef].status1 & STATUS1_ICY_ANY))
     {
         enum Move aiMove;
-        for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+        for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
+            if (gBattleMons[battlerAtk].moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+                continue;
             aiMove = gBattleMons[battlerAtk].moves[moveIndex];
             if (!CanFireMoveThawTarget(aiMove, CheckDynamicMoveType(GetBattlerMon(battlerAtk), aiMove, battlerAtk, MON_IN_BATTLE))
              && !CanBurnHitThaw(aiMove)
@@ -4092,22 +4104,22 @@ static bool32 ShouldCompareMove(enum BattlerId battlerAtk, enum BattlerId battle
 
 static void AI_CompareDamagingMoves(enum BattlerId battlerAtk, enum BattlerId battlerDef)
 {
-    u32 tempMoveScores[MAX_MON_MOVES];
-    u32 moveComparisonScores[MAX_MON_MOVES];
+    u32 tempMoveScores[MAX_BATTLE_MOVES];
+    u32 moveComparisonScores[MAX_BATTLE_MOVES];
     u32 bestScore = AI_SCORE_DEFAULT;
     bool32 multipleBestMoves = FALSE;
-    s32 noOfHits[MAX_MON_MOVES];
+    s32 noOfHits[MAX_BATTLE_MOVES];
     s32 leastHits = 1000;
     enum Move *moves = GetMovesArray(battlerAtk);
     enum Move predictedMove = GetPredictedMove(battlerAtk, battlerDef, gAiLogicData);
-    bool32 moveIsFaster[MAX_MON_MOVES];
+    bool32 moveIsFaster[MAX_BATTLE_MOVES];
 
-    for (u32 currId = 0; currId < MAX_MON_MOVES; currId++)
+    for (u32 currId = 0; currId < MAX_BATTLE_MOVES; currId++)
     {
         moveComparisonScores[currId] = 0;
         if (!ShouldCompareMove(battlerAtk, battlerDef, currId, moves[currId]))
             continue;
-        for (u32 compareId = 0; compareId < MAX_MON_MOVES; compareId++)
+        for (u32 compareId = 0; compareId < MAX_BATTLE_MOVES; compareId++)
         {
             if (moves[compareId] != MOVE_NONE && GetMovePower(moves[compareId]) != 0)
             {
@@ -4149,8 +4161,10 @@ static void AI_CompareDamagingMoves(enum BattlerId battlerAtk, enum BattlerId ba
         // Current move requires the least hits to KO. Compare with other moves.
         if (leastHits == noOfHits[currId])
         {
-            for (u32 compareId = 0; compareId < MAX_MON_MOVES; compareId++)
+            for (u32 compareId = 0; compareId < MAX_BATTLE_MOVES; compareId++)
             {
+                if (moves[compareId] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+                    continue;
                 if (compareId == currId)
                     continue;
                 if (noOfHits[currId] == noOfHits[compareId])
@@ -4163,10 +4177,10 @@ static void AI_CompareDamagingMoves(enum BattlerId battlerAtk, enum BattlerId ba
                         switch (CompareResistBerryEffects(battlerAtk, battlerDef, currId, compareId))
                         {
                         case MOVE_WON_COMPARISON:
-                            tempMoveScores[currId] += MathUtil_Exponent(MAX_MON_MOVES, PRIORITY_RESIST_BERRY);
+                            tempMoveScores[currId] += MathUtil_Exponent(MAX_BATTLE_MOVES, PRIORITY_RESIST_BERRY);
                             break;
                         case MOVE_LOST_COMPARISON:
-                            tempMoveScores[compareId] += MathUtil_Exponent(MAX_MON_MOVES, PRIORITY_RESIST_BERRY);
+                            tempMoveScores[compareId] += MathUtil_Exponent(MAX_BATTLE_MOVES, PRIORITY_RESIST_BERRY);
                             break;
                         case MOVE_NEUTRAL_COMPARISON:
                             break;
@@ -4175,10 +4189,10 @@ static void AI_CompareDamagingMoves(enum BattlerId battlerAtk, enum BattlerId ba
                         switch (CompareMoveSpeeds(battlerAtk, battlerDef, moveIsFaster[currId], moveIsFaster[compareId]))
                         {
                         case MOVE_WON_COMPARISON:
-                            tempMoveScores[currId] += MathUtil_Exponent(MAX_MON_MOVES, PRIORITY_SPEED);
+                            tempMoveScores[currId] += MathUtil_Exponent(MAX_BATTLE_MOVES, PRIORITY_SPEED);
                             break;
                         case MOVE_LOST_COMPARISON:
-                            tempMoveScores[compareId] += MathUtil_Exponent(MAX_MON_MOVES, PRIORITY_SPEED);
+                            tempMoveScores[compareId] += MathUtil_Exponent(MAX_BATTLE_MOVES, PRIORITY_SPEED);
                             break;
                         case MOVE_NEUTRAL_COMPARISON:
                             break;
@@ -4187,10 +4201,10 @@ static void AI_CompareDamagingMoves(enum BattlerId battlerAtk, enum BattlerId ba
                         switch (CompareGuaranteeFaintTarget(battlerAtk, battlerDef, currId, compareId, moves))
                         {
                         case MOVE_WON_COMPARISON:
-                            tempMoveScores[currId] += MathUtil_Exponent(MAX_MON_MOVES, PRIORITY_GUARANTEE);
+                            tempMoveScores[currId] += MathUtil_Exponent(MAX_BATTLE_MOVES, PRIORITY_GUARANTEE);
                             break;
                         case MOVE_LOST_COMPARISON:
-                            tempMoveScores[compareId] += MathUtil_Exponent(MAX_MON_MOVES, PRIORITY_GUARANTEE);
+                            tempMoveScores[compareId] += MathUtil_Exponent(MAX_BATTLE_MOVES, PRIORITY_GUARANTEE);
                             break;
                         case MOVE_NEUTRAL_COMPARISON:
                             break;
@@ -4199,10 +4213,10 @@ static void AI_CompareDamagingMoves(enum BattlerId battlerAtk, enum BattlerId ba
                     switch (CompareMoveTwoTurnEffect(battlerAtk, moves[currId], moves[compareId]))
                     {
                     case MOVE_WON_COMPARISON:
-                        tempMoveScores[currId] += MathUtil_Exponent(MAX_MON_MOVES, PRIORITY_NOT_CHARGING);
+                        tempMoveScores[currId] += MathUtil_Exponent(MAX_BATTLE_MOVES, PRIORITY_NOT_CHARGING);
                         break;
                     case MOVE_LOST_COMPARISON:
-                        tempMoveScores[compareId] += MathUtil_Exponent(MAX_MON_MOVES, PRIORITY_NOT_CHARGING);
+                        tempMoveScores[compareId] += MathUtil_Exponent(MAX_BATTLE_MOVES, PRIORITY_NOT_CHARGING);
                         break;
                     case MOVE_NEUTRAL_COMPARISON:
                         break;
@@ -4210,10 +4224,10 @@ static void AI_CompareDamagingMoves(enum BattlerId battlerAtk, enum BattlerId ba
                     switch (CompareMoveAccuracies(battlerAtk, battlerDef, currId, compareId))
                     {
                     case MOVE_WON_COMPARISON:
-                        tempMoveScores[currId] += MathUtil_Exponent(MAX_MON_MOVES, PRIORITY_ACCURACY);
+                        tempMoveScores[currId] += MathUtil_Exponent(MAX_BATTLE_MOVES, PRIORITY_ACCURACY);
                         break;
                     case MOVE_LOST_COMPARISON:
-                        tempMoveScores[compareId] += MathUtil_Exponent(MAX_MON_MOVES, PRIORITY_ACCURACY);
+                        tempMoveScores[compareId] += MathUtil_Exponent(MAX_BATTLE_MOVES, PRIORITY_ACCURACY);
                         break;
                     case MOVE_NEUTRAL_COMPARISON:
                         break;
@@ -4221,10 +4235,10 @@ static void AI_CompareDamagingMoves(enum BattlerId battlerAtk, enum BattlerId ba
                     switch (CompareMoveSelfSacrifice(battlerAtk, battlerDef, moves[currId], moves[compareId]))
                     {
                     case MOVE_WON_COMPARISON:
-                        tempMoveScores[currId] += MathUtil_Exponent(MAX_MON_MOVES, PRIORITY_AVOID_SELF_SACRIFICE);
+                        tempMoveScores[currId] += MathUtil_Exponent(MAX_BATTLE_MOVES, PRIORITY_AVOID_SELF_SACRIFICE);
                         break;
                     case MOVE_LOST_COMPARISON:
-                        tempMoveScores[compareId] += MathUtil_Exponent(MAX_MON_MOVES, PRIORITY_AVOID_SELF_SACRIFICE);
+                        tempMoveScores[compareId] += MathUtil_Exponent(MAX_BATTLE_MOVES, PRIORITY_AVOID_SELF_SACRIFICE);
                         break;
                     case MOVE_NEUTRAL_COMPARISON:
                         break;
@@ -4232,10 +4246,10 @@ static void AI_CompareDamagingMoves(enum BattlerId battlerAtk, enum BattlerId ba
                     switch (CompareMoveEffects(moves[currId], moves[compareId], battlerAtk, battlerDef, noOfHits[currId]))
                     {
                     case MOVE_WON_COMPARISON:
-                        tempMoveScores[currId] += MathUtil_Exponent(MAX_MON_MOVES, PRIORITY_EFFECT);
+                        tempMoveScores[currId] += MathUtil_Exponent(MAX_BATTLE_MOVES, PRIORITY_EFFECT);
                         break;
                     case MOVE_LOST_COMPARISON:
-                        tempMoveScores[compareId] += MathUtil_Exponent(MAX_MON_MOVES, PRIORITY_EFFECT);
+                        tempMoveScores[compareId] += MathUtil_Exponent(MAX_BATTLE_MOVES, PRIORITY_EFFECT);
                         break;
                     case MOVE_NEUTRAL_COMPARISON:
                         break;
@@ -4251,13 +4265,13 @@ static void AI_CompareDamagingMoves(enum BattlerId battlerAtk, enum BattlerId ba
     }
 
     // Find highest comparison score
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (moveComparisonScores[moveIndex] > bestScore)
             bestScore = moveComparisonScores[moveIndex];
     }
     // Increase score for corresponding move(s), accomodating ties
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (moveComparisonScores[moveIndex] == bestScore)
             gAiThinkingStruct->score[moveIndex] += BEST_DAMAGE_MOVE;
@@ -5694,7 +5708,7 @@ static s32 AI_CalcAdditionalEffectScore(enum BattlerId battlerAtk, enum BattlerI
 
     enum Move incomingMove = GetIncomingMove(battlerAtk, battlerDef, aiData);
     u32 additionalEffectCount = GetMoveAdditionalEffectCount(move);
-    enum Move defBestMoves[MAX_MON_MOVES] = {MOVE_NONE};
+    enum Move defBestMoves[MAX_BATTLE_MOVES] = {MOVE_NONE};
 
     // Set battlerDef best dmg moves
     GetBestDmgMovesFromBattler(battlerDef, battlerAtk, AI_DEFENDING, defBestMoves);
@@ -5856,7 +5870,7 @@ static s32 AI_CalcAdditionalEffectScore(enum BattlerId battlerAtk, enum BattlerI
                     ADJUST_SCORE(GOOD_EFFECT);
                 break;
             case MOVE_EFFECT_THROAT_CHOP:
-                for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+                for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
                 {
                     if (defBestMoves[moveIndex] == MOVE_NONE)
                     {

@@ -133,8 +133,9 @@ enum FrontierLevelMode
 };
 
 #define TRAINER_ID_LENGTH 4
-#define MAX_MON_MOVES 4
-#define ALL_MOVES_MASK ((1 << MAX_MON_MOVES) - 1)
+#define MAX_MON_MOVES 4      // moves a saved Pokémon knows
+#define MAX_BATTLE_MOVES 8   // Pokémon Ascension (F014): moves a battler can carry in battle (slots 4+ are battle-only)
+#define ALL_MOVES_MASK ((1 << MAX_BATTLE_MOVES) - 1)
 
 #define CONTESTANT_COUNT 4
 

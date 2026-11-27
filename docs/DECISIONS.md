@@ -58,6 +58,13 @@ Decided:
   - Work continues in the approved roadmap order: F005c → F014 → F015 → F016 → F018 → F019 → F020 → F021.
   - Branches stack (D021), and subjective gameplay features wait for the owner's combined playtest before they merge.
   - Lab-only spike code merges to main as dev tooling.
+- D027 (2026-11-27): F015 move library (owner answers).
+  1. **Talent trees:** generated automatically from each evolution line's level-up moves, and the owner can change any line by hand afterwards (data the owner can edit, not code).
+  2. **No "custom" move slots.** Taught moves (TMs, tutors, eggs) fit into the talent tree:
+     - If the Pokémon would also learn the move naturally, the TM moves it straight to that point in its tree.
+     - If it has already grown past that point, the TM can't be used.
+     - If the move isn't in the Pokémon's own tree, teaching it puts the Pokémon onto the tree branch containing that move, and it grows along that branch from there.
+  3. **F005c happens only when the save space is needed,** not before; until then it is lower value.
 
 To be raised at F015 (not decided): how to recover save space for an expanded move library — see SAVE_COMPATIBILITY.md options S1–S5.
 

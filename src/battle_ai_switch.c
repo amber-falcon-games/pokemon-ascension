@@ -496,8 +496,10 @@ static bool32 ShouldSwitchIfAllMovesBad(struct SwitchAiContext *switchContext)
     if (IsDoubleBattle())
     {
         enum BattlerId opposingPartner = GetPartnerBattler(switchContext->opposingBattler);
-        for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+        for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
+            if (gBattleMons[switchContext->battler].moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+                continue;
             ctx.move = ctx.chosenMove = ctx.baseMove = gBattleMons[switchContext->battler].moves[moveIndex];
             ctx.moveType = GetBattleMoveType(ctx.move);
             // Check if move is bad in the context of both opposing battlers
@@ -520,8 +522,10 @@ static bool32 ShouldSwitchIfAllMovesBad(struct SwitchAiContext *switchContext)
     }
     else
     {
-        for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+        for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
+            if (gBattleMons[switchContext->battler].moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+                continue;
             ctx.move = ctx.chosenMove = ctx.baseMove = gBattleMons[switchContext->battler].moves[moveIndex];
             ctx.moveType = GetBattleMoveType(ctx.move);
             if (!IsMoveBad(&ctx, moveIndex))
@@ -843,7 +847,7 @@ static bool32 CanPalafinZeroSafelyUseHitEscape(enum BattlerId battlerAtk, enum M
         return FALSE;
 
     moveIndex = GetMoveIndex(battlerAtk, move);
-    if (moveIndex >= MAX_MON_MOVES)
+    if (moveIndex >= MAX_BATTLE_MOVES)
         return FALSE;
 
     moveType = GetBattleMoveType(move);
@@ -1055,7 +1059,7 @@ static bool32 ShouldSwitchIfAbilityBenefit(struct SwitchAiContext *switchContext
         moveIndex = GetBattlerMoveIndexWithEffect(switchContext->battler, EFFECT_HIT_ESCAPE);
 
         // Prefer a safe hit escape move over switching directly.
-        if (moveIndex < MAX_MON_MOVES && CanPalafinZeroSafelyUseHitEscape(switchContext->battler, gBattleMons[switchContext->battler].moves[moveIndex]))
+        if (moveIndex < MAX_BATTLE_MOVES && CanPalafinZeroSafelyUseHitEscape(switchContext->battler, gBattleMons[switchContext->battler].moves[moveIndex]))
             return FALSE;
 
         // No safe pivot is available, so switch directly to transform.
@@ -1108,7 +1112,7 @@ static bool32 CanUseSuperEffectiveMoveAgainstOpponent(enum BattlerId battler, en
 {
     enum Move move;
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         move = gBattleMons[battler].moves[moveIndex];
         if (move == MOVE_NONE || AI_DoesChoiceEffectBlockMove(battler, move))
@@ -1332,7 +1336,7 @@ void GetShouldSwitchMoveData(struct SwitchAiContext *switchContext)
     bool32 isBattlerFirst, isBattlerFirstPriority;
 
     // Get max damage mon could take
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         playerMove = SMART_SWITCHING_OMNISCIENT ? gBattleMons[switchContext->opposingBattler].moves[moveIndex] : playerMoves[moveIndex];
         if (playerMove != MOVE_NONE && !IsBattleMoveStatus(playerMove) && GetMoveEffect(playerMove) != EFFECT_FOCUS_PUNCH && gBattleMons[switchContext->opposingBattler].pp[moveIndex] > 0)
@@ -1354,7 +1358,7 @@ void GetShouldSwitchMoveData(struct SwitchAiContext *switchContext)
     switchContext->battlerGetsOHKOd = minHitsToKOAI == 1 ? TRUE : FALSE;
     expectedMove = gAiThinkingStruct->aiFlags[switchContext->battler] & AI_FLAG_PREDICT_MOVE ? GetIncomingMove(switchContext->battler, switchContext->opposingBattler, gAiLogicData) : bestPlayerMove;
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         aiMove = gBattleMons[switchContext->battler].moves[moveIndex];
         aiMoveEffect = GetMoveEffect(aiMove);
@@ -1484,7 +1488,7 @@ bool32 ShouldSwitchIfAllScoresBad(struct SwitchAiContext *switchContext)
     if (!(gAiThinkingStruct->aiFlags[switchContext->battler] & AI_FLAG_SMART_SWITCHING))
         return FALSE;
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         if (IsDoubleBattle())
         {
@@ -1508,8 +1512,10 @@ bool32 ShouldSwitchIfAllScoresBad(struct SwitchAiContext *switchContext)
 
 bool32 ShouldStayInToUseMove(struct SwitchAiContext *switchContext)
 {
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+        if (gBattleMons[switchContext->battler].moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+            continue;
         enum Move move = gBattleMons[switchContext->battler].moves[moveIndex];
         enum BattleMoveEffects effect = GetMoveEffect(move);
 
@@ -2078,7 +2084,7 @@ static s32 GetMaxDamagePlayerCouldDealToSwitchin(enum BattlerId battler, enum Ba
     enum Move *playerMoves = GetMovesArray(opposingBattler);
     s32 damageTaken = 0, maxDamageTaken = 0;
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         playerMove = SMART_SWITCHING_OMNISCIENT ? gBattleMons[opposingBattler].moves[moveIndex] : playerMoves[moveIndex];
         if (playerMove != MOVE_NONE && !IsBattleMoveStatus(playerMove) && GetMoveEffect(playerMove) != EFFECT_FOCUS_PUNCH && gBattleMons[opposingBattler].pp[moveIndex] > 0)
@@ -2105,7 +2111,7 @@ static s32 GetMaxPriorityDamagePlayerCouldDealToSwitchin(enum BattlerId battler,
     enum Move *playerMoves = GetMovesArray(opposingBattler);
     s32 damageTaken = 0, maxDamageTaken = 0;
 
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         // If player is choiced into a non-priority move, AI understands that it can't deal priority damage
         if (gBattleStruct->choicedMove[opposingBattler] != MOVE_NONE && GetMovePriority(gBattleStruct->choicedMove[opposingBattler]) < 1)
@@ -2275,7 +2281,7 @@ static u32 GetBestMonIntegrated(struct Pokemon *party, int lastId, enum BattlerI
         bool32 anyMoveCanWin1v1 = FALSE;
 
         // Check through current mon's moves
-        for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+        for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
             // Check that move has PP remaining before running calcs
             if (gBattleMons[battler].pp[moveIndex] < 1)
@@ -2520,7 +2526,7 @@ static u32 GetBestMonVanilla(struct Pokemon *party, int lastId, enum BattlerId b
 
         typeMatchup = GetBattlerTypeMatchup(opposingBattler, battler);
 
-        for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+        for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
             // Check that move has PP remaining before running calcs
             if (gBattleMons[battler].pp[moveIndex] < 1)
@@ -2683,7 +2689,7 @@ u32 AI_SelectRevivalBlessingMon(enum BattlerId battler)
             continue;
 
         s32 bestDamage = 0;
-        for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+        for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
             enum Move aiMove = gBattleMons[battler].moves[moveIndex];
             if (aiMove == MOVE_NONE || gBattleMons[battler].pp[moveIndex] == 0)

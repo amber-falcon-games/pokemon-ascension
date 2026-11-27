@@ -776,7 +776,7 @@ static void OakOldManHandleChooseAction(enum BattlerId battler)
     gBattlerControllerFuncs[battler] = HandleChooseActionAfterDma3;
     BattlePutTextOnWindow(gText_EmptyString3, B_WIN_MSG);
     BattlePutTextOnWindow(gText_BattleMenu, B_WIN_ACTION_MENU);
-    for (i = 0; i < MAX_MON_MOVES; ++i)
+    for (i = 0; i < MAX_BATTLE_MOVES; ++i)
         ActionSelectionDestroyCursorAt((u8)i);
     ActionSelectionCreateCursorAt(gActionSelectionCursor[battler], 0);
     if (gBattleTypeFlags & BATTLE_TYPE_FIRST_BATTLE)

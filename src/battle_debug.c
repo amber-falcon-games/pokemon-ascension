@@ -739,7 +739,7 @@ static void PutMovesPointsText(struct BattleDebugMenu *data)
 
     FillWindowPixelBuffer(data->aiMovesWindowId, 0x11);
     AddTextPrinterParameterized(data->aiMovesWindowId, FONT_NORMAL, COMPOUND_STRING("Score/Dmg"), 3, 0, 0, NULL);
-    for (u32 moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+    for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
         text[0] = CHAR_SPACE;
         StringCopy(text + 1, GetMoveName(gBattleMons[data->aiBattlerId].moves[moveIndex]));
@@ -964,7 +964,7 @@ static void PutAiPartyText(struct BattleDebugMenu *data)
         *txtPtr = EOS;
         AddTextPrinterParameterized5(data->aiMovesWindowId, FONT_SMALL_NARROW, text, i * 41, 15, 0, NULL, 0, 0);
 
-        for (j = 0; j < MAX_MON_MOVES; j++)
+        for (j = 0; j < MAX_BATTLE_MOVES; j++)
         {
             txtPtr = StringCopyN(text, GetMoveName(aiMons[i].moves[j]), 8);
             *txtPtr = EOS;

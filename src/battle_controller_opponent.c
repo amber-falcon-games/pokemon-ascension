@@ -463,7 +463,7 @@ static void OpponentHandleChooseMove(enum BattlerId battler)
 
         do
         {
-            chosenMoveIndex = Random() & (MAX_MON_MOVES - 1);
+            chosenMoveIndex = Random() & (MAX_BATTLE_MOVES - 1);
             move = moveInfo->moves[chosenMoveIndex];
         } while (move == MOVE_NONE);
 

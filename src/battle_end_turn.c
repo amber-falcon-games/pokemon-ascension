@@ -835,12 +835,12 @@ static bool32 HandleEndTurnDisable(enum BattlerId battler)
 
     if (gBattleMons[battler].volatiles.disableTimer != 0)
     {
-        for (moveIndex = 0; moveIndex < MAX_MON_MOVES; moveIndex++)
+        for (moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
             if (gBattleMons[battler].volatiles.disabledMove == gBattleMons[battler].moves[moveIndex])
                 break;
         }
-        if (moveIndex == MAX_MON_MOVES)  // Pokémon does not have the disabled move anymore
+        if (moveIndex == MAX_BATTLE_MOVES)  // Pokémon does not have the disabled move anymore
         {
             gBattleMons[battler].volatiles.disabledMove = 0;
             gBattleMons[battler].volatiles.disableTimer = 0;

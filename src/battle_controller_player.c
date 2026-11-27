@@ -81,6 +81,43 @@ static void MoveSelectionDisplayPPNumber(enum BattlerId battler);
 static void MoveSelectionDisplayPPString(enum BattlerId battler);
 static void MoveSelectionDisplayMoveType(enum BattlerId battler);
 static void MoveSelectionDisplayMoveNames(enum BattlerId battler);
+
+// Pokémon Ascension (F014): the move menu lists a battler's moves (up to MAX_BATTLE_MOVES) grouped
+// Final Fantasy-style: attacks first, then support (status) moves, each in slot order, four to a
+// page. gMoveSelectionCursor stays the move's slot; these map slots to list positions.
+static u32 AscMoveOrder(enum BattlerId battler, u8 *order)
+{
+    struct ChooseMoveStruct *moveInfo = (struct ChooseMoveStruct *)(&gBattleResources->bufferA[battler][4]);
+    u32 i, n = 0, pass;
+    for (pass = 0; pass < 2; pass++)
+        for (i = 0; i < MAX_BATTLE_MOVES; i++)
+            if (moveInfo->moves[i] != MOVE_NONE
+             && (GetMoveCategory(moveInfo->moves[i]) == DAMAGE_CATEGORY_STATUS) == (pass == 1))
+                order[n++] = i;
+    return n;
+}
+
+static u32 AscListIndex(enum BattlerId battler, u32 slot)
+{
+    u8 order[MAX_BATTLE_MOVES];
+    u32 i, n = AscMoveOrder(battler, order);
+    for (i = 0; i < n; i++)
+        if (order[i] == slot)
+            return i;
+    return 0;
+}
+
+static u32 AscSlotAt(enum BattlerId battler, u32 index)   // MAX_BATTLE_MOVES if there is no move there
+{
+    u8 order[MAX_BATTLE_MOVES];
+    u32 n = AscMoveOrder(battler, order);
+    return index < n ? order[index] : MAX_BATTLE_MOVES;
+}
+
+static u32 AscCursorPos(enum BattlerId battler)   // 0-3: where the cursor is on the current page
+{
+    return AscListIndex(battler, gMoveSelectionCursor[battler]) & 3;
+}
 static void TryMoveSelectionDisplayMoveDescription(enum BattlerId battler);
 static void MoveSelectionDisplayMoveDescription(enum BattlerId battler);
 static void WaitForMonSelection(enum BattlerId battler);
@@ -806,68 +843,40 @@ void HandleInputChooseMove(enum BattlerId battler)
             TryToHideMoveInfoWindow();
         }
     }
-    else if (JOY_NEW(DPAD_LEFT) && !gBattleStruct->zmove.viewing)
+    else if (!gBattleStruct->zmove.viewing && (JOY_NEW(DPAD_LEFT) || JOY_NEW(DPAD_RIGHT) || JOY_NEW(DPAD_UP) || JOY_NEW(DPAD_DOWN)))
     {
-        if (gMoveSelectionCursor[battler] & 1)
+        // Pokémon Ascension (F014): move around the grouped list. Left/right and up/down work as in
+        // Emerald within a page of four; down from the bottom row / up from the top row turn the page.
+        u32 index = AscListIndex(battler, gMoveSelectionCursor[battler]), target = index, slot;
+        if (JOY_NEW(DPAD_LEFT) && (index & 1))
+            target = index ^ 1;
+        else if (JOY_NEW(DPAD_RIGHT) && !(index & 1))
+            target = index ^ 1;
+        else if (JOY_NEW(DPAD_UP))
+            target = (index & 2) ? index ^ 2 : (index >= 4 ? (index & ~3) - 4 + 2 + (index & 1) : index);
+        else if (JOY_NEW(DPAD_DOWN))
+            target = !(index & 2) ? index ^ 2 : (index & ~3) + 4 + (index & 1);
+        slot = AscSlotAt(battler, target);
+        if (slot == MAX_BATTLE_MOVES && target != index && (JOY_NEW(DPAD_UP) || JOY_NEW(DPAD_DOWN)) && (target & ~3) != (index & ~3))
+            slot = AscSlotAt(battler, target & ~1);   // new page: fall back to its left column
+        if (target != index && slot != MAX_BATTLE_MOVES)
         {
-            MoveSelectionDestroyCursorAt(gMoveSelectionCursor[battler]);
-            gMoveSelectionCursor[battler] ^= 1;
+            bool32 newPage = (target & ~3) != (index & ~3) && (AscListIndex(battler, slot) & ~3) != (index & ~3);
+            MoveSelectionDestroyCursorAt(index & 3);
+            gMoveSelectionCursor[battler] = slot;
             PlaySE(SE_SELECT);
-            MoveSelectionCreateCursorAt(gMoveSelectionCursor[battler], 0);
-            if (B_SHOW_EFFECTIVENESS)
-                MoveSelectionDisplayMoveEffectiveness(CheckTargetTypeEffectiveness(battler), battler);
-            MoveSelectionDisplayPPNumber(battler);
-            MoveSelectionDisplayMoveType(battler);
-            TryMoveSelectionDisplayMoveDescription(battler);
-            TryChangeZTrigger(battler, gMoveSelectionCursor[battler]);
-        }
-    }
-    else if (JOY_NEW(DPAD_RIGHT) && !gBattleStruct->zmove.viewing)
-    {
-        if (!(gMoveSelectionCursor[battler] & 1)
-         && (gMoveSelectionCursor[battler] ^ 1) < gNumberOfMovesToChoose)
-        {
-            MoveSelectionDestroyCursorAt(gMoveSelectionCursor[battler]);
-            gMoveSelectionCursor[battler] ^= 1;
-            PlaySE(SE_SELECT);
-            MoveSelectionCreateCursorAt(gMoveSelectionCursor[battler], 0);
-            if (B_SHOW_EFFECTIVENESS)
-                MoveSelectionDisplayMoveEffectiveness(CheckTargetTypeEffectiveness(battler), battler);
-            MoveSelectionDisplayPPNumber(battler);
-            MoveSelectionDisplayMoveType(battler);
-            TryMoveSelectionDisplayMoveDescription(battler);
-            TryChangeZTrigger(battler, gMoveSelectionCursor[battler]);
-        }
-    }
-    else if (JOY_NEW(DPAD_UP) && !gBattleStruct->zmove.viewing)
-    {
-        if (gMoveSelectionCursor[battler] & 2)
-        {
-            MoveSelectionDestroyCursorAt(gMoveSelectionCursor[battler]);
-            gMoveSelectionCursor[battler] ^= 2;
-            PlaySE(SE_SELECT);
-            MoveSelectionCreateCursorAt(gMoveSelectionCursor[battler], 0);
-            if (B_SHOW_EFFECTIVENESS)
-                MoveSelectionDisplayMoveEffectiveness(CheckTargetTypeEffectiveness(battler), battler);
-            MoveSelectionDisplayPPNumber(battler);
-            MoveSelectionDisplayMoveType(battler);
-            TryMoveSelectionDisplayMoveDescription(battler);
-            TryChangeZTrigger(battler, gMoveSelectionCursor[battler]);
-        }
-    }
-    else if (JOY_NEW(DPAD_DOWN) && !gBattleStruct->zmove.viewing)
-    {
-        if (!(gMoveSelectionCursor[battler] & 2)
-         && (gMoveSelectionCursor[battler] ^ 2) < gNumberOfMovesToChoose)
-        {
-            MoveSelectionDestroyCursorAt(gMoveSelectionCursor[battler]);
-            gMoveSelectionCursor[battler] ^= 2;
-            PlaySE(SE_SELECT);
-            MoveSelectionCreateCursorAt(gMoveSelectionCursor[battler], 0);
-            if (B_SHOW_EFFECTIVENESS)
-                MoveSelectionDisplayMoveEffectiveness(CheckTargetTypeEffectiveness(battler), battler);
-            MoveSelectionDisplayPPNumber(battler);
-            MoveSelectionDisplayMoveType(battler);
+            if (newPage)
+            {
+                ReloadMoveNames(battler);
+            }
+            else
+            {
+                MoveSelectionCreateCursorAt(AscCursorPos(battler), 0);
+                if (B_SHOW_EFFECTIVENESS)
+                    MoveSelectionDisplayMoveEffectiveness(CheckTargetTypeEffectiveness(battler), battler);
+                MoveSelectionDisplayPPNumber(battler);
+                MoveSelectionDisplayMoveType(battler);
+            }
             TryMoveSelectionDisplayMoveDescription(battler);
             TryChangeZTrigger(battler, gMoveSelectionCursor[battler]);
         }
@@ -948,7 +957,7 @@ static void ReloadMoveNames(enum BattlerId battler)
         gBattleStruct->zmove.viewing = FALSE;
         MoveSelectionDestroyCursorAt(battler);
         MoveSelectionDisplayMoveNames(battler);
-        MoveSelectionCreateCursorAt(gMoveSelectionCursor[battler], 0);
+        MoveSelectionCreateCursorAt(AscCursorPos(battler), 0);
         if (B_SHOW_EFFECTIVENESS)
             MoveSelectionDisplayMoveEffectiveness(CheckTargetTypeEffectiveness(battler), battler);
         MoveSelectionDisplayPPNumber(battler);
@@ -974,33 +983,33 @@ static u32 UNUSED HandleMoveInputUnused(enum BattlerId battler)
     }
     if (JOY_NEW(DPAD_LEFT) && gMoveSelectionCursor[battler] & 1)
     {
-        MoveSelectionDestroyCursorAt(gMoveSelectionCursor[battler]);
+        MoveSelectionDestroyCursorAt(AscCursorPos(battler));
         gMoveSelectionCursor[battler] ^= 1;
         PlaySE(SE_SELECT);
-        MoveSelectionCreateCursorAt(gMoveSelectionCursor[battler], 0);
+        MoveSelectionCreateCursorAt(AscCursorPos(battler), 0);
     }
     if (JOY_NEW(DPAD_RIGHT) && !(gMoveSelectionCursor[battler] & 1)
         && (gMoveSelectionCursor[battler] ^ 1) < gNumberOfMovesToChoose)
     {
-        MoveSelectionDestroyCursorAt(gMoveSelectionCursor[battler]);
+        MoveSelectionDestroyCursorAt(AscCursorPos(battler));
         gMoveSelectionCursor[battler] ^= 1;
         PlaySE(SE_SELECT);
-        MoveSelectionCreateCursorAt(gMoveSelectionCursor[battler], 0);
+        MoveSelectionCreateCursorAt(AscCursorPos(battler), 0);
     }
     if (JOY_NEW(DPAD_UP) && gMoveSelectionCursor[battler] & 2)
     {
-        MoveSelectionDestroyCursorAt(gMoveSelectionCursor[battler]);
+        MoveSelectionDestroyCursorAt(AscCursorPos(battler));
         gMoveSelectionCursor[battler] ^= 2;
         PlaySE(SE_SELECT);
-        MoveSelectionCreateCursorAt(gMoveSelectionCursor[battler], 0);
+        MoveSelectionCreateCursorAt(AscCursorPos(battler), 0);
     }
     if (JOY_NEW(DPAD_DOWN) && !(gMoveSelectionCursor[battler] & 2)
         && (gMoveSelectionCursor[battler] ^ 2) < gNumberOfMovesToChoose)
     {
-        MoveSelectionDestroyCursorAt(gMoveSelectionCursor[battler]);
+        MoveSelectionDestroyCursorAt(AscCursorPos(battler));
         gMoveSelectionCursor[battler] ^= 2;
         PlaySE(SE_SELECT);
-        MoveSelectionCreateCursorAt(gMoveSelectionCursor[battler], 0);
+        MoveSelectionCreateCursorAt(AscCursorPos(battler), 0);
     }
 
     return var;
@@ -1008,7 +1017,7 @@ static u32 UNUSED HandleMoveInputUnused(enum BattlerId battler)
 
 void HandleMoveSwitching(enum BattlerId battler)
 {
-    u8 perMovePPBonuses[MAX_MON_MOVES];
+    u8 perMovePPBonuses[MAX_BATTLE_MOVES];
     struct ChooseMoveStruct moveStruct;
     u8 totalPPBonuses;
 
@@ -1105,7 +1114,7 @@ void HandleMoveSwitching(enum BattlerId battler)
         else
             gBattlerControllerFuncs[battler] = HandleInputChooseMove;
         gMoveSelectionCursor[battler] = gMultiUsePlayerCursor;
-        MoveSelectionCreateCursorAt(gMoveSelectionCursor[battler], 0);
+        MoveSelectionCreateCursorAt(AscCursorPos(battler), 0);
         if (B_SHOW_EFFECTIVENESS)
             MoveSelectionDisplayMoveEffectiveness(CheckTargetTypeEffectiveness(battler), battler);
         else
@@ -1118,7 +1127,7 @@ void HandleMoveSwitching(enum BattlerId battler)
     {
         PlaySE(SE_SELECT);
         MoveSelectionDestroyCursorAt(gMultiUsePlayerCursor);
-        MoveSelectionCreateCursorAt(gMoveSelectionCursor[battler], 0);
+        MoveSelectionCreateCursorAt(AscCursorPos(battler), 0);
 
         if (gBattleTypeFlags & BATTLE_TYPE_FIRST_BATTLE)
             gBattlerControllerFuncs[battler] = OakOldManHandleInputChooseMove;
@@ -1670,19 +1679,28 @@ static void PlayerHandleYesNoInput(enum BattlerId battler)
 static void MoveSelectionDisplayMoveNames(enum BattlerId battler)
 {
     s32 i;
-    struct ChooseMoveStruct *moveInfo = (struct ChooseMoveStruct *)(&gBattleResources->bufferA[battler][4]);
+    u8 order[MAX_BATTLE_MOVES];
+    u32 count = AscMoveOrder(battler, order);
+    // Pokémon Ascension (F014): the cursor's page of the grouped list (attacks, then support);
+    // arrows mark the pages above and below.
+    u32 base = AscListIndex(battler, gMoveSelectionCursor[battler]) & ~3;
     gNumberOfMovesToChoose = 0;
 
-    for (i = 0; i < MAX_MON_MOVES; i++)
+    for (i = 0; i < MAX_MON_MOVES; i++)   // four name windows
     {
+        enum Move move = (base + i < count) ? ((struct ChooseMoveStruct *)(&gBattleResources->bufferA[battler][4]))->moves[order[base + i]] : MOVE_NONE;
         MoveSelectionDestroyCursorAt(i);
         if (IsGimmickSelected(battler, GIMMICK_DYNAMAX) || GetActiveGimmick(battler) == GIMMICK_DYNAMAX)
-            StringCopy(gDisplayedStringBattle, GetMoveName(GetMaxMove(battler, moveInfo->moves[i])));
+            StringCopy(gDisplayedStringBattle, GetMoveName(GetMaxMove(battler, move)));
         else
-            StringCopy(gDisplayedStringBattle, GetMoveName(moveInfo->moves[i]));
+            StringCopy(gDisplayedStringBattle, GetMoveName(move));
+        if (i == 1 && base > 0)
+            StringAppend(gDisplayedStringBattle, COMPOUND_STRING(" {UP_ARROW}"));
+        if (i == 3 && base + 4 < count)
+            StringAppend(gDisplayedStringBattle, COMPOUND_STRING(" {DOWN_ARROW}"));
         // Prints on windows B_WIN_MOVE_NAME_1, B_WIN_MOVE_NAME_2, B_WIN_MOVE_NAME_3, B_WIN_MOVE_NAME_4
         BattlePutTextOnWindow(gDisplayedStringBattle, i + B_WIN_MOVE_NAME_1);
-        if (moveInfo->moves[i] != MOVE_NONE)
+        if (move != MOVE_NONE)
             gNumberOfMovesToChoose++;
     }
 }
@@ -2154,7 +2172,7 @@ void InitMoveSelectionsVarsAndStrings(enum BattlerId battler)
     LoadTypeIcons(battler);
     MoveSelectionDisplayMoveNames(battler);
     gMultiUsePlayerCursor = 0xFF;
-    MoveSelectionCreateCursorAt(gMoveSelectionCursor[battler], 0);
+    MoveSelectionCreateCursorAt(AscCursorPos(battler), 0);
     if (B_SHOW_EFFECTIVENESS)
         MoveSelectionDisplayMoveEffectiveness(CheckTargetTypeEffectiveness(battler), battler);
     else

@@ -31,8 +31,10 @@
 #include "trainer_slide.h"
 
 // Used to exclude moves learned temporarily by Transform or Mimic
+// Pokémon Ascension (F014): battle-only move slots (4+) are never written back to the saved Pokémon.
 #define MOVE_IS_PERMANENT(battler, moveSlot)                        \
-   (!(gBattleMons[battler].volatiles.transformed)           \
+   ((moveSlot) < MAX_MON_MOVES                                      \
+ && !(gBattleMons[battler].volatiles.transformed)           \
  && !(gBattleMons[battler].volatiles.mimickedMoves & (1u << moveSlot)))
 
 // Battle Actions
@@ -189,7 +191,7 @@ struct FieldTimer
 struct AI_SavedBattleMon
 {
     enum Ability ability;
-    enum Move moves[MAX_MON_MOVES];
+    enum Move moves[MAX_BATTLE_MOVES];
     enum Item heldItem;
     enum Species species:15;
     u16 saved:1;
@@ -203,7 +205,7 @@ struct AiPartyMon
     enum HoldEffect heldEffect;
     enum Ability ability;
     u16 level;
-    enum Move moves[MAX_MON_MOVES];
+    enum Move moves[MAX_BATTLE_MOVES];
     u32 status;
     u8 switchInCount; // Counts how many times this Pokemon has been sent out or switched into in a battle.
     u8 gender:2;
@@ -236,14 +238,14 @@ struct AiLogicData
     u8 hpPercents[MAX_BATTLERS_COUNT];
     enum Move partnerMove;
     u16 speedStats[MAX_BATTLERS_COUNT]; // Speed stats for all battles, calculated only once, same way as damages
-    struct SimulatedDamage simulatedDmg[MAX_BATTLERS_COUNT][MAX_BATTLERS_COUNT][MAX_MON_MOVES]; // attacker, target, moveIndex
-    uq4_12_t effectiveness[MAX_BATTLERS_COUNT][MAX_BATTLERS_COUNT][MAX_MON_MOVES]; // attacker, target, moveIndex
-    u8 moveAccuracy[MAX_BATTLERS_COUNT][MAX_BATTLERS_COUNT][MAX_MON_MOVES]; // attacker, target, moveIndex
+    struct SimulatedDamage simulatedDmg[MAX_BATTLERS_COUNT][MAX_BATTLERS_COUNT][MAX_BATTLE_MOVES]; // attacker, target, moveIndex
+    uq4_12_t effectiveness[MAX_BATTLERS_COUNT][MAX_BATTLERS_COUNT][MAX_BATTLE_MOVES]; // attacker, target, moveIndex
+    u8 moveAccuracy[MAX_BATTLERS_COUNT][MAX_BATTLERS_COUNT][MAX_BATTLE_MOVES]; // attacker, target, moveIndex
     u8 moveLimitations[MAX_BATTLERS_COUNT];
     u8 monToSwitchInId[MAX_BATTLERS_COUNT]; // ID of the mon to switch in.
     u8 mostSuitableMonId[MAX_BATTLERS_COUNT]; // Stores result of GetMostSuitableMonToSwitchInto, which decides which generic mon the AI would switch into if they decide to switch. This can be overruled by specific mons found in ShouldSwitch; the final resulting mon is stored in AI_monToSwitchIntoId.
     enum Move predictedMove[MAX_BATTLERS_COUNT];
-    u8 resistBerryAffected[MAX_BATTLERS_COUNT][MAX_BATTLERS_COUNT][MAX_MON_MOVES]; // Tracks whether currently calc'd move is affected by a resist berry into given target
+    u8 resistBerryAffected[MAX_BATTLERS_COUNT][MAX_BATTLERS_COUNT][MAX_BATTLE_MOVES]; // Tracks whether currently calc'd move is affected by a resist berry into given target
 
     // Flags
     u32 ejectButtonSwitch:1; // Tracks whether current switch out was from Eject Button
@@ -268,7 +270,7 @@ struct AiThinkingStruct
     u8 aiState;
     u8 movesetIndex;
     enum Move moveConsidered;
-    s32 score[MAX_MON_MOVES];
+    s32 score[MAX_BATTLE_MOVES];
     u64 aiFlags[MAX_BATTLERS_COUNT];
     u8 aiAction;
     u8 aiLogicId;
@@ -281,7 +283,7 @@ struct BattleHistory
 {
     enum Ability abilities[MAX_BATTLERS_COUNT];
     u8 itemEffects[MAX_BATTLERS_COUNT];
-    enum Move usedMoves[MAX_BATTLERS_COUNT][MAX_MON_MOVES];
+    enum Move usedMoves[MAX_BATTLERS_COUNT][MAX_BATTLE_MOVES];
     enum Move moveHistory[MAX_BATTLERS_COUNT][AI_MOVE_HISTORY_COUNT]; // 3 last used moves for each battler
     u8 moveHistoryIndex[MAX_BATTLERS_COUNT];
     enum Item trainerItems[MAX_BATTLERS_COUNT];
@@ -625,7 +627,7 @@ struct BattleStruct
     u8 stateIdAfterSelScript[MAX_BATTLERS_COUNT];
     u8 prevSelectedPartySlot;
     u8 stringMoveType;
-    u8 palaceFlags; // First 4 bits are "is <= 50% HP and not asleep" for each battler, last 4 bits are selected moves to pass to AI
+    u16 palaceFlags; // (Pokémon Ascension: u16 for 8 battle moves) First 4 bits are "is <= 50% HP and not asleep" for each battler, last 4 bits are selected moves to pass to AI
     u8 recordedActionSet; // related to choosing Pokémon?
     u8 wallyBattleState;
     u8 wallyMovesState;
@@ -749,7 +751,7 @@ struct BattleStruct
 
 struct AiBattleData
 {
-    s32 finalScore[MAX_BATTLERS_COUNT][MAX_BATTLERS_COUNT][MAX_MON_MOVES]; // AI, target, moves to make debugging easier
+    s32 finalScore[MAX_BATTLERS_COUNT][MAX_BATTLERS_COUNT][MAX_BATTLE_MOVES]; // AI, target, moves to make debugging easier
     u8 playerStallMons[PARTY_SIZE];
     u8 chosenMoveIndex[MAX_BATTLERS_COUNT];
     u8 chosenTarget[MAX_BATTLERS_COUNT];
@@ -793,7 +795,7 @@ extern const struct BattleWeatherInfo gBattleWeatherInfo[BATTLE_WEATHER_COUNT];
 // The palaceFlags member of struct BattleStruct contains 1 flag per move to indicate which moves the AI should consider,
 // and 1 flag per battler to indicate whether the battler is awake and at <= 50% HP (which affects move choice).
 // The assert below is to ensure palaceFlags is large enough to store these flags without overlap.
-STATIC_ASSERT(sizeof(((struct BattleStruct *)0)->palaceFlags) * 8 >= MAX_BATTLERS_COUNT + MAX_MON_MOVES, PalaceFlagsTooSmall)
+STATIC_ASSERT(sizeof(((struct BattleStruct *)0)->palaceFlags) * 8 >= MAX_BATTLERS_COUNT + MAX_BATTLE_MOVES, PalaceFlagsTooSmall)
 
 static inline bool32 IsBattleMovePhysical(enum Move move)
 {

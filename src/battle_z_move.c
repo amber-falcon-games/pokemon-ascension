@@ -175,7 +175,7 @@ bool32 IsViableZMove(enum BattlerId battler, enum Move move)
     if (gBattleStruct->gimmick.usableGimmick[battler] != GIMMICK_Z_MOVE)
         return FALSE;
 
-    for (moveSlotIndex = 0; moveSlotIndex < MAX_MON_MOVES; moveSlotIndex++)
+    for (moveSlotIndex = 0; moveSlotIndex < MAX_BATTLE_MOVES; moveSlotIndex++)
     {
         if (gBattleMons[battler].moves[moveSlotIndex] == move && gBattleMons[battler].pp[moveSlotIndex] == 0)
             return FALSE;
@@ -207,7 +207,7 @@ void AssignUsableZMoves(enum BattlerId battler, enum Move *moves)
 {
     u32 i;
     gBattleStruct->zmove.possibleZMoves[battler] = 0;
-    for (i = 0; i < MAX_MON_MOVES; i++)
+    for (i = 0; i < MAX_BATTLE_MOVES; i++)
     {
         if (moves[i] != MOVE_NONE && IsViableZMove(battler, moves[i]))
             gBattleStruct->zmove.possibleZMoves[battler] |= 1u << i;
@@ -270,7 +270,7 @@ bool32 MoveSelectionDisplayZMove(enum Move zmove, enum BattlerId battler)
     if (zmove != MOVE_NONE)
     {
         // Clear move slots
-        for (i = 0; i < MAX_MON_MOVES; ++i)
+        for (i = 0; i < MAX_BATTLE_MOVES; ++i)
         {
             MoveSelectionDestroyCursorAt(i);
             StringCopy(gDisplayedStringBattle, gText_EmptyString2);

@@ -1,4 +1,5 @@
 #include "global.h"
+#include "ascension_moves.h"
 #include "malloc.h"
 #include "apprentice.h"
 #include "battle.h"
@@ -3373,6 +3374,7 @@ void PokemonToBattleMon(struct Pokemon *src, struct BattlePokemon *dst)
         dst->moves[i] = GetMonData(src, MON_DATA_MOVE1 + i);
         dst->pp[i] = GetMonData(src, MON_DATA_PP1 + i);
     }
+    Ascension_FillExtraBattleMoves(src, dst->moves, dst->pp);   // Pokémon Ascension (F014): battle-only slots
 
     dst->species = GetMonData(src, MON_DATA_SPECIES);
     dst->item = GetMonData(src, MON_DATA_HELD_ITEM);

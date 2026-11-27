@@ -227,9 +227,9 @@ struct MovePPInfo
 
 struct ChooseMoveStruct
 {
-    enum Move moves[MAX_MON_MOVES];
-    u8 currentPP[MAX_MON_MOVES];
-    u8 maxPP[MAX_MON_MOVES];
+    enum Move moves[MAX_BATTLE_MOVES];
+    u8 currentPP[MAX_BATTLE_MOVES];
+    u8 maxPP[MAX_BATTLE_MOVES];
     enum Species species;
     enum Type monTypes[3];
     struct ZMoveData zmove;

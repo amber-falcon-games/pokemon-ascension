@@ -185,7 +185,7 @@ u16 ChooseMoveAndTargetInBattlePalace(enum BattlerId battler)
         selectedGroup = PALACE_MOVE_GROUP_SUPPORT;
 
     // Flag moves that match selected group, to be passed to AI
-    for (selectedMoves = 0, i = 0; i < MAX_MON_MOVES; i++)
+    for (selectedMoves = 0, i = 0; i < MAX_BATTLE_MOVES; i++)
     {
         if (moveInfo->moves[i] == MOVE_NONE)
             break;
@@ -207,14 +207,14 @@ u16 ChooseMoveAndTargetInBattlePalace(enum BattlerId battler)
     // If no moves matched the selected group, pick a new move from groups the Pokémon has
     // In this case the AI is not checked again, so the choice may be worse
     // If a move is chosen this way, there's a 50% chance that it will be unable to use it anyway
-    if (chosenMoveIndex == -1 || chosenMoveIndex >= MAX_MON_MOVES)
+    if (chosenMoveIndex == -1 || chosenMoveIndex >= MAX_BATTLE_MOVES)
     {
         chosenMoveIndex = -1;
         if (unusableMovesBits != ALL_MOVES_MASK)
         {
             numMovesPerGroup = 0, numMultipleMoveGroups = 0;
 
-            for (i = 0; i < MAX_MON_MOVES; i++)
+            for (i = 0; i < MAX_BATTLE_MOVES; i++)
             {
                 // Count the number of usable moves the battler has in each move group.
                 // The totals will be stored separately in 3 groups of 4 bits each in numMovesPerGroup.
@@ -254,7 +254,7 @@ u16 ChooseMoveAndTargetInBattlePalace(enum BattlerId battler)
             {
                 do
                 {
-                    i = Random() % MAX_MON_MOVES;
+                    i = Random() % MAX_BATTLE_MOVES;
                     if (!((1u << i) & unusableMovesBits))
                         chosenMoveIndex = i;
                 } while (chosenMoveIndex == -1);
@@ -280,7 +280,7 @@ u16 ChooseMoveAndTargetInBattlePalace(enum BattlerId battler)
 
                 do
                 {
-                    i = Random() % MAX_MON_MOVES;
+                    i = Random() % MAX_BATTLE_MOVES;
                     if (!((1u << i) & unusableMovesBits) && randSelectGroup == GetBattlePalaceMoveGroup(battler, moveInfo->moves[i]))
                         chosenMoveIndex = i;
                 } while (chosenMoveIndex == -1);
