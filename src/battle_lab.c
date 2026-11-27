@@ -1354,6 +1354,103 @@ static void LabLogBattlers(void)
 static EWRAM_DATA u32 sLabRegenAt = 0;
 static EWRAM_DATA u32 sLabRegenCarry[MAX_BATTLERS_COUNT] = {0};
 
+// Regen "+N" (owner, 2026-11-27): a small green number rises from the battler's healthbox and
+// fades, Final Fantasy style. It is a 32x16 sprite drawn with a built-in 3x5 pixel font in the
+// health bar's own palette (green with a dark outline), so it needs no extra palette or window.
+#define LAB_POPUP_TAG 0xA5C0
+static EWRAM_DATA u8 sLabPopupSprite[MAX_BATTLERS_COUNT] = {0};
+static const u8 sLabPopupGlyphs[11][5] =   // 3x5 digits 0-9 and '+', bit 2 = left column
+{
+    {7,5,5,5,7}, {2,6,2,2,7}, {7,1,7,4,7}, {7,1,3,1,7}, {5,5,7,1,1},
+    {7,4,7,1,7}, {7,4,7,5,7}, {7,1,1,2,2}, {7,5,7,5,7}, {7,5,7,1,7}, {0,2,7,2,0},
+};
+
+// The popup is 32x16: four 8x8 tiles per row, two rows (1D mapping). Glyphs are drawn 2x.
+static void LabPopupPixel(u8 *tiles, s32 x, s32 y, u32 color)
+{
+    u8 *b;
+    if (x < 0 || x >= 32 || y < 0 || y >= 16)
+        return;
+    b = &tiles[((y / 8) * 4 + x / 8) * 32 + (y % 8) * 4 + (x % 8) / 2];
+    if (x & 1)
+        *b = (*b & 0x0F) | (color << 4);
+    else
+        *b = (*b & 0xF0) | color;
+}
+
+static void SpriteCB_LabRegenPopup(struct Sprite *sprite)
+{
+    sprite->data[0]++;
+    if ((sprite->data[0] & 3) == 0 && sprite->data[0] <= 24)
+        sprite->y2--;                                   // rises 6 px
+    if (sprite->data[0] > 30)
+        sprite->invisible = (sprite->data[0] & 2) != 0; // flickers out
+    if (sprite->data[0] > 46)
+    {
+        u32 tag = sprite->data[1];
+        DestroySprite(sprite);
+        FreeSpriteTilesByTag(tag);
+    }
+}
+
+static void LabShowRegenPopup(u32 battler, u32 amount)
+{
+    static const struct OamData sOam = {.shape = SPRITE_SHAPE(32x16), .size = SPRITE_SIZE(32x16), .priority = 0};
+    struct SpriteTemplate tmpl = {.tileTag = LAB_POPUP_TAG + battler, .paletteTag = TAG_NONE, .oam = &sOam,
+                                  .anims = gDummySpriteAnimTable, .images = NULL, .affineAnims = gDummySpriteAffineAnimTable,
+                                  .callback = SpriteCB_LabRegenPopup};
+    struct SpriteSheet sheet = {.data = NULL, .size = 32 * 8, .tag = LAB_POPUP_TAG + battler};
+    u8 digits[4] ALIGNED(4), tiles[32 * 8] ALIGNED(4), healthbox = gHealthboxSpriteIds[battler];
+    u32 n = 0, i, gx, x, y, spriteId, barSprite;
+    s32 dx, dy;
+    if (amount == 0 || healthbox >= MAX_SPRITES || gSprites[healthbox].invisible)
+        return;
+    // Replace any popup still showing for this battler.
+    spriteId = sLabPopupSprite[battler];
+    if (spriteId < MAX_SPRITES && gSprites[spriteId].inUse && gSprites[spriteId].callback == SpriteCB_LabRegenPopup)
+    {
+        DestroySprite(&gSprites[spriteId]);
+        FreeSpriteTilesByTag(LAB_POPUP_TAG + battler);
+    }
+    if (amount > 999)
+        amount = 999;
+    digits[n++] = 10;   // '+'
+    if (amount >= 100) digits[n++] = amount / 100;
+    if (amount >= 10)  digits[n++] = amount / 10 % 10;
+    digits[n++] = amount % 10;
+    // Outline (dark) first, then the green glyph on top; each font pixel is 2x2.
+    memset(tiles, 0, sizeof(tiles));
+    for (i = 0; i < n; i++)
+        for (y = 0; y < 5; y++)
+            for (gx = 0; gx < 3; gx++)
+                if (sLabPopupGlyphs[digits[i]][y] & (4 >> gx))
+                    for (dy = -1; dy <= 2; dy++)
+                        for (dx = -1; dx <= 2; dx++)
+                            LabPopupPixel(tiles, 1 + i * 7 + gx * 2 + dx, 2 + y * 2 + dy, 1);
+    for (i = 0; i < n; i++)
+        for (y = 0; y < 5; y++)
+            for (gx = 0; gx < 3; gx++)
+                if (sLabPopupGlyphs[digits[i]][y] & (4 >> gx))
+                    for (dy = 0; dy <= 1; dy++)
+                        for (dx = 0; dx <= 1; dx++)
+                            LabPopupPixel(tiles, 1 + i * 7 + gx * 2 + dx, 2 + y * 2 + dy, 10);
+    sheet.data = tiles;   // LoadSpriteSheet copies the drawn number into sprite VRAM
+    if (LoadSpriteSheet(&sheet) == 0xFFFF)
+        return;
+    x = gSprites[healthbox].x + gSprites[healthbox].x2 + 32;   // just above the healthbox's right side
+    y = gSprites[healthbox].y + gSprites[healthbox].y2 - 16;
+    spriteId = CreateSprite(&tmpl, x, y, 0);
+    if (spriteId >= MAX_SPRITES)
+    {
+        FreeSpriteTilesByTag(LAB_POPUP_TAG + battler);
+        return;
+    }
+    barSprite = gSprites[healthbox].data[5];   // the health bar sprite: its palette has the bar green
+    gSprites[spriteId].oam.paletteNum = gSprites[barSprite].oam.paletteNum;
+    gSprites[spriteId].data[1] = LAB_POPUP_TAG + battler;
+    sLabPopupSprite[battler] = spriteId;
+}
+
 static void LabRegenEnergy(void)
 {
     u32 battler, elapsed = sLabNow - sLabRegenAt;
@@ -1387,6 +1484,7 @@ static void LabRegenEnergy(void)
         if (gain == 0)
             continue;
         hp = (hp + gain < maxHp) ? hp + gain : maxHp;
+        LabShowRegenPopup(battler, hp - *energy);
         *energy = hp;
         LabSyncEnergy(battler);
     }
@@ -2724,6 +2822,7 @@ static void Task_BattleLab_StartBattle(u8 taskId)
     sLabAiTicksMax = 0;
     sLabAiDecisions = 0;
     sLabNow = 0;
+    memset(sLabPopupSprite, 0xFF, sizeof(sLabPopupSprite));
     sLabTintedMask = 0;
     sLabMessage[0] = EOS;
     sLabWasExhausted = 0;
