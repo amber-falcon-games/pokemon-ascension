@@ -1,5 +1,5 @@
 # F014 — Categorised move menu (more than four moves in battle)
-Status: IN_PROGRESS
+Status: BUILT, awaiting the combined owner playtest (D026)
 Dependencies: F017 (go, D026)
 Owner decision IDs: D015 (more than four moves, Final Fantasy-style categorised list), D025 (Dual bars), D026 (build the whole overhaul, then a combined owner playtest)
 Branch / commit: `feature/F014-move-menu` (stacked on `feature/F017-energy-spike`)
@@ -62,3 +62,15 @@ Turn `ASCENSION_MOVE_LIST` off, or revert the branch.
 ## Evidence and acceptance
 - Engine (34b527fc24, f576b54a23): the full upstream suite runs in CI on PR #19.
 - AI thinking-time ceilings (`test/battle/ai/ai_thinking_time.c`): with 8-move tables and 4 real moves, the smart AI measured 29 frames in doubles and 25 in Steven multi, against 28 and 23 on main (same local build). Empty-slot skips in the AI loops did not remove it, because the cost is spread across many loops. The two ceilings were raised to 30 and 26 (measured + 1). The other four are unchanged.
+- Menu (4281347a5d, 97de346d8d):
+  - The list is grouped attacks first, then support moves, four to a page.
+  - Up/down at the edges turns the page, and arrows mark the other pages.
+  - Headless LAB-012 check: page 1 shows Hydro Pump, Earthquake, Hammer Arm and Muddy Water. Page 2 shows Take Down, Protect, Screech and Amnesia. A move chosen from page 2 is used and its energy is paid.
+- AI time with up to 8 moves on both sides (Lab AI timer):
+  - 1v1 LAB-012: mean 1.26 frames, max 1.45 (F017 with 4 moves: about 0.9).
+  - 6v6 LAB-009 Classic: mean 11.1 frames, max 12.7, about 0.2 s (F017 with 4 moves: 4.5–8).
+  - This is not a visible stall, but it is up to about 60% more work. Optimising it, for example by pruning moves the AI already rules out or spreading the switch analysis over frames, is F021 (scheduler-aware AI).
+- Deferred:
+  - Editing moves 5–8 in the Lab slot editor. Lab Pokémon already get moves 5–8 from their learnset, and F015 replaces raw move lists with talent-tree choices, so the editor gains them there.
+  - A thin category header. The order (attacks, then support) and the move type line make the grouping clear for now; F016 adds the info panel.
+- Tests: `test/ascension/move_list.c` 2/2, Lab 22/22, and the full upstream suite is green in CI (PR #19), with the documented AI thinking-time ceiling change.
