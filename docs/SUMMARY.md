@@ -181,3 +181,4 @@
         - [F012 Battle Lab inspection and diagnostics](./features/F012-lab-inspection.md)
         - [F013 Battle Lab acceptance and 0.2.0](./features/F013-lab-acceptance.md)
         - [F017 Feasibility spike: timeline, energy, more moves](./features/F017-feasibility-spike.md)
+        - [F014 Categorised move menu (8 moves in battle)](./features/F014-categorised-move-menu.md)
