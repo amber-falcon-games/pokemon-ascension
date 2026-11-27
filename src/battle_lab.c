@@ -812,7 +812,7 @@ static void LabPlanRound(void)
         {
             // A replacement for a fainted Pokémon may act straight away; a Pokémon switched in
             // by choice joins half a step after "now" (switching is not free).
-            struct Pokemon *party = IsOnPlayerSide(battler) ? gPlayerParty : gEnemyParty;
+            struct Pokemon *party = IsOnPlayerSide(battler) ? gParties[B_TRAINER_PLAYER] : gParties[B_TRAINER_OPPONENT_A];
             bool32 replacedFainted = GetMonData(&party[sLabPartyIndex[battler]], MON_DATA_HP) == 0;
             sLabNextAct[battler] = sLabNow + (replacedFainted ? 0 : LabActionDelay(battler, 100) / 2);
             sLabPartyIndex[battler] = gBattlerPartyIndexes[battler];
@@ -939,7 +939,7 @@ void BattleLab_ScaleStartingEnergy(void)
         return;
     for (i = 0; i < PARTY_SIZE * 2; i++)
     {
-        struct Pokemon *mon = (i < PARTY_SIZE) ? &gPlayerParty[i] : &gEnemyParty[i - PARTY_SIZE];
+        struct Pokemon *mon = (i < PARTY_SIZE) ? &gParties[B_TRAINER_PLAYER][i] : &gParties[B_TRAINER_OPPONENT_A][i - PARTY_SIZE];
         u32 maxHp = GetMonData(mon, MON_DATA_MAX_HP), hp = GetMonData(mon, MON_DATA_HP);
         if (maxHp == 0)
             continue;
