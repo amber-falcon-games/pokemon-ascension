@@ -106,6 +106,18 @@ None of them argues for another platform. The open question is **feel**, and tha
 5. Optional: mGBA **Tools → View Logs** shows the clock ("LAB clock: … ACTS"), energy payments and AI timings.
 6. Tell me: does Speed feel right? Is "wait for the big move" a real choice? Does tiring the boss work? Are battles dynamic rather than grindy? And go or no-go?
 
+## Owner playtest results (2026-11-27)
+The owner played LAB-011, LAB-012 and LAB-013.
+- **Speed works.** Ninjask got 2–3 moves before Slaking acted once.
+- **Battles are too short.** Damage is unchanged, so a trainer battle still ends quickly. Trainer battles should last longer. This needs a balance decision (below).
+- **Bug, fixed in `a8f5792353`.** Highlighting a move after losing energy appeared to add energy back. Cause: the bar was never redrawn after a move's cost was paid or after regen, so it showed a stale value. It now redraws immediately.
+- **Feedback for F018/F019 (visual clarity):**
+  - Turn order isn't visible. For example, Metagross is faster, acted before Blissey, and one-shot it. A turn-order strip should show who acts next.
+  - Regen isn't visible.
+  - The cost number lacks context.
+  - There's no Exhausted indicator, and the slowdown isn't noticeable.
+  - Boost needs a stronger visual signal.
+
 ## Explicit exclusions
 - Final balance: F019.
 - The polished timeline UI: F018.
