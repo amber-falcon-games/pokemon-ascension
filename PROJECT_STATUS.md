@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-26 20:55 UTC (Claude session: F017 spike built; awaiting owner playtest and go/no-go).
+Last updated: 2026-11-27 08:10 UTC (Claude session: F017 iteration 2 built from owner playtest feedback; awaiting playtest 2).
 Current phase: Combat track (after the 0.2.0 Battle Lab foundation). D003 gate passed: the Lab is accepted.
 Current feature: F017 stamina-timeline spike (D023), branch `feature/F017-energy-spike`, draft PR #18. Steps 1–5 built; status OWNER PLAYTEST.
 Done: F000–F013 and F007b. Releases: v0.1.0 (c204b79399) and v0.2.0 (3faa92d298, Battle Lab foundation; player build unchanged from 0.1.0).
@@ -9,8 +9,8 @@ Last known-good playable build: v0.2.0 (3faa92d298), owner smoke-tested and publ
 Current engine version: pokeemerald-expansion `expansion/1.17.2` (commit 79dd4369) on `main`.
 Automated tests: CI runs on each PR. `make check TESTS=test/ascension/checkpoints.c`: 10/10 PASS locally; every checkpoint was screenshot-checked with gbashot; release build has no checkpoint or Lab symbols.
 Local Mac environment: verified by the owner (setup, play, 16 tests passed).
-Pending owner decisions: F017 go/no-go (stay on the GBA engine and proceed to F014–F016/F018). Recommendation: go.
-Owner actions: playtest LAB-011/012/013 in the Lab on the F017 branch (instructions in docs/features/F017-feasibility-spike.md, "Owner playtest"), then decide go/no-go.
+Pending owner decisions: (1) should healing moves cost energy (free healing allows endless stalling)? (2) the Exhausted death spiral: keep it, only from self-spending, or ×0.5 Speed? Go/no-go comes after more refinement (owner, 2026-11-27: "keep refining the prototype").
+Owner actions: playtest F017 iteration 2 (try the new Rules rows Energy/Damage/Cost), answer the two questions above.
 
 ## Session handoff
 - Branches (D021): each feature is on its own `feature/F0xx-*` branch and they stack. `feature/F007b-dev-checkpoints` also carries the session-branch commits: gbashot, D021 and the Done-button convention.
