@@ -31,6 +31,33 @@ Decided:
 - D020 (2026-11-26) — CI: script-only and project Python changes take the quick check path (syntax and unit tests); cancelled, superseded runs no longer report a failure.
 - D021 (2026-11-26) — owner allows Claude to create and push branches named `feature/F0xx-short-name`. Tooling and dev-only features keep merging to `main` once CI passes. Gameplay features that need owner sign-off are stacked: each branches from the previous feature's branch while awaiting review; on approval they are merged to `main` in order with merge commits; requested changes are fixed on the earliest affected branch and merged forward.
 - D022 (2026-11-26) — Battle Lab scenarios stay out of save memory entirely (owner rejected using the Recorded Battle sector, option A, and the export-code-only option B). Scenarios are text files in the repository (`lab/scenarios/*.json`); `scripts/play.sh --lab` / `--scenario ID` writes them into a reserved, dev-only data block of a separate Lab ROM copy (`build/pokemon-ascension-lab.gba`, with its own `.sav`), and the Lab reads that block at start. Release builds contain no block. Saving a Lab-made setup back to a file is a later, separate step.
+- D023 (2026-11-26) — Combat model D, the "stamina timeline" (owner design; refines D016):
+  - **One energy bar** replaces HP and PP. Max energy comes from species, level and evolution, like max HP today; damage drains it, and 0 energy means fainted.
+  - **Moves cost energy**: light moves are cheap, powerhouse moves expensive, and recovery and Protect-type moves are free. A Pokémon's own moves never take it below 1 energy.
+  - **Exhausted** is a new status at low energy (about 25% or less, whatever the cause). The Pokémon is slower, weaker, less accurate and easier to hit, and its heaviest moves are locked.
+  - **Protect-type moves** keep upstream's consecutive-use failure (success 1/3, 1/9, …), and energy does not regenerate while protecting.
+  - **Timeline turn order**: faster Pokémon act more often.
+  - **Boost**: press R on a move to choose Speed, Power or Both for extra energy, with the cost previewed on the bar.
+  - **Recovery**: energy regenerates slowly in battle. Between battles it returns while walking, through items, and fully at Pokémon Centers. A fainted Pokémon recovers more slowly and wakes still Exhausted.
+  - **AI**: trainer AI is smarter than wild AI (upstream already works this way).
+  - **Pace**: about 4–6 actions per Pokémon in normal battles; bosses run longer, and "tire them out, then strike" is a real tactic.
+  - Exact numbers are tuned in the Battle Lab. The F017 spike prototypes the model Lab-only before F018–F019.
+- D024 (2026-11-27): Owner refinements to D023 after two Lab playtests, with the spike prototype still being refined (go/no-go deferred).
+  - **Opening round:** everyone picks a move before anything happens; after that, the timeline. A replacement for a fainted Pokémon may act straight away.
+  - **Exhausted:** Speed ×0.25, with a clear badge and a visual change to the Pokémon.
+  - **Longer battles:** option c (more energy, less damage, lower costs), tuned in the Lab.
+  - **Explanations:** battle messages say why something happened (a Boost was used; the Pokémon is faster and acts again; it is Exhausted).
+  - **In Stamina (one bar):** healing stays free for now, and the Exhausted death spiral stays. Future ideas for healing: it reduces Speed, it is less effective, or it fails more on repeated use.
+  - **Dual bars, to be tested as the likely direction:** separate health and energy bars. Damage takes health (0 = fainted); moves spend energy. Lost health caps energy capacity (a hard hit saps stamina, like a boxer's). Healing costs energy and restores health, so spamming it exhausts the Pokémon. Built as a third Lab combat mode, "Dual bars".
+- D025 (2026-11-27): Health and energy are separate. Owner, after playtesting Dual bars: "Energy and Health definitely need separating." Dual bars is the model F018–F019 build on.
+  - **Energy gets its own bar in the healthbox.** Reusing the EXP bar is only a prototype shortcut; the real version keeps the EXP bar for experience.
+  - **Exhausted is announced** with a message.
+  - **Regen is shown subtly.** The prototype's whole-HUD green flash was dropped as distracting.
+  - **Benched Pokémon recover energy, but only up to their health cap,** so the cap can be felt and switching has a purpose.
+- D026 (2026-11-27): F017 go/no-go is **go**, so we stay on the GBA engine. The owner prefers the Dual-bars approach with a separate energy bar for every battler, and asked to skip the last spike playtest and "implement the rest of the battle overhaul". The owner will test and propose improvements and balancing once it is all there.
+  - Work continues in the approved roadmap order: F005c → F014 → F015 → F016 → F018 → F019 → F020 → F021.
+  - Branches stack (D021), and subjective gameplay features wait for the owner's combined playtest before they merge.
+  - Lab-only spike code merges to main as dev tooling.
 
 To be raised at F015 (not decided): how to recover save space for an expanded move library — see SAVE_COMPATIBILITY.md options S1–S5.
 

@@ -1488,6 +1488,16 @@ u32 TrySetCantSelectMoveBattleScript(enum BattlerId battler)
             limitations++;
     }
 
+#if ASCENSION_BATTLE_LAB
+    // Pokémon Ascension (F017 spike): an Exhausted Pokémon can't pick its heaviest moves.
+    if (BattleLab_ExhaustionLocksMove(battler, move))
+    {
+        gCurrentMove = move;
+        gSelectionBattleScripts[battler] = BattleScript_SelectingExhaustedMove;
+        limitations++;
+    }
+#endif
+
     if (dynamaxBypassCheck && zMoveBypassCheck && IsGravityPreventingMove(move))
     {
         if (SetCantSelectScript(battler, gCurrentMove, BattleScript_SelectingNotAllowedMoveGravityInPalace, BattleScript_SelectingNotAllowedMoveGravity))
@@ -1636,6 +1646,9 @@ u32 CheckMoveLimitations(enum BattlerId battler, u8 unusableMoves, u32 check)
             unusableMoves |= 1u << i;
         // Placeholder
         else if (check & MOVE_LIMITATION_PLACEHOLDER && moveEffect == EFFECT_PLACEHOLDER)
+            unusableMoves |= 1u << i;
+        // Pokémon Ascension (F017 spike, D023): Exhausted Pokémon can't use their heaviest moves
+        else if (BattleLab_ExhaustionLocksMove(battler, move))
             unusableMoves |= 1u << i;
         // Disable
         else if (check & MOVE_LIMITATION_DISABLED && move == gBattleMons[battler].volatiles.disabledMove)
@@ -6796,6 +6809,12 @@ static inline u32 CalcMoveBasePowerAfterModifiers(struct DamageContext *ctx)
         return 60;
     }
 
+    // Pokémon Ascension (F017 spike, D023): Exhausted attackers hit weaker.
+    if (BattleLab_IsExhausted(battlerAtk))
+        modifier = uq4_12_multiply(modifier, UQ_4_12(0.85));
+    // Power Boost (R on the move menu): x1.3.
+    if (BattleLab_BoostPower(battlerAtk, 10) != 10)
+        modifier = uq4_12_multiply(modifier, UQ_4_12(1.3));
     return uq4_12_multiply_by_int_half_down(modifier, basePower);
 }
 
@@ -7740,7 +7759,7 @@ s32 ApplyModifiersAfterDmgRoll(struct DamageContext *ctx, s32 dmg)
     DAMAGE_APPLY_MODIFIER(GetMoveAgainstProtectionModifier(ctx));
     DAMAGE_APPLY_MODIFIER(GetOtherModifiers(ctx));
 
-    return dmg;
+    return BattleLab_ScaleDamage(dmg);   // Pokémon Ascension (F017 spike): Lab "Damage" rule in stamina battles
 }
 
 s32 DoFixedDamageMoveCalc(struct DamageContext *ctx)
@@ -10499,6 +10518,12 @@ u32 GetTotalAccuracy(struct BattleCalcValues *cv, u32 weather)
 
     u32 calc = gAccuracyStageRatios[buff].dividend * moveAcc;
     calc /= gAccuracyStageRatios[buff].divisor;
+
+    // Pokémon Ascension (F017 spike, D023): Exhausted attackers are less accurate, Exhausted targets easier to hit.
+    if (BattleLab_IsExhausted(battlerAtk))
+        calc = (calc * 90) / 100;
+    if (BattleLab_IsExhausted(battlerDef))
+        calc = (calc * 110) / 100;
 
     // Attacker's ability
     switch (cv->abilities[battlerAtk])

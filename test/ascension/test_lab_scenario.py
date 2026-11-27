@@ -100,6 +100,19 @@ class LabScenarioTool(unittest.TestCase):
             self.assertEqual(sc["id"] + ".json", name)                # file name = id
             json.dumps(sc)
 
+    def test_combat_byte_packs_stamina_tuning(self):
+        # bits 0-1 combat, 2-3 energy, 4-5 damage, 6-7 cost (struct LabRules bitfields)
+        self.assertEqual(ls.pack_combat({}, "t"), 0)
+        self.assertEqual(ls.pack_combat({"combat": "stamina"}, "t"), 1)
+        self.assertEqual(ls.pack_combat({"combat": "dual"}, "t"), 2)
+        self.assertEqual(ls.pack_combat({"combat": "stamina", "energy": 2, "damage": 75, "cost": 50}, "t"),
+                         1 | 2 << 2 | 1 << 4 | 2 << 6)
+        self.assertEqual(ls.pack_combat({"energy": 3, "damage": 33, "cost": 25}, "t"), 3 << 2 | 3 << 4 | 3 << 6)
+        with self.assertRaises(ls.ScenarioError):
+            ls.pack_combat({"energy": 4}, "t")
+        with self.assertRaises(ls.ScenarioError):
+            ls.pack_combat({"damage": 60}, "t")
+
 
 if __name__ == "__main__":
     unittest.main()

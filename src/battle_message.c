@@ -1,4 +1,6 @@
 #include "global.h"
+#include "config/ascension.h"
+#include "battle_lab.h"
 #include "battle.h"
 #include "battle_anim.h"
 #include "battle_ai_record.h"
@@ -613,6 +615,11 @@ const u8 *const gBattleStringsTable[STRINGID_COUNT] =
     [STRINGID_PKMNMOVEBOUNCEDABILITY]               = COMPOUND_STRING("{B_DEF_NAME_WITH_PREFIX}'s {B_CURRENT_MOVE} was bounced back!"),
     [STRINGID_IMPOSTERTRANSFORM]                    = COMPOUND_STRING("{B_ATK_NAME_WITH_PREFIX} transformed into {B_DEF_NAME_WITH_PREFIX2}!"),
     [STRINGID_ASSAULTVESTDOESNTALLOW]               = COMPOUND_STRING("The effects of the {B_LAST_ITEM} prevent status moves from being used!\p"),
+#if ASCENSION_BATTLE_LAB
+    // Text is built at run time (BattleLab_PendingMessageText); this sample keeps the string tests honest.
+    [STRINGID_LABMESSAGE]                           = COMPOUND_STRING("{B_ATK_NAME_WITH_PREFIX}'s stamina\nwas sapped by the blow!\p"),
+    [STRINGID_TOOEXHAUSTEDTOUSE]                    = COMPOUND_STRING("{B_ATK_NAME_WITH_PREFIX} is too exhausted to use {B_CURRENT_MOVE}!\p"),
+#endif
     [STRINGID_GRAVITYPREVENTSUSAGE]                 = COMPOUND_STRING("{B_ATK_NAME_WITH_PREFIX} can't use {B_CURRENT_MOVE} because of gravity!\p"),
     [STRINGID_HEALBLOCKPREVENTSUSAGE]               = COMPOUND_STRING("{B_ATK_NAME_WITH_PREFIX} was prevented from healing!\p"),
     [STRINGID_NOTDONEYET]                           = COMPOUND_STRING("This move effect is not done yet!\p"),
@@ -2726,7 +2733,7 @@ void BufferStringBattle(enum StringID stringID, enum BattlerId battler)
             StringCopy(gBattleTextBuff3, gTypesInfo[*(&gBattleStruct->stringMoveType)].generic);
         else
             StringCopy(gBattleTextBuff3, GetMoveName(gBattleMsgDataPtr->currentMove));
-        stringPtr = sText_AttackerUsedX;
+        stringPtr = BattleLab_UsedMoveText(gBattlerAttacker, sText_AttackerUsedX);   // Pokémon Ascension: Lab stamina explanations
         break;
     case STRINGID_BATTLEEND: // battle end
         if (gBattleTextBuff1[0] & B_OUTCOME_LINK_BATTLE_RAN)
@@ -2800,6 +2807,11 @@ void BufferStringBattle(enum StringID stringID, enum BattlerId battler)
     case STRINGID_TRAINERSLIDE:
         stringPtr = gBattleStruct->trainerSlideMsg;
         break;
+#if ASCENSION_BATTLE_LAB
+    case STRINGID_LABMESSAGE:   // Pokémon Ascension (F017 spike): "X is exhausted!" etc.
+        stringPtr = BattleLab_PendingMessageText();
+        break;
+#endif
     default: // load a string from the table
         if (stringID >= STRINGID_COUNT)
         {

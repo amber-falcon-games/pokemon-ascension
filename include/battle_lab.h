@@ -44,6 +44,11 @@ enum LabFormat { LAB_FORMAT_TRAINER_SINGLE, LAB_FORMAT_TRAINER_DOUBLE, LAB_FORMA
 enum LabWeather { LAB_WEATHER_NONE, LAB_WEATHER_RAIN, LAB_WEATHER_SUN, LAB_WEATHER_SAND, LAB_WEATHER_HAIL, LAB_WEATHER_SNOW, LAB_WEATHER_COUNT };
 enum LabTerrain { LAB_TERRAIN_NONE, LAB_TERRAIN_ELECTRIC, LAB_TERRAIN_GRASSY, LAB_TERRAIN_MISTY, LAB_TERRAIN_PSYCHIC, LAB_TERRAIN_COUNT };
 enum LabAi { LAB_AI_SCENARIO, LAB_AI_SMART, LAB_AI_RANDOM, LAB_AI_COUNT };
+enum LabCombat { LAB_COMBAT_CLASSIC, LAB_COMBAT_STAMINA, LAB_COMBAT_DUAL, LAB_COMBAT_COUNT };   // F017 spike: D023 one bar; Dual = separate health and energy bars
+enum LabEnergyScale { LAB_ENERGY_X1, LAB_ENERGY_X1_5, LAB_ENERGY_X2, LAB_ENERGY_X3, LAB_ENERGY_COUNT };
+enum LabDamageScale { LAB_DAMAGE_100, LAB_DAMAGE_75, LAB_DAMAGE_50, LAB_DAMAGE_33, LAB_DAMAGE_COUNT };
+enum LabCostScale { LAB_COST_100, LAB_COST_75, LAB_COST_50, LAB_COST_25, LAB_COST_COUNT };
+enum LabBoost { LAB_BOOST_NONE, LAB_BOOST_SPEED, LAB_BOOST_POWER, LAB_BOOST_BOTH, LAB_BOOST_COUNT };   // bit 0 speed, bit 1 power
 
 struct LabRules
 {
@@ -52,7 +57,11 @@ struct LabRules
     u8 terrain;
     u8 ai;
     bool8 fixedSeed;
-    u8 padding;
+    // F017 spike (D023). This byte was padding, so old scenario records read as Classic x1/100%/100%.
+    u8 combat:2;        // enum LabCombat
+    u8 energyScale:2;   // enum LabEnergyScale: max energy x1, x1.5, x2, x3
+    u8 damageScale:2;   // enum LabDamageScale: damage 100%, 75%, 50%, 33%
+    u8 costScale:2;     // enum LabCostScale: energy costs 100%, 75%, 50%, 25%
     u16 seed;
 };
 
@@ -105,10 +114,53 @@ void BattleLab_TrimToWildOpponent(void);
 // BattleLab_ShouldAutoOpen: the ROM carries injected scenarios asking to open the Lab (F011).
 #if ASCENSION_BATTLE_LAB
 bool32 BattleLab_IsLabBattle(void);
+bool32 BattleLab_StaminaMode(void);                   // F017: a Lab battle with energy (Stamina or Dual)
+bool32 BattleLab_DualMode(void);                      // ... with separate health and energy bars
+bool32 BattleLab_DrawEnergyBar(u32 battler, u32 healthboxSpriteId);   // Dual: the player's EXP bar shows energy
+u32 BattleLab_EnergyCost(u32 move, u32 maxEnergy);     // energy a move costs, as HP
+void BattleLab_PayEnergy(u32 battler, u32 move);       // called where PP would be deducted
+bool32 BattleLab_IsExhausted(u32 battler);
+u32 BattleLab_ExhaustedSpeed(u32 battler, u32 speed);
+bool32 BattleLab_ExhaustionLocksMove(u32 battler, u32 move);
+bool32 BattleLab_TimelineSkips(u32 battler);           // timeline: this battler sits the round out
+s32 BattleLab_ScaleDamage(s32 damage);                 // Rules "Damage" scale in stamina battles
+void BattleLab_ScaleStartingEnergy(void);              // Rules "Energy" scale, applied to both parties
+u32 BattleLab_BoostedCost(u32 battler, u32 move);      // Boost (R): energy cost with the chosen boost
+u32 BattleLab_BoostPower(u32 battler, u32 power);
+void BattleLab_CycleBoost(u32 battler);
+void BattleLab_ClearBoost(u32 battler);
+void BattleLab_ShowMoveCost(u32 battler, u32 move);    // move menu: cost in the PP box, preview on the bar
+void BattleLab_EndMoveCostPreview(u32 battler);
+void BattleLab_MoveMenuFrame(u32 battler);             // blinks the cost preview on the bar
+const void *BattleLab_HealthbarLabelGfx(u32 battler, const void *hpLabel);   // "EN" (or red "EX" when Exhausted) in stamina battles
+const u8 *BattleLab_UsedMoveText(u32 attacker, const u8 *defaultText);   // "X used Y!" plus why (boost, acts again, exhausted)
+void BattleLab_AiTimerStart(void);                     // F017 measurement: AI decision time
+bool32 BattleLab_TakePendingMessage(void);             // end of round: a Lab message to print?
+const u8 *BattleLab_PendingMessageText(void);
+void BattleLab_AiTimerStop(u32 battler);
 bool32 BattleLab_ShouldAutoOpen(void);
 void BattleLab_LogTurnEnd(void);   // F012: per-turn battle log (mGBA log window); no-op outside Lab battles
 void BattleLab_LogBattleEnd(void); // F012: final state before the battle clears its data
 #else
+static inline bool32 BattleLab_StaminaMode(void) { return FALSE; }
+static inline bool32 BattleLab_DualMode(void) { return FALSE; }
+static inline bool32 BattleLab_DrawEnergyBar(u32 battler, u32 healthboxSpriteId) { return FALSE; }
+static inline void BattleLab_PayEnergy(u32 battler, u32 move) {}
+static inline bool32 BattleLab_IsExhausted(u32 battler) { return FALSE; }
+static inline u32 BattleLab_ExhaustedSpeed(u32 battler, u32 speed) { return speed; }
+static inline bool32 BattleLab_ExhaustionLocksMove(u32 battler, u32 move) { return FALSE; }
+static inline bool32 BattleLab_TimelineSkips(u32 battler) { return FALSE; }
+static inline s32 BattleLab_ScaleDamage(s32 damage) { return damage; }
+static inline u32 BattleLab_BoostPower(u32 battler, u32 power) { return power; }
+static inline void BattleLab_CycleBoost(u32 battler) {}
+static inline void BattleLab_ClearBoost(u32 battler) {}
+static inline void BattleLab_ShowMoveCost(u32 battler, u32 move) {}
+static inline void BattleLab_EndMoveCostPreview(u32 battler) {}
+static inline void BattleLab_MoveMenuFrame(u32 battler) {}
+static inline const void *BattleLab_HealthbarLabelGfx(u32 battler, const void *hpLabel) { return hpLabel; }
+static inline const u8 *BattleLab_UsedMoveText(u32 attacker, const u8 *defaultText) { return defaultText; }
+static inline void BattleLab_AiTimerStart(void) {}
+static inline void BattleLab_AiTimerStop(u32 battler) {}
 static inline bool32 BattleLab_IsLabBattle(void) { return FALSE; }
 static inline bool32 BattleLab_ShouldAutoOpen(void) { return FALSE; }
 static inline void BattleLab_LogTurnEnd(void) {}

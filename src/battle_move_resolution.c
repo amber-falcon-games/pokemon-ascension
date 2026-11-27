@@ -1,4 +1,5 @@
 #include "global.h"
+#include "battle_lab.h"
 #include "battle.h"
 #include "battle_arena.h"
 #include "battle_environment.h"
@@ -1032,6 +1033,13 @@ static enum CancelerResult CancelerPPDeduction(struct BattleCalcValues *cv)
     if (cv->move != gLastResultingMoves[cv->battlerAtk] || gBattleStruct->unableToUseMove)
         gBattleMons[cv->battlerAtk].volatiles.metronomeItemCounter = 0;
 
+    // Pokémon Ascension (F017 spike, D023): Battle Lab stamina combat spends energy instead of PP.
+    if (BattleLab_StaminaMode())
+    {
+        BattleLab_PayEnergy(cv->battlerAtk, cv->move);
+        ppToDeduct = 0;
+    }
+
     if (gBattleMons[cv->battlerAtk].pp[movePosition] > ppToDeduct)
         gBattleMons[cv->battlerAtk].pp[movePosition] -= ppToDeduct;
     else
@@ -1039,7 +1047,8 @@ static enum CancelerResult CancelerPPDeduction(struct BattleCalcValues *cv)
 
     gLastMoves[cv->battlerAtk] = gChosenMove;
 
-    if (MOVE_IS_PERMANENT(cv->battlerAtk, movePosition))
+    // (Stamina: PP is unchanged, and this emit would overwrite the energy update in the controller buffer.)
+    if (!BattleLab_StaminaMode() && MOVE_IS_PERMANENT(cv->battlerAtk, movePosition))
     {
         BtlController_EmitSetMonData(
             cv->battlerAtk,

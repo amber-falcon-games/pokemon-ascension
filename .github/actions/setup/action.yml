@@ -14,7 +14,10 @@ runs:
     - name: Install toolchain
       shell: bash
       run: |
-        sudo apt-get update -qq
+        # The runner image ships third-party apt sources (e.g. packages.microsoft.com) that we don't
+        # need; when one is down (403 / unsigned) a plain update fails the job. Use Ubuntu's sources only.
+        sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/microsoft-prod.sources
+        sudo apt-get update -qq || { echo "::warning::apt-get update reported errors; retrying once"; sleep 10; sudo apt-get update -qq; }
         sudo apt-get install -y -qq --no-install-recommends binutils-arm-none-eabi gcc-arm-none-eabi libnewlib-arm-none-eabi libpng-dev python3 >/dev/null
         arm-none-eabi-gcc --version | head -1
     - name: Compute cache key

@@ -3704,6 +3704,19 @@ BattleScript_SelectingNotAllowedMoveGravity::
 	printselectionstring STRINGID_GRAVITYPREVENTSUSAGE
 	endselectionscript
 
+#ifndef RELEASE
+@ Pokémon Ascension (F017 spike): end-of-round messages in Lab stamina battles.
+BattleScript_LabMessageRet::
+	printstring STRINGID_LABMESSAGE
+	waitmessage B_WAIT_TIME_LONG
+	return
+
+@ Pokémon Ascension (F017 spike): Battle Lab stamina battles only.
+BattleScript_SelectingExhaustedMove::
+	printselectionstring STRINGID_TOOEXHAUSTEDTOUSE
+	endselectionscript
+#endif
+
 BattleScript_SelectingNotAllowedStuffCheeks::
 	printselectionstring STRINGID_STUFFCHEEKSCANTSELECT
 	endselectionscript

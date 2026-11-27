@@ -3806,7 +3806,9 @@ static void HandleTurnActionSelectionState(void)
             bool32 isAiBattler = (gBattleTypeFlags & BATTLE_TYPE_HAS_AI || IsWildMonSmart()) && (BattlerHasAi(battler) && !(gBattleTypeFlags & BATTLE_TYPE_PALACE));
             if (isAiBattler)
             {
+                BattleLab_AiTimerStart();   // Pokémon Ascension (F017): Lab-only AI timing
                 ComputeAiBattlerDecisions(battler); // Do AI score computations here so we can use them in AI_TrySwitchOrUseItem
+                BattleLab_AiTimerStop(battler);
             }
             // fallthrough
         case STATE_BEFORE_ACTION_CHOSEN: // Choose an action.
@@ -3826,7 +3828,12 @@ static void HandleTurnActionSelectionState(void)
                 }
                 else
                 {
-                    if (gBattleMons[battler].volatiles.multipleTurns
+                    if (BattleLab_TimelineSkips(battler))   // Pokémon Ascension (F017 spike): not this battler's time
+                    {
+                        gChosenActionByBattler[battler] = B_ACTION_NOTHING_FAINTED;
+                        gBattleCommunication[battler] = STATE_WAIT_ACTION_CONFIRMED_STANDBY;
+                    }
+                    else if (gBattleMons[battler].volatiles.multipleTurns
                         || gBattleMons[battler].volatiles.rechargeTimer > 0)
                     {
                         gChosenActionByBattler[battler] = B_ACTION_USE_MOVE;
@@ -4436,6 +4443,7 @@ u32 GetBattlerTotalSpeedStat(enum BattlerId battler, enum Ability ability, enum 
     if (gSideStatuses[GetBattlerSide(battler)] & SIDE_STATUS_SWAMP)
         speed /= 4;
 
+    speed = BattleLab_ExhaustedSpeed(battler, speed);   // Pokémon Ascension (F017 spike): Exhausted is slower
     return speed;
 }
 

@@ -275,6 +275,8 @@ extern const u8 BattleScript_SelectingNotAllowedPlaceholderInPalace[];
 extern const u8 BattleScript_SelectingCantUseMove[];
 extern const u8 BattleScript_SelectingCantUseMoveInPalace[];
 extern const u8 BattleScript_SelectingNotAllowedMoveGravity[];
+extern const u8 BattleScript_SelectingExhaustedMove[];
+extern const u8 BattleScript_LabMessageRet[];   // Pokémon Ascension: Battle Lab only (not in release builds)   // Pokémon Ascension: Battle Lab only (not in release builds)
 extern const u8 BattleScript_MoveUsedGravityPrevents[];
 extern const u8 BattleScript_SelectingNotAllowedMoveGravityInPalace[];
 extern const u8 BattleScript_SelectingNotAllowedMoveHealBlock[];

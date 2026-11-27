@@ -1,4 +1,5 @@
 #include "global.h"
+#include "battle_lab.h"
 #include "malloc.h"
 #include "battle.h"
 #include "pokemon.h"
@@ -684,7 +685,7 @@ u8 CreateBattlerHealthboxSprites(enum BattlerId battler)
     healthBarSpritePtr->oam.priority = 1;
 
     if (ShouldShowHealthbar(battler))
-        CpuCopy32(GetHealthboxElementGfxPtr(HEALTHBOX_GFX_1), (void *)(OBJ_VRAM0 + healthBarSpritePtr->oam.tileNum * TILE_SIZE_4BPP), 64);
+        CpuCopy32(BattleLab_HealthbarLabelGfx(battler, GetHealthboxElementGfxPtr(HEALTHBOX_GFX_1)), (void *)(OBJ_VRAM0 + healthBarSpritePtr->oam.tileNum * TILE_SIZE_4BPP), 64);   // Pokémon Ascension: "EN" in Lab stamina battles
 
     gSprites[healthboxLeftSpriteId].hMain_HealthBarSpriteId = healthbarSpriteId;
     gSprites[healthboxLeftSpriteId].hMain_Battler = battler;
@@ -1932,7 +1933,7 @@ static void UpdateStatusIconInHealthbox(u8 healthboxSpriteId)
             CpuCopy32(statusGfxPtr, (void *)(OBJ_VRAM0 + (gSprites[healthboxSpriteId].oam.tileNum + tileNumAdder + i) * TILE_SIZE_4BPP), 32);
 
         if (ShouldShowHealthbar(battler))
-            CpuCopy32(GetHealthboxElementGfxPtr(HEALTHBOX_GFX_1), (void *)(OBJ_VRAM0 + gSprites[healthBarSpriteId].oam.tileNum * TILE_SIZE_4BPP), 64);
+            CpuCopy32(BattleLab_HealthbarLabelGfx(battler, GetHealthboxElementGfxPtr(HEALTHBOX_GFX_1)), (void *)(OBJ_VRAM0 + gSprites[healthBarSpriteId].oam.tileNum * TILE_SIZE_4BPP), 64);
 
         TryAddPokeballIconToHealthbox(healthboxSpriteId, TRUE);
         return;
@@ -2090,7 +2091,8 @@ void UpdateHealthboxAttribute(u8 healthboxSpriteId, struct Pokemon *mon, u8 elem
             MoveBattleBar(battler, healthboxSpriteId, HEALTH_BAR, 0);
         }
 
-        if (!isDoubles && (elementId == HEALTHBOX_EXP_BAR || elementId == HEALTHBOX_ALL))
+        if (!isDoubles && (elementId == HEALTHBOX_EXP_BAR || elementId == HEALTHBOX_ALL)
+         && !BattleLab_DrawEnergyBar(battler, healthboxSpriteId))   // Pokémon Ascension: Lab Dual bars show energy here
         {
             enum Species species;
             u32 exp, currLevelExp;

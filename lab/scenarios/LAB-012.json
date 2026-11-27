@@ -1,0 +1,11 @@
+{
+  "id": "LAB-012",
+  "name": "Big vs small (stamina)",
+  "rules": { "format": "trainer_single", "combat": "dual", "energy": 1, "damage": 50, "cost": 100, "ai": "smart", "seed": 4242 },
+  "player": [
+    { "species": "SWAMPERT", "level": 50, "moves": ["HYDRO_PUMP", "EARTHQUAKE", "HAMMER_ARM", "PROTECT"] }
+  ],
+  "opponent": [
+    { "species": "SWAMPERT", "level": 50, "moves": ["WATER_GUN", "MUD_SLAP", "ROCK_SMASH", "PROTECT"] }
+  ]
+}
