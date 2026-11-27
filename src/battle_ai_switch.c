@@ -498,6 +498,8 @@ static bool32 ShouldSwitchIfAllMovesBad(struct SwitchAiContext *switchContext)
         enum BattlerId opposingPartner = GetPartnerBattler(switchContext->opposingBattler);
         for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
+            if (gBattleMons[switchContext->battler].moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+                continue;
             ctx.move = ctx.chosenMove = ctx.baseMove = gBattleMons[switchContext->battler].moves[moveIndex];
             ctx.moveType = GetBattleMoveType(ctx.move);
             // Check if move is bad in the context of both opposing battlers
@@ -522,6 +524,8 @@ static bool32 ShouldSwitchIfAllMovesBad(struct SwitchAiContext *switchContext)
     {
         for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
+            if (gBattleMons[switchContext->battler].moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+                continue;
             ctx.move = ctx.chosenMove = ctx.baseMove = gBattleMons[switchContext->battler].moves[moveIndex];
             ctx.moveType = GetBattleMoveType(ctx.move);
             if (!IsMoveBad(&ctx, moveIndex))
@@ -1510,6 +1514,8 @@ bool32 ShouldStayInToUseMove(struct SwitchAiContext *switchContext)
 {
     for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+        if (gBattleMons[switchContext->battler].moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+            continue;
         enum Move move = gBattleMons[switchContext->battler].moves[moveIndex];
         enum BattleMoveEffects effect = GetMoveEffect(move);
 

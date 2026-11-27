@@ -689,6 +689,8 @@ void Ai_UpdateSwitchInData(enum BattlerId battler)
             gBattleHistory->itemEffects[battler] = aiMon->heldEffect;
         for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
+            if (aiMon->moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+                continue;
             if (aiMon->moves[moveIndex])
                 gBattleHistory->usedMoves[battler][moveIndex] = aiMon->moves[moveIndex];
         }
@@ -717,6 +719,8 @@ void RecordMovesBasedOnStab(enum BattlerId battler)
 {
     for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+        if (gBattleMons[battler].moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+            continue;
         enum Move playerMove = gBattleMons[battler].moves[moveIndex];
         if (IsSpeciesOfType(gBattleMons[battler].species, GetMoveType(playerMove)) && GetMovePower(playerMove) != 0)
             RecordKnownMove(battler, playerMove);
@@ -727,6 +731,8 @@ void RecordStatusMoves(enum BattlerId battler)
 {
     for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+        if (gBattleMons[battler].moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+            continue;
         enum Move playerMove = gBattleMons[battler].moves[moveIndex];
         if (ShouldRecordStatusMove(playerMove))
             RecordKnownMove(battler, playerMove);
@@ -807,6 +813,10 @@ void CalcBattlerAiMovesData(struct AiLogicData *aiData, enum BattlerId battlerAt
 
     for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         struct SimulatedDamage dmg = {0};
         aiCalc.typeEffectiveness = Q_4_12(0.0);
         aiCalc.move = moves[moveIndex];
@@ -1364,6 +1374,8 @@ static s32 AI_CheckBadMove(enum BattlerId battlerAtk, enum BattlerId battlerDef,
         enum Move aiMove;
         for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
+            if (gBattleMons[battlerAtk].moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+                continue;
             aiMove = gBattleMons[battlerAtk].moves[moveIndex];
             if (!CanFireMoveThawTarget(aiMove, CheckDynamicMoveType(GetBattlerMon(battlerAtk), aiMove, battlerAtk, MON_IN_BATTLE))
              && !CanBurnHitThaw(aiMove)
@@ -4151,6 +4163,8 @@ static void AI_CompareDamagingMoves(enum BattlerId battlerAtk, enum BattlerId ba
         {
             for (u32 compareId = 0; compareId < MAX_BATTLE_MOVES; compareId++)
             {
+                if (moves[compareId] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+                    continue;
                 if (compareId == currId)
                     continue;
                 if (noOfHits[currId] == noOfHits[compareId])

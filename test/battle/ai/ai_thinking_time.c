@@ -4,9 +4,11 @@
 #define AI_FRAME_CEILING_SINGLES_NO_FLAGS                       2
 #define AI_FRAME_CEILING_SINGLES_SMART_TRAINER                  7
 #define AI_FRAME_CEILING_DOUBLES_NO_FLAGS                       14
-#define AI_FRAME_CEILING_DOUBLES_SMART_TRAINER                  28
+// Pokémon Ascension (F014): the AI's move tables hold MAX_BATTLE_MOVES (8) per battler; the smart AI
+// measured 29 (doubles) and 25 (Steven multi) frames with 4 real moves (upstream 28 and 23). +1 headroom.
+#define AI_FRAME_CEILING_DOUBLES_SMART_TRAINER                  30
 #define AI_FRAME_CEILING_STEVEN_MULTI                           21
-#define AI_FRAME_CEILING_STEVEN_MULTI_SMART_TRAINER             24
+#define AI_FRAME_CEILING_STEVEN_MULTI_SMART_TRAINER             26
 #define AI_FRAME_CEILING_CHECK                                  FALSE // If TRUE, forces all thinking time tests to fail. Useful for printing all actual frame times to console by running the tests
 
 AI_SINGLE_BATTLE_TEST("AI thinking time doesn't explode (singles, no flags)")

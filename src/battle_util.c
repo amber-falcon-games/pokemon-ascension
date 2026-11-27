@@ -1637,6 +1637,12 @@ u32 CheckMoveLimitations(enum BattlerId battler, u8 unusableMoves, u32 check)
     for (i = 0; i < MAX_BATTLE_MOVES; i++)
     {
         move = gBattleMons[battler].moves[i];
+        if (move == MOVE_NONE)   // Pokémon Ascension (F014): empty slots (an empty slot has 0 PP)
+        {
+            if (check & (MOVE_LIMITATION_ZEROMOVE | MOVE_LIMITATION_PP))
+                unusableMoves |= 1u << i;
+            continue;
+        }
         moveEffect = GetMoveEffect(move);
         // No move
         if (check & MOVE_LIMITATION_ZEROMOVE && move == MOVE_NONE)

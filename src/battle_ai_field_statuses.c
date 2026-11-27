@@ -53,6 +53,8 @@ static bool32 HasBattlerTerrainBoostMove(enum BattlerId battler, enum BattleTerr
     enum Move *moves = GetMovesArray(battler);
     for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+            continue;
         enum Move move = moves[moveIndex];
         if (GetMoveEffect(move) == EFFECT_TERRAIN_BOOST
          && GetMoveTerrainBoost_Terrain(move) == terrain)

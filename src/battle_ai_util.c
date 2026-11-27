@@ -1334,6 +1334,10 @@ u32 GetBestNoOfHitsToKO(enum BattlerId battlerAtk, enum BattlerId battlerDef, en
 
     for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations))
             continue;
 
@@ -1484,6 +1488,10 @@ bool32 CanTargetFaintAi(enum BattlerId battlerDef, enum BattlerId battlerAtk)
 
     for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations))
             continue;
 
@@ -1549,6 +1557,8 @@ void GetBestDmgMovesFromBattler(enum BattlerId battlerAtk, enum BattlerId battle
     {
         for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
+            if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+                continue;
             if (CanIndexMoveFaintTarget(battlerAtk, battlerDef, moveIndex, calcContext))
                 bestMoves[countBestMoves++] = moves[moveIndex];
         }
@@ -1557,6 +1567,8 @@ void GetBestDmgMovesFromBattler(enum BattlerId battlerAtk, enum BattlerId battle
     {
         for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
         {
+            if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+                continue;
             if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations)
             || (GetMovePower(moves[moveIndex]) == 0)
             || (AI_GetDamage(battlerAtk, battlerDef, moveIndex, calcContext, aiData) == 0))
@@ -1583,6 +1595,10 @@ u32 GetMoveIndex(enum BattlerId battler, enum Move move)
 
     for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (moves[moveIndex] == move)
             return moveIndex;
     }
@@ -1636,6 +1652,10 @@ u32 GetBestDmgFromBattler(enum BattlerId battler, enum BattlerId battlerTarget, 
 
     for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations))
             continue;
 
@@ -1658,6 +1678,10 @@ bool32 CanAIFaintTarget(enum BattlerId battlerAtk, enum BattlerId battlerDef, u3
 
     for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations))
             continue;
 
@@ -1689,6 +1713,10 @@ bool32 CanBattlerKOTargetIgnoringSturdy(enum BattlerId battlerAtk, enum BattlerI
 
     for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations))
             continue;
         dmg = AI_GetDamage(battlerAtk, battlerDef, moveIndex, AI_ATTACKING, aiData);
@@ -1725,6 +1753,10 @@ bool32 CanTargetFaintAiWithMod(enum BattlerId battlerDef, enum BattlerId battler
 
     for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations))
             continue;
 
@@ -2569,6 +2601,8 @@ u32 GetBattlerMoveIndexWithEffect(enum BattlerId battler, enum BattleMoveEffects
     enum Move *moves = GetMovesArray(battler);
     for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+            continue;
         if (GetMoveEffect(moves[moveIndex]) == effect)
             return moveIndex;
     }
@@ -2581,6 +2615,10 @@ static u32 GetUsableMoveIndexWithEffect(enum BattlerId battler, enum BattleMoveE
 
     for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         enum Move battlerMove = moves[moveIndex];
         if (!IsMoveUnusable(moveIndex, battlerMove, moveLimitations) && GetMoveEffect(battlerMove) == effect)
             return moveIndex;
@@ -2825,6 +2863,10 @@ bool32 HasNonVolatileMoveEffect(enum BattlerId battlerId, enum MoveEffect effect
 
     for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (GetMoveNonVolatileStatus(moves[moveIndex]) == effect)
             return TRUE;
     }
@@ -2976,6 +3018,10 @@ bool32 HasMoveWithLowAccuracy(enum BattlerId battlerAtk, enum BattlerId battlerD
 
     for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations))
             continue;
 
@@ -3003,6 +3049,10 @@ bool32 HasSleepMoveWithLowAccuracy(enum BattlerId battlerAtk, enum BattlerId bat
 
     for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations))
             continue;
 
@@ -3070,6 +3120,8 @@ bool32 HasMoveUsableWhileAsleep(enum BattlerId battler)
     u32 moveLimitations = gAiLogicData->moveLimitations[battler];
     for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+            continue;
         if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations))
             continue;
         if (IsUsableWhileAsleepEffect(GetMoveEffect(moves[moveIndex])))
@@ -3235,6 +3287,10 @@ bool32 HasMoveWithFlag(enum BattlerId battler, MoveFlag getFlag)
 
     for (u32 moveIndex = 0; moveIndex < MAX_BATTLE_MOVES; moveIndex++)
     {
+
+        if (moves[moveIndex] == MOVE_NONE)   // Pokémon Ascension (F014): empty battle slots cost nothing
+
+            continue;
         if (IsMoveUnusable(moveIndex, moves[moveIndex], moveLimitations))
             continue;
 

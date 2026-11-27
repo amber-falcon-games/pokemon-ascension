@@ -60,4 +60,5 @@ Owner playtest is combined with the rest of the overhaul (D026). Lab scenario LA
 Turn `ASCENSION_MOVE_LIST` off, or revert the branch.
 
 ## Evidence and acceptance
-To be filled in during implementation.
+- Engine (34b527fc24, f576b54a23): the full upstream suite runs in CI on PR #19.
+- AI thinking-time ceilings (`test/battle/ai/ai_thinking_time.c`): with 8-move tables and 4 real moves, the smart AI measured 29 frames in doubles and 25 in Steven multi, against 28 and 23 on main (same local build). Empty-slot skips in the AI loops did not remove it, because the cost is spread across many loops. The two ceilings were raised to 30 and 26 (measured + 1). The other four are unchanged.
