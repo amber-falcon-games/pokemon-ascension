@@ -616,6 +616,8 @@ const u8 *const gBattleStringsTable[STRINGID_COUNT] =
     [STRINGID_IMPOSTERTRANSFORM]                    = COMPOUND_STRING("{B_ATK_NAME_WITH_PREFIX} transformed into {B_DEF_NAME_WITH_PREFIX2}!"),
     [STRINGID_ASSAULTVESTDOESNTALLOW]               = COMPOUND_STRING("The effects of the {B_LAST_ITEM} prevent status moves from being used!\p"),
 #if ASCENSION_BATTLE_LAB
+    // Text is built at run time (BattleLab_PendingMessageText); this sample keeps the string tests honest.
+    [STRINGID_LABMESSAGE]                           = COMPOUND_STRING("{B_ATK_NAME_WITH_PREFIX}'s stamina\nwas sapped by the blow!\p"),
     [STRINGID_TOOEXHAUSTEDTOUSE]                    = COMPOUND_STRING("{B_ATK_NAME_WITH_PREFIX} is too exhausted to use {B_CURRENT_MOVE}!\p"),
 #endif
     [STRINGID_GRAVITYPREVENTSUSAGE]                 = COMPOUND_STRING("{B_ATK_NAME_WITH_PREFIX} can't use {B_CURRENT_MOVE} because of gravity!\p"),
