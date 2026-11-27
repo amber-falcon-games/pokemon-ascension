@@ -72,6 +72,7 @@ enum MonData {
     MON_DATA_MET_LEVEL,
     MON_DATA_MET_GAME,
     MON_DATA_POKEBALL,
+    MON_DATA_TALENT_CHOICES,   // Pokémon Ascension (F015): 2 bits per talent-tree branch (8 branches)
     MON_DATA_HP_IV,
     MON_DATA_ATK_IV,
     MON_DATA_DEF_IV,
@@ -134,15 +135,15 @@ struct PokemonSubstruct0
     enum Species species:11; // 2047 species.
     enum Type teraType:5; // 30 types.
     enum Item heldItem:10; // 1023 items.
-    u16 unused_02:6;
+    u16 talentChoicesA:6;   // Pokémon Ascension (F015): talent-tree choices, bits 0-5
     u32 experience:21;
     u32 nickname11:8; // 11th character of nickname.
-    u32 unused_04:3;
+    u32 talentChoicesB:3;   // Pokémon Ascension (F015): bits 6-8
     u8 ppBonuses;
     u8 friendship;
     u16 pokeball:6; // 63 balls.
     u16 nickname12:8; // 12th character of nickname.
-    u16 unused_0A:2;
+    u16 talentChoicesC:2;   // Pokémon Ascension (F015): bits 9-10
 };
 
 struct PokemonSubstruct1
@@ -152,7 +153,7 @@ struct PokemonSubstruct1
     enum Move move2:11; // 2047 moves.
     u16 evolutionTracker2:5;
     enum Move move3:11; // 2047 moves.
-    u16 unused_04:5;
+    u16 talentChoicesD:5;   // Pokémon Ascension (F015): bits 11-15
     enum Move move4:11; // 2047 moves.
     u16 unused_06:3;
     u16 hyperTrainedHP:1;

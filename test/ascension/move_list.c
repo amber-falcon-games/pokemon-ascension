@@ -82,3 +82,24 @@ TEST("Talent tree: the battle list comes from the tree and refreshes the saved f
     for (i = 0; i < MAX_MON_MOVES; i++)
         EXPECT_EQ(GetMonData(&mon, MON_DATA_MOVE1 + i), moves[i]);
 }
+
+TEST("Talent tree: a branch choice is saved with the Pokémon and picks that option")
+{
+    struct Pokemon mon;
+    u32 b, branch = MAX_BATTLE_MOVES;
+    CreateMon(&mon, SPECIES_PIKACHU, 50, 0, OTID_STRUCT_PRESET(0));
+    // Pikachu's first status branch starts with a 3-way choice (Play Nice / Tail Whip / Growl).
+    for (b = 0; b < Ascension_TalentBranchCount(SPECIES_PIKACHU); b++)
+        if (Ascension_TalentBranchMove(SPECIES_PIKACHU, b, 1, 0) != Ascension_TalentBranchMove(SPECIES_PIKACHU, b, 1, 1))
+            branch = b;
+    EXPECT_LT(branch, MAX_BATTLE_MOVES);
+    EXPECT_EQ(Ascension_GetTalentChoice(&mon, branch), 0);
+    Ascension_SetTalentChoice(&mon, branch, 2);
+    EXPECT_EQ(Ascension_GetTalentChoice(&mon, branch), 2);
+    for (b = 0; b < MAX_BATTLE_MOVES; b++)   // other branches untouched
+        if (b != branch)
+            EXPECT_EQ(Ascension_GetTalentChoice(&mon, b), 0);
+    Ascension_SetTalentChoice(&mon, 7, 3);   // the top bits survive the split across substructures
+    EXPECT_EQ(Ascension_GetTalentChoice(&mon, 7), 3);
+    EXPECT_EQ(Ascension_GetTalentChoice(&mon, branch), 2);
+}

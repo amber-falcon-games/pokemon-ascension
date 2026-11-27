@@ -24,6 +24,9 @@ struct BattlePokemon;
 // at branch points (index into the node's options).
 u16 Ascension_TalentBranchMove(u32 species, u32 branch, u32 level, u32 choice);
 u32 Ascension_TalentBranchCount(u32 species);
+// The option chosen at a branch's branch points (0-3), saved with the Pokémon (MON_DATA_TALENT_CHOICES).
+u32 Ascension_GetTalentChoice(struct Pokemon *mon, u32 branch);
+void Ascension_SetTalentChoice(struct Pokemon *mon, u32 branch, u32 choice);
 u32 Ascension_FillExtraBattleMoves(struct Pokemon *mon, enum Move moves[MAX_BATTLE_MOVES], u8 pp[MAX_BATTLE_MOVES]);
 
 #endif // GUARD_ASCENSION_MOVES_H

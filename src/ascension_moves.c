@@ -11,6 +11,18 @@
 EWRAM_DATA bool8 gAscensionMoveListTestOverride = FALSE;
 #endif
 
+u32 Ascension_GetTalentChoice(struct Pokemon *mon, u32 branch)
+{
+    return (GetMonData(mon, MON_DATA_TALENT_CHOICES) >> (2 * branch)) & 3;
+}
+
+void Ascension_SetTalentChoice(struct Pokemon *mon, u32 branch, u32 choice)
+{
+    u32 choices = GetMonData(mon, MON_DATA_TALENT_CHOICES);
+    choices = (choices & ~(3u << (2 * branch))) | ((choice & 3) << (2 * branch));
+    SetMonData(mon, MON_DATA_TALENT_CHOICES, &choices);
+}
+
 u32 Ascension_TalentBranchCount(u32 species)
 {
     return species < NUM_SPECIES ? gTalentTrees[species].branchCount : 0;
@@ -55,7 +67,7 @@ u32 Ascension_FillExtraBattleMoves(struct Pokemon *mon, enum Move moves[MAX_BATT
         count = 0;
         for (i = 0; i < Ascension_TalentBranchCount(species) && count < MAX_BATTLE_MOVES; i++)
         {
-            u16 move = Ascension_TalentBranchMove(species, i, level, 0);   // branch choices: saved in the next F015 step
+            u16 move = Ascension_TalentBranchMove(species, i, level, Ascension_GetTalentChoice(mon, i));
             if (move != MOVE_NONE)
                 moves[count++] = move;
         }
