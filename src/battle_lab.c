@@ -853,6 +853,18 @@ static void LabTimelineRoundEnd(void)
     memset(sLabBoost, 0, sizeof(sLabBoost));
 }
 
+// Energy changed outside the damage path (a move's cost, regen): copy it to the party
+// Pokémon and redraw that battler's bar and number at once. (The controller's HP update only
+// changes the stored data; the bar is otherwise redrawn only by damage animations.)
+static void LabSyncEnergy(u32 battler)
+{
+    struct Pokemon *mon = GetBattlerMon(battler);
+    u32 hp = gBattleMons[battler].hp;
+    SetMonData(mon, MON_DATA_HP, &hp);
+    UpdateHealthboxAttribute(gHealthboxSpriteIds[battler], mon, HEALTHBOX_HEALTH_BAR);
+    UpdateHealthboxAttribute(gHealthboxSpriteIds[battler], mon, HEALTHBOX_CURRENT_HP);
+}
+
 // Boost (D023, spike step 4): R on the move menu cycles None > Speed > Power > Both.
 // Speed: +50% cost, the next action comes sooner (delay x0.6). Power: +50% cost, power x1.3.
 // Both: +100% cost. The choice lasts until the end of the round. The AI does not boost yet.
@@ -953,8 +965,7 @@ void BattleLab_PayEnergy(u32 battler, u32 move)
     DebugPrintf("LAB energy: %S pays %d for %S%s (%d -> %d)", GetSpeciesName(gBattleMons[battler].species),
                 cost, GetMoveName(move), sLabBoostLog[sLabBoost[battler]], gBattleMons[battler].hp, hp);
     gBattleMons[battler].hp = hp;
-    BtlController_EmitSetMonData(battler, B_COMM_TO_CONTROLLER, REQUEST_HP_BATTLE, 0, sizeof(gBattleMons[battler].hp), &gBattleMons[battler].hp);
-    MarkBattlerForControllerExec(battler);
+    LabSyncEnergy(battler);
 }
 
 // ---------------------------------------------------------------- diagnostics (F012)
@@ -1064,8 +1075,7 @@ static void LabRegenEnergy(void)
             continue;
         hp = (hp + gain < maxHp) ? hp + gain : maxHp;
         gBattleMons[battler].hp = hp;
-        BtlController_EmitSetMonData(battler, B_COMM_TO_CONTROLLER, REQUEST_HP_BATTLE, 0, sizeof(gBattleMons[battler].hp), &gBattleMons[battler].hp);
-        MarkBattlerForControllerExec(battler);
+        LabSyncEnergy(battler);
     }
     sLabProtectedThisTurn = 0;
 }
