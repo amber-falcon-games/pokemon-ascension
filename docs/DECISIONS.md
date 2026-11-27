@@ -54,6 +54,10 @@ Decided:
   - **Exhausted is announced** with a message.
   - **Regen is shown subtly.** The prototype's whole-HUD green flash was dropped as distracting.
   - **Benched Pokémon recover energy, but only up to their health cap,** so the cap can be felt and switching has a purpose.
+- D026 (2026-11-27): F017 go/no-go is **go**, so we stay on the GBA engine. The owner prefers the Dual-bars approach with a separate energy bar for every battler, and asked to skip the last spike playtest and "implement the rest of the battle overhaul". The owner will test and propose improvements and balancing once it is all there.
+  - Work continues in the approved roadmap order: F005c → F014 → F015 → F016 → F018 → F019 → F020 → F021.
+  - Branches stack (D021), and subjective gameplay features wait for the owner's combined playtest before they merge.
+  - Lab-only spike code merges to main as dev tooling.
 
 To be raised at F015 (not decided): how to recover save space for an expanded move library — see SAVE_COMPATIBILITY.md options S1–S5.
 

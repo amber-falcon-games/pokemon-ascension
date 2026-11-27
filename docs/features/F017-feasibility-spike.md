@@ -1,5 +1,5 @@
 # F017 — Feasibility spike: timeline, energy, more than 4 moves, AI time
-Status: OWNER PLAYTEST (spike steps 1–5 built; go/no-go decision pending)
+Status: DONE (go, D026, 2026-11-27): owner chose Dual bars and the rest of the overhaul proceeds
 Dependencies: F013 (Battle Lab accepted, 0.2.0)
 Owner decision IDs: D015 (more than 4 moves, talent tree), D016 (energy replaces PP; order from energy, recovery and Speed); new decisions requested below
 Branch / commit: `feature/F017-energy-spike`
