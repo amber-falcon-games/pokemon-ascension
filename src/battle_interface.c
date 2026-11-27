@@ -685,7 +685,7 @@ u8 CreateBattlerHealthboxSprites(enum BattlerId battler)
     healthBarSpritePtr->oam.priority = 1;
 
     if (ShouldShowHealthbar(battler))
-        CpuCopy32(BattleLab_HealthbarLabelGfx(GetHealthboxElementGfxPtr(HEALTHBOX_GFX_1)), (void *)(OBJ_VRAM0 + healthBarSpritePtr->oam.tileNum * TILE_SIZE_4BPP), 64);   // Pokémon Ascension: "EN" in Lab stamina battles
+        CpuCopy32(BattleLab_HealthbarLabelGfx(battler, GetHealthboxElementGfxPtr(HEALTHBOX_GFX_1)), (void *)(OBJ_VRAM0 + healthBarSpritePtr->oam.tileNum * TILE_SIZE_4BPP), 64);   // Pokémon Ascension: "EN" in Lab stamina battles
 
     gSprites[healthboxLeftSpriteId].hMain_HealthBarSpriteId = healthbarSpriteId;
     gSprites[healthboxLeftSpriteId].hMain_Battler = battler;
@@ -1933,7 +1933,7 @@ static void UpdateStatusIconInHealthbox(u8 healthboxSpriteId)
             CpuCopy32(statusGfxPtr, (void *)(OBJ_VRAM0 + (gSprites[healthboxSpriteId].oam.tileNum + tileNumAdder + i) * TILE_SIZE_4BPP), 32);
 
         if (ShouldShowHealthbar(battler))
-            CpuCopy32(BattleLab_HealthbarLabelGfx(GetHealthboxElementGfxPtr(HEALTHBOX_GFX_1)), (void *)(OBJ_VRAM0 + gSprites[healthBarSpriteId].oam.tileNum * TILE_SIZE_4BPP), 64);
+            CpuCopy32(BattleLab_HealthbarLabelGfx(battler, GetHealthboxElementGfxPtr(HEALTHBOX_GFX_1)), (void *)(OBJ_VRAM0 + gSprites[healthBarSpriteId].oam.tileNum * TILE_SIZE_4BPP), 64);
 
         TryAddPokeballIconToHealthbox(healthboxSpriteId, TRUE);
         return;

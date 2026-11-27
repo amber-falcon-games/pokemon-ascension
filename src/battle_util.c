@@ -7759,7 +7759,7 @@ s32 ApplyModifiersAfterDmgRoll(struct DamageContext *ctx, s32 dmg)
     DAMAGE_APPLY_MODIFIER(GetMoveAgainstProtectionModifier(ctx));
     DAMAGE_APPLY_MODIFIER(GetOtherModifiers(ctx));
 
-    return dmg;
+    return BattleLab_ScaleDamage(dmg);   // Pokémon Ascension (F017 spike): Lab "Damage" rule in stamina battles
 }
 
 s32 DoFixedDamageMoveCalc(struct DamageContext *ctx)

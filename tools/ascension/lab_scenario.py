@@ -39,6 +39,25 @@ WEATHERS = ["none", "rain", "sun", "sand", "hail", "snow"]
 TERRAINS = ["none", "electric", "grassy", "misty", "psychic"]
 AIS = ["scenario", "smart", "random"]
 COMBATS = ["classic", "stamina"]   # F017 spike (D023)
+ENERGY_SCALES = {1: 0, 1.5: 1, 2: 2, 3: 3}        # max energy multiplier -> 2-bit index
+DAMAGE_SCALES = {100: 0, 75: 1, 50: 2, 33: 3}     # damage percent
+COST_SCALES = {100: 0, 75: 1, 50: 2, 25: 3}       # energy cost percent
+
+
+def pick_scale(value, table, default, what):
+    if value is None:
+        value = default
+    if value not in table:
+        raise ScenarioError(f"{what} must be one of {', '.join(str(k) for k in table)}")
+    return table[value]
+
+
+def pack_combat(rules, where):
+    """The combat byte: bit 0 Classic/Stamina, bits 1-2 energy, 3-4 damage, 5-6 cost."""
+    return (pick(rules.get("combat"), COMBATS, f"{where} combat")
+            | pick_scale(rules.get("energy"), ENERGY_SCALES, 1, f"{where} energy") << 1
+            | pick_scale(rules.get("damage"), DAMAGE_SCALES, 100, f"{where} damage") << 3
+            | pick_scale(rules.get("cost"), COST_SCALES, 100, f"{where} cost") << 5)
 STATUSES = ["none", "poison", "toxic", "burn", "paralysis", "sleep", "freeze"]
 ABILITY_SLOTS = {1: 0, 2: 1, "1": 0, "2": 1, "hidden": 2}
 
@@ -186,7 +205,7 @@ def pack_record(sc, consts, charmap):
                        pick(rules.get("terrain"), TERRAINS, f"{where} terrain"),
                        pick(rules.get("ai"), AIS, f"{where} ai"),
                        1 if seed is not None else 0,
-                       pick(rules.get("combat"), COMBATS, f"{where} combat"), int(seed or 0))
+                       pack_combat(rules, where), int(seed or 0))
     for side in ("player", "opponent"):
         mons = sc[side] + [None] * (PARTY_SIZE - len(sc[side]))
         for i, mon in enumerate(mons):

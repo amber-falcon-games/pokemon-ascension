@@ -1,7 +1,7 @@
 {
   "id": "LAB-013",
   "name": "Tire out the boss",
-  "rules": { "format": "trainer_single", "combat": "stamina", "ai": "smart", "seed": 777 },
+  "rules": { "format": "trainer_single", "combat": "stamina", "energy": 2, "damage": 75, "cost": 50, "ai": "smart", "seed": 777 },
   "player": [
     { "species": "BLISSEY",  "level": 50, "moves": ["SOFT_BOILED", "PROTECT", "TOXIC", "SEISMIC_TOSS"] },
     { "species": "SKARMORY", "level": 50, "moves": ["SPIKES", "ROOST", "WHIRLWIND", "BRAVE_BIRD"] },

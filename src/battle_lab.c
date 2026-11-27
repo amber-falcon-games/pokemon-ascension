@@ -4,6 +4,7 @@
 // to itself afterwards. It never writes the save: Exit soft-resets, which reloads
 // the campaign save from flash. Compiled out of release builds (ASCENSION_BATTLE_LAB).
 #include "global.h"
+#include "util.h"
 #include "config/ascension.h"
 #include "battle_lab.h"
 
@@ -85,8 +86,8 @@ static const struct BgTemplate sLabBgTemplates[] =
 static const struct WindowTemplate sLabWindowTemplates[] =
 {
     [WIN_TITLE] = {.bg = 0, .tilemapLeft = 1,  .tilemapTop = 1, .width = 28, .height = 2,  .paletteNum = TEXT_PAL, .baseBlock = 1},
-    [WIN_MENU]  = {.bg = 0, .tilemapLeft = 1,  .tilemapTop = 5, .width = 15, .height = 12, .paletteNum = TEXT_PAL, .baseBlock = 57},
-    [WIN_INFO]  = {.bg = 0, .tilemapLeft = 19, .tilemapTop = 5, .width = 10, .height = 12, .paletteNum = TEXT_PAL, .baseBlock = 237},
+    [WIN_MENU]  = {.bg = 0, .tilemapLeft = 1,  .tilemapTop = 4, .width = 15, .height = 15, .paletteNum = TEXT_PAL, .baseBlock = 57},
+    [WIN_INFO]  = {.bg = 0, .tilemapLeft = 19, .tilemapTop = 5, .width = 10, .height = 12, .paletteNum = TEXT_PAL, .baseBlock = 282},
     DUMMY_WIN_TEMPLATE,
 };
 
@@ -138,7 +139,7 @@ enum
     EDIT_ROW_ABILITY, EDIT_ROW_ITEM, EDIT_ROW_NATURE, EDIT_ROW_IVS, EDIT_ROW_HP, EDIT_ROW_STATUS,
     EDIT_ROW_RESET, EDIT_ROW_CLEAR, EDIT_ROW_COUNT
 };
-enum { RULES_ROW_FORMAT, RULES_ROW_COMBAT, RULES_ROW_WEATHER, RULES_ROW_TERRAIN, RULES_ROW_AI, RULES_ROW_SEED_MODE, RULES_ROW_SEED, RULES_ROW_COUNT };
+enum { RULES_ROW_FORMAT, RULES_ROW_COMBAT, RULES_ROW_ENERGY, RULES_ROW_DAMAGE, RULES_ROW_COST, RULES_ROW_WEATHER, RULES_ROW_TERRAIN, RULES_ROW_AI, RULES_ROW_SEED_MODE, RULES_ROW_SEED, RULES_ROW_COUNT };
 #define LAB_VISIBLE_ROWS 6
 static EWRAM_DATA u8 sLabMode = 0;
 static EWRAM_DATA u8 sLabSide = 0;
@@ -741,10 +742,10 @@ bool32 BattleLab_IsExhausted(u32 battler)
         && gBattleMons[battler].hp * 4 <= gBattleMons[battler].maxHP;
 }
 
-// Speed x0.75 while Exhausted (used by GetBattlerTotalSpeedStat).
+// Speed x0.25 while Exhausted (used by GetBattlerTotalSpeedStat).
 u32 BattleLab_ExhaustedSpeed(u32 battler, u32 speed)
 {
-    return BattleLab_IsExhausted(battler) ? speed * 3 / 4 : speed;
+    return BattleLab_IsExhausted(battler) ? speed / 4 : speed;   // owner: x0.25, a slowdown you notice (2026-11-27)
 }
 
 // Exhausted Pokémon can't use their heaviest moves (power 100+).
@@ -800,10 +801,20 @@ static void LabPlanRound(void)
     {
         if (!LabBattlerOnField(battler))
             continue;
-        // A Pokémon that has just come in joins the clock: half a step after "now".
-        if (!sLabTimelineStarted || sLabPartyIndex[battler] != gBattlerPartyIndexes[battler])
+        if (!sLabTimelineStarted)
         {
-            sLabNextAct[battler] = sLabNow + LabActionDelay(battler, 100) / (sLabTimelineStarted ? 2 : 1);
+            // Opening round: everyone picks a move before anything happens (owner, 2026-11-27),
+            // and the round runs in normal priority/Speed order, so e.g. Protect can block.
+            sLabNextAct[battler] = 0;
+            sLabPartyIndex[battler] = gBattlerPartyIndexes[battler];
+        }
+        else if (sLabPartyIndex[battler] != gBattlerPartyIndexes[battler])
+        {
+            // A replacement for a fainted Pokémon may act straight away; a Pokémon switched in
+            // by choice joins half a step after "now" (switching is not free).
+            struct Pokemon *party = IsOnPlayerSide(battler) ? gPlayerParty : gEnemyParty;
+            bool32 replacedFainted = GetMonData(&party[sLabPartyIndex[battler]], MON_DATA_HP) == 0;
+            sLabNextAct[battler] = sLabNow + (replacedFainted ? 0 : LabActionDelay(battler, 100) / 2);
             sLabPartyIndex[battler] = gBattlerPartyIndexes[battler];
         }
         if (sLabNextAct[battler] < earliest)
@@ -856,6 +867,40 @@ static void LabTimelineRoundEnd(void)
 // Energy changed outside the damage path (a move's cost, regen): copy it to the party
 // Pokémon and redraw that battler's bar and number at once. (The controller's HP update only
 // changes the stored data; the bar is otherwise redrawn only by damage animations.)
+static void LabRefreshEnergyLabel(u32 battler);
+
+// A short colour pulse on one 16-colour sprite palette (about a quarter of a second):
+// green on the energy bar when it regenerates, the Boost colour on the attacker.
+#define tPalOffset data[0]
+#define tColorLo   data[1]
+#define tColorHi   data[2]
+#define tFrame     data[3]
+static void Task_LabPalettePulse(u8 taskId)
+{
+    s16 *data = gTasks[taskId].data;
+    u32 color = (u16)tColorLo | ((u32)(u16)tColorHi << 16);
+    u32 coeff = (tFrame < 8) ? tFrame : 16 - tFrame;
+    BlendPalette(tPalOffset, 16, coeff, color);
+    if (++tFrame > 16)
+    {
+        BlendPalette(tPalOffset, 16, 0, color);
+        DestroyTask(taskId);
+    }
+}
+
+static void LabPulseSpritePalette(u32 spriteId, u32 color)
+{
+    u8 taskId = CreateTask(Task_LabPalettePulse, 5);
+    gTasks[taskId].tPalOffset = OBJ_PLTT_ID(gSprites[spriteId].oam.paletteNum);
+    gTasks[taskId].tColorLo = color & 0xFFFF;
+    gTasks[taskId].tColorHi = color >> 16;
+    gTasks[taskId].tFrame = 1;
+}
+#undef tPalOffset
+#undef tColorLo
+#undef tColorHi
+#undef tFrame
+
 static void LabSyncEnergy(u32 battler)
 {
     struct Pokemon *mon = GetBattlerMon(battler);
@@ -863,17 +908,61 @@ static void LabSyncEnergy(u32 battler)
     SetMonData(mon, MON_DATA_HP, &hp);
     UpdateHealthboxAttribute(gHealthboxSpriteIds[battler], mon, HEALTHBOX_HEALTH_BAR);
     UpdateHealthboxAttribute(gHealthboxSpriteIds[battler], mon, HEALTHBOX_CURRENT_HP);
+    LabRefreshEnergyLabel(battler);
 }
 
 // Boost (D023, spike step 4): R on the move menu cycles None > Speed > Power > Both.
 // Speed: +50% cost, the next action comes sooner (delay x0.6). Power: +50% cost, power x1.3.
 // Both: +100% cost. The choice lasts until the end of the round. The AI does not boost yet.
 static const char *const sLabBoostLog[LAB_BOOST_COUNT] = {"", " +SPEED", " +POWER", " +BOTH"};
-static const u8 sLabBoostTag[LAB_BOOST_COUNT][4] = {_("EN"), _("SPD"), _("POW"), _("ALL")};
+static const u8 sLabBoostTag[LAB_BOOST_COUNT][6] = {_("Cost"), _("Spd+"), _("Pow+"), _("All+")};   // PP box label in stamina battles
+static const u32 sLabBoostFlashColor[LAB_BOOST_COUNT] = {0, RGB(8, 28, 31), RGB(31, 8, 4), RGB(31, 26, 4)};
+
+static const u8 sLabEnergyScaleTenths[LAB_ENERGY_COUNT] = {10, 15, 20, 30};
+static const u8 sLabDamageScalePercent[LAB_DAMAGE_COUNT] = {100, 75, 50, 33};
+static const u8 sLabCostScalePercent[LAB_COST_COUNT] = {100, 75, 50, 25};
+
+// Rules "Damage": scales every damaging hit in stamina battles (never below 1).
+s32 BattleLab_ScaleDamage(s32 damage)
+{
+    if (!BattleLab_StaminaMode() || damage <= 0)
+        return damage;
+    damage = damage * sLabDamageScalePercent[gBattleLabRules.damageScale] / 100;
+    return damage > 0 ? damage : 1;
+}
+
+// Rules "Energy": multiplies both parties' max (and current) energy before the battle starts.
+void BattleLab_ScaleStartingEnergy(void)
+{
+    u32 i, tenths = sLabEnergyScaleTenths[gBattleLabRules.energyScale];
+    if (gBattleLabRules.combat != LAB_COMBAT_STAMINA || tenths == 10)
+        return;
+    for (i = 0; i < PARTY_SIZE * 2; i++)
+    {
+        struct Pokemon *mon = (i < PARTY_SIZE) ? &gPlayerParty[i] : &gEnemyParty[i - PARTY_SIZE];
+        u32 maxHp = GetMonData(mon, MON_DATA_MAX_HP), hp = GetMonData(mon, MON_DATA_HP);
+        if (maxHp == 0)
+            continue;
+        maxHp = maxHp * tenths / 10;
+        hp = hp * tenths / 10;
+        if (maxHp > 0xFFFF)
+            maxHp = 0xFFFF;
+        if (hp > maxHp)
+            hp = maxHp;
+        SetMonData(mon, MON_DATA_MAX_HP, &maxHp);
+        SetMonData(mon, MON_DATA_HP, &hp);
+    }
+}
 
 u32 BattleLab_BoostedCost(u32 battler, u32 move)
 {
     u32 cost = BattleLab_EnergyCost(move, gBattleMons[battler].maxHP);
+    if (cost != 0)
+    {
+        cost = cost * sLabCostScalePercent[gBattleLabRules.costScale] / 100;
+        if (cost == 0)
+            cost = 1;
+    }
     switch (sLabBoost[battler])
     {
     case LAB_BOOST_SPEED:
@@ -906,11 +995,26 @@ void BattleLab_ClearBoost(u32 battler)
 // Move menu in stamina battles: the PP box shows the boost and the energy cost, and the
 // player's energy bar previews what is left after paying it.
 // Stamina battles relabel the bar "EN" (energy): two 8x8 tiles in place of upstream's "HP".
+// Exhausted Pokémon show a red "EX" there instead: a badge that never hides a status condition
+// (while a status icon is shown, upstream draws it over this label, and the label comes back after).
 const u32 gBattleLabEnergyLabelGfx[] = INCBIN_U32("graphics/battle_interface/lab_energy_label.4bpp");
+const u32 gBattleLabExhaustedLabelGfx[] = INCBIN_U32("graphics/battle_interface/lab_exhausted_label.4bpp");
 
-const void *BattleLab_HealthbarLabelGfx(const void *hpLabel)
+const void *BattleLab_HealthbarLabelGfx(u32 battler, const void *hpLabel)
 {
-    return BattleLab_StaminaMode() ? (const void *)gBattleLabEnergyLabelGfx : hpLabel;
+    if (!BattleLab_StaminaMode())
+        return hpLabel;
+    return BattleLab_IsExhausted(battler) ? (const void *)gBattleLabExhaustedLabelGfx : (const void *)gBattleLabEnergyLabelGfx;
+}
+
+// Redraw the EN/EX label after energy changes (no-op while a status icon occupies it).
+static void LabRefreshEnergyLabel(u32 battler)
+{
+    u32 barSpriteId;
+    if (!BattleLab_StaminaMode() || gBattleMons[battler].status1 != 0 || gBattleMons[battler].hp == 0)
+        return;
+    barSpriteId = gSprites[gHealthboxSpriteIds[battler]].data[5];   // hMain_HealthBarSpriteId (battle_interface.c)
+    CpuCopy32(BattleLab_HealthbarLabelGfx(battler, NULL), (void *)(OBJ_VRAM0 + gSprites[barSpriteId].oam.tileNum * TILE_SIZE_4BPP), 64);
 }
 
 // The preview blinks: the bar alternates between now and after paying, so the part that
@@ -962,6 +1066,8 @@ void BattleLab_PayEnergy(u32 battler, u32 move)
     if (cost == 0 || hp <= 1)
         return;
     hp = (hp > cost) ? hp - cost : 1;   // own moves never faint the user (D023)
+    if (sLabBoost[battler] != LAB_BOOST_NONE)   // Boost: flash the attacker (Speed cyan, Power red, Both gold)
+        LabPulseSpritePalette(gBattlerSpriteIds[battler], sLabBoostFlashColor[sLabBoost[battler]]);
     DebugPrintf("LAB energy: %S pays %d for %S%s (%d -> %d)", GetSpeciesName(gBattleMons[battler].species),
                 cost, GetMoveName(move), sLabBoostLog[sLabBoost[battler]], gBattleMons[battler].hp, hp);
     gBattleMons[battler].hp = hp;
@@ -1075,6 +1181,7 @@ static void LabRegenEnergy(void)
             continue;
         hp = (hp + gain < maxHp) ? hp + gain : maxHp;
         gBattleMons[battler].hp = hp;
+        LabPulseSpritePalette(gHealthboxSpriteIds[battler], RGB(8, 31, 8));   // regen: green flash on the bar
         LabSyncEnergy(battler);
     }
     sLabProtectedThisTurn = 0;
@@ -1086,8 +1193,11 @@ void BattleLab_LogTurnEnd(void)
         return;
     if (BattleLab_StaminaMode())
     {
+        u32 battler;
         LabRegenEnergy();
         LabTimelineRoundEnd();
+        for (battler = 0; battler < gBattlersCount; battler++)
+            LabRefreshEnergyLabel(battler);   // damage may have tipped someone into Exhausted
     }
     DebugPrintf("LAB turn %d", gBattleResults.battleTurnCounter + 1);
     LabLogBattlers();
@@ -1166,7 +1276,6 @@ static void LabSanitiseRules(struct LabRules *r)
     if (r->terrain >= LAB_TERRAIN_COUNT) r->terrain = 0;
     if (r->ai >= LAB_AI_COUNT) r->ai = 0;
     r->fixedSeed = r->fixedSeed ? TRUE : FALSE;
-    if (r->combat >= LAB_COMBAT_COUNT) r->combat = LAB_COMBAT_CLASSIC;
 }
 
 static void LabLoadBuiltIn(struct LabScenarioRecord *rec)
@@ -2060,6 +2169,9 @@ static const u8 *const sLabRulesLabels[RULES_ROW_COUNT] =
 {
     [RULES_ROW_FORMAT]    = COMPOUND_STRING("Format"),
     [RULES_ROW_COMBAT]    = COMPOUND_STRING("Combat"),
+    [RULES_ROW_ENERGY]    = COMPOUND_STRING(" Energy"),
+    [RULES_ROW_DAMAGE]    = COMPOUND_STRING(" Damage"),
+    [RULES_ROW_COST]      = COMPOUND_STRING(" Cost"),
     [RULES_ROW_WEATHER]   = COMPOUND_STRING("Weather"),
     [RULES_ROW_TERRAIN]   = COMPOUND_STRING("Terrain"),
     [RULES_ROW_AI]        = COMPOUND_STRING("Foe AI"),
@@ -2085,6 +2197,10 @@ static const u8 *const sLabAiNames[LAB_AI_COUNT] =
     COMPOUND_STRING("Scenario"), COMPOUND_STRING("Smart"), COMPOUND_STRING("Random"),
 };
 
+static const u8 *const sLabEnergyScaleNames[LAB_ENERGY_COUNT] = {COMPOUND_STRING("x1"), COMPOUND_STRING("x1.5"), COMPOUND_STRING("x2"), COMPOUND_STRING("x3")};
+static const u8 *const sLabDamageScaleNames[LAB_DAMAGE_COUNT] = {COMPOUND_STRING("100%"), COMPOUND_STRING("75%"), COMPOUND_STRING("50%"), COMPOUND_STRING("33%")};
+static const u8 *const sLabCostScaleNames[LAB_COST_COUNT] = {COMPOUND_STRING("100%"), COMPOUND_STRING("75%"), COMPOUND_STRING("50%"), COMPOUND_STRING("25%")};
+
 static void BattleLab_DrawRules(void)
 {
     const struct LabRules *r = &gBattleLabRules;
@@ -2099,11 +2215,14 @@ static void BattleLab_DrawRules(void)
         label[0] = (row == sLabRulesRow) ? CHAR_RIGHT_ARROW : CHAR_SPACE;
         label[1] = EOS;
         StringAppend(label, sLabRulesLabels[row]);
-        AddTextPrinterParameterized3(WIN_MENU, FONT_NARROW, 0, row * 16 + 1, sTextColorNormal, TEXT_SKIP_DRAW, label);
+        AddTextPrinterParameterized3(WIN_MENU, FONT_NARROW, 0, row * 12, sTextColorNormal, TEXT_SKIP_DRAW, label);
         buf[0] = EOS;
         switch (row)
         {
         case RULES_ROW_COMBAT:    StringAppend(buf, r->combat == LAB_COMBAT_STAMINA ? COMPOUND_STRING("Stamina") : COMPOUND_STRING("Classic")); changed = r->combat != sLabCurrent.rules.combat; break;
+        case RULES_ROW_ENERGY:    StringAppend(buf, sLabEnergyScaleNames[r->energyScale]); changed = r->energyScale != sLabCurrent.rules.energyScale; break;
+        case RULES_ROW_DAMAGE:    StringAppend(buf, sLabDamageScaleNames[r->damageScale]); changed = r->damageScale != sLabCurrent.rules.damageScale; break;
+        case RULES_ROW_COST:      StringAppend(buf, sLabCostScaleNames[r->costScale]);     changed = r->costScale != sLabCurrent.rules.costScale; break;
         case RULES_ROW_FORMAT:    StringAppend(buf, sLabFormatNames[r->format]);   changed = r->format != sLabCurrent.rules.format; break;
         case RULES_ROW_WEATHER:   StringAppend(buf, sLabWeatherNames[r->weather]); changed = r->weather != sLabCurrent.rules.weather; break;
         case RULES_ROW_TERRAIN:   StringAppend(buf, sLabTerrainNames[r->terrain]); changed = r->terrain != sLabCurrent.rules.terrain; break;
@@ -2118,7 +2237,7 @@ static void BattleLab_DrawRules(void)
         }
         if (changed)
             StringAppend(buf, COMPOUND_STRING("!"));
-        AddTextPrinterParameterized3(WIN_MENU, FONT_NARROW, 50, row * 16 + 1, sTextColorNormal, TEXT_SKIP_DRAW, buf);
+        AddTextPrinterParameterized3(WIN_MENU, FONT_NARROW, 50, row * 12, sTextColorNormal, TEXT_SKIP_DRAW, buf);
     }
     CopyWindowToVram(WIN_MENU, COPYWIN_GFX);
     buf[0] = EOS;
@@ -2184,6 +2303,9 @@ static void BattleLab_HandleRulesInput(void)
     {
     case RULES_ROW_FORMAT:    r->format  = (r->format  + LAB_FORMAT_COUNT  + delta) % LAB_FORMAT_COUNT;  break;
     case RULES_ROW_COMBAT:    r->combat  = (r->combat  + LAB_COMBAT_COUNT  + delta) % LAB_COMBAT_COUNT;  break;
+    case RULES_ROW_ENERGY:    r->energyScale = (r->energyScale + LAB_ENERGY_COUNT + delta) % LAB_ENERGY_COUNT; break;
+    case RULES_ROW_DAMAGE:    r->damageScale = (r->damageScale + LAB_DAMAGE_COUNT + delta) % LAB_DAMAGE_COUNT; break;
+    case RULES_ROW_COST:      r->costScale   = (r->costScale   + LAB_COST_COUNT   + delta) % LAB_COST_COUNT;   break;
     case RULES_ROW_WEATHER:   r->weather = (r->weather + LAB_WEATHER_COUNT + delta) % LAB_WEATHER_COUNT; break;
     case RULES_ROW_TERRAIN:   r->terrain = (r->terrain + LAB_TERRAIN_COUNT + delta) % LAB_TERRAIN_COUNT; break;
     case RULES_ROW_AI:        r->ai      = (r->ai      + LAB_AI_COUNT      + delta) % LAB_AI_COUNT;      break;
@@ -2297,6 +2419,7 @@ static void Task_BattleLab_StartBattle(u8 taskId)
     SeedRng(sLabLastSeed);
     BattleLab_LogBattleStart();
     BattleLab_SetupScenarioParties();
+    BattleLab_ScaleStartingEnergy();
     sLabInBattleFlag = TRUE;
     sLabEndRequest = LAB_END_NONE;
     sLabProtectedThisTurn = 0;

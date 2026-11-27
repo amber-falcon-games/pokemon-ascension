@@ -118,6 +118,32 @@ The owner played LAB-011, LAB-012 and LAB-013.
   - There's no Exhausted indicator, and the slowdown isn't noticeable.
   - Boost needs a stronger visual signal.
 
+## Iteration 2 (owner direction, 2026-11-27)
+Owner decisions: keep refining the prototype (no go/no-go yet). Make battles longer with option c (more energy, less damage, cheaper moves).
+
+**Built on the branch:**
+- **Opening round.** At the start of a battle every Pokémon picks a move. The round runs in normal priority and Speed order, so the player can e.g. Protect against a faster foe. A Pokémon replacing a fainted one may act straight away. A Pokémon switched in by choice still joins half a step after "now".
+- **Exhausted is now Speed ×0.25** (was ×0.75). The energy bar's label turns from "EN" to a yellow **"EX"** badge. While a status icon is shown, upstream draws it over the label, so the badge never hides a status condition.
+- **Option c as Lab Rules rows.** Energy ×1/×1.5/×2/×3 (both parties), Damage 100/75/50/33% (every damaging hit) and Cost 100/75/50/25%.
+  - These are packed into the old combat byte, so the scenario format is unchanged; the tool accepts `"energy"`, `"damage"` and `"cost"` keys.
+  - LAB-011/012/013 now default to ×2 energy, 75% damage and 50% cost.
+- **Feedback effects:**
+  - Regen flashes the energy bar green.
+  - A boosted move flashes the attacker: Speed cyan, Power red, Both gold.
+  - The move-menu label reads "Cost 31", then "Spd+ 46", "Pow+ 46" or "All+ 62" as R cycles.
+- **Headless results:**
+  - LAB-013: Blissey now survives the opening Hammer Arm (580/660).
+  - LAB-012: lasted 28+ rounds, against 7 before.
+  - LAB-011: still short. Slaking's Giga Impact takes Ninjask from 272 to 62 energy, Ninjask becomes Exhausted, and at ×0.25 Speed it barely acts again.
+
+**Design findings for the owner:**
+1. **Free healing allows endless stalling.** In LAB-013 a Soft-Boiled loop ran for 168 rounds, because healing moves are free under D023. Healing probably needs a cost, or diminishing returns like Protect.
+2. **The Exhausted death spiral.** Damage can push you into Exhausted, and at ×0.25 Speed you then rarely act, so one big hit decides the fight. Options:
+   - keep it, as the intended "wear them down" tactic
+   - make Exhausted only come from spending your own energy
+   - use a softer slowdown (×0.5)
+3. The fading "+N" number on regen needs a small text-sprite helper. Moved to F018 together with the turn-order strip.
+
 ## Explicit exclusions
 - Final balance: F019.
 - The polished timeline UI: F018.
