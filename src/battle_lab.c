@@ -913,6 +913,7 @@ static void LabTimelineRoundEnd(void)
 // Pokémon and redraw that battler's bar and number at once. (The controller's HP update only
 // changes the stored data; the bar is otherwise redrawn only by damage animations.)
 static void LabRefreshEnergyLabel(u32 battler);
+static EWRAM_DATA bool8 sLabBadgeBlinkOff = FALSE;   // the EX badge blinks: off = show the normal label
 
 // A short colour pulse on one 16-colour sprite palette (about a quarter of a second):
 // green on the energy bar when it regenerates, the Boost colour on the attacker.
@@ -959,6 +960,13 @@ static void Task_LabExhaustedTint(u8 taskId)
         return;
     }
     (*frame)++;
+    if ((*frame & 31) == 0)   // the EX badge blinks: about half a second on, half off
+    {
+        sLabBadgeBlinkOff = (*frame >> 5) & 1;
+        for (battler = 0; battler < gBattlersCount; battler++)
+            if (BattleLab_IsExhausted(battler))
+                LabRefreshEnergyLabel(battler);
+    }
     coeff = 4 + ((*frame >> 3) & 3);   // 4..7, stepping every 8 frames
     if ((*frame >> 5) & 1)
         coeff = 11 - coeff;
@@ -1180,10 +1188,14 @@ const void *BattleLab_HealthbarLabelGfx(u32 battler, const void *hpLabel)
 static void LabRefreshEnergyLabel(u32 battler)
 {
     u32 barSpriteId;
+    const void *gfx;
     if (!BattleLab_StaminaMode() || gBattleMons[battler].status1 != 0 || gBattleMons[battler].hp == 0)
         return;
     barSpriteId = gSprites[gHealthboxSpriteIds[battler]].data[5];   // hMain_HealthBarSpriteId (battle_interface.c)
-    CpuCopy32(BattleLab_HealthbarLabelGfx(battler, NULL), (void *)(OBJ_VRAM0 + gSprites[barSpriteId].oam.tileNum * TILE_SIZE_4BPP), 64);
+    gfx = BattleLab_HealthbarLabelGfx(battler, NULL);
+    if (gfx == (const void *)gBattleLabExhaustedLabelGfx && sLabBadgeBlinkOff)
+        gfx = BattleLab_DualMode() ? (const void *)gHealthboxElementsGfxTable[1] : (const void *)gBattleLabEnergyLabelGfx;
+    CpuCopy32(gfx, (void *)(OBJ_VRAM0 + gSprites[barSpriteId].oam.tileNum * TILE_SIZE_4BPP), 64);
 }
 
 // The preview blinks: the bar alternates between now and after paying, so the part that
