@@ -911,6 +911,7 @@ bool32 BattleLab_EndTurnSkips(u32 state)
     case ENDTURN_SEND_OUT_REPLACEMENTS_3:
     case ENDTURN_SEND_OUT_REPLACEMENTS_4:
     case ENDTURN_SEND_OUT_REPLACEMENTS_5:
+    case ENDTURN_ROOST:   // Roost's Flying-type loss lasts one action, not until the next beat
     case ENDTURN_FORM_CHANGE:
     case ENDTURN_EJECT_PACK:
     case ENDTURN_ARENA_TURN_END:
@@ -935,6 +936,11 @@ bool32 BattleLab_TimelineBeat(void)
     return sLabBeat;
 }
 
+static u32 LabSpeed(u32 battler)
+{
+    return GetBattlerTotalSpeedStat(battler, GetBattlerAbility(battler), GetBattlerHoldEffect(battler));
+}
+
 // F018: predicted order of the next actions, assuming each takes a typical step (an ordinary
 // attack). Fills battlers[] (up to count) and returns how many were predicted.
 #define LAB_TYPICAL_WEIGHT 115
@@ -949,8 +955,14 @@ u32 BattleLab_PredictOrder(u8 *battlers, u32 count)
     {
         u32 best = MAX_BATTLERS_COUNT;
         for (b = 0; b < gBattlersCount; b++)
-            if (times[b] != 0xFFFFFFFF && (best == MAX_BATTLERS_COUNT || times[b] < times[best]))
+        {
+            if (times[b] == 0xFFFFFFFF)
+                continue;
+            // Ties (e.g. the opening round) go as the battle orders them: the faster first.
+            if (best == MAX_BATTLERS_COUNT || times[b] < times[best]
+             || (times[b] == times[best] && LabSpeed(b) > LabSpeed(best)))
                 best = b;
+        }
         if (best == MAX_BATTLERS_COUNT)
             break;
         battlers[n++] = best;

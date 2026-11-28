@@ -13,13 +13,14 @@ Turn the F017 spike's timeline into a dependable part of the overhaul, and make 
    - Opening round (D024): everyone acts, in classic priority and Speed order.
 2. **End-of-turn effects on beats (fixes a spike finding).**
    - Weather, Leftovers, poison and burn, Speed Boost, screens, Taunt and other timers no longer tick after every one-action round. They run once per **beat**: when the clock crosses a multiple of 1,000 (about one plain action at Speed 100).
-   - Steps that keep the battle going always run: turn order, replacements after fainting, form changes, Eject Pack and trainer slides.
+   - Steps that keep the battle going always run: turn order, replacements after fainting, form changes, Eject Pack and trainer slides. Roost's cleanup also always runs: its loss of the Flying type lasts one action.
    - Where several beats pass in one round, the effects run once (proposed; tune at the playtest).
 3. **Recharge waits for the battler's own action (fixes a spike shortcut).** After Hyper Beam or Giga Impact, the recharge turn is the battler's next action. Rounds it sits out no longer use it up.
 4. **Turn-order strip.**
    - At the top of the screen while choosing an action: "Next: Ninjask → Ninjask → Slaking → Ninjask".
    - The next four actions are predicted from the current clock, assuming an ordinary attack each (weight 115). A heavier or boosted move changes the real order, so it is a forecast.
    - In a mirror match the opponent's entries read "Foe Swampert".
+   - Equal times (the opening round) list the faster battler first, as the battle orders them.
 5. **Where it applies.** The Lab's Stamina and Dual-bars modes, as in the spike. The campaign switches to the overhaul together with F019, which productises energy, so the two land in the campaign at once.
 
 ## Explicit exclusions
