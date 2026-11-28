@@ -26,4 +26,7 @@
 #define ASCENSION_COMBAT        DISABLED_ON_RELEASE
 #endif
 
+// The contest data the overhaul reuses (F015 talent data, F019 energy) is not shown as ribbons.
+#define ASCENSION_CONTEST_FIELDS_REUSED (ASCENSION_MOVE_LIST || ASCENSION_COMBAT)
+
 #endif // GUARD_CONFIG_ASCENSION_H

@@ -1,4 +1,5 @@
 #include "global.h"
+#include "battle_lab.h"
 #include "reshow_battle_screen.h"
 #include "battle.h"
 #include "palette.h"
@@ -167,6 +168,7 @@ static void CB2_ReshowBattleScreenAfterMenu(void)
         ClearBattleBgCntBaseBlocks();
         BeginHardwarePaletteFade(0xFF, 0, 0x10, 0, 1);
         gPaletteFade.bufferTransferDisabled = 0;
+        BattleLab_OnBattleScreenReshown();   // Pokémon Ascension: energy bars after the sprite reset
         SetMainCallback2(BattleMainCB2);
         FillAroundBattleWindows();
         break;
@@ -250,6 +252,7 @@ static void CB2_ReshowBlankBattleScreenAfterMenu(void)
         ClearBattleBgCntBaseBlocks();
         BeginHardwarePaletteFade(0xFF, 0, 0x10, 0, 1);
         gPaletteFade.bufferTransferDisabled = 0;
+        BattleLab_OnBattleScreenReshown();   // Pokémon Ascension: energy bars after the sprite reset
         SetMainCallback2(BattleMainCB2);
         FillAroundBattleWindows();
         break;

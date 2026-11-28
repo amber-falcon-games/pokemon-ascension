@@ -4584,7 +4584,7 @@ static void CreateInGameTradePokemonInternal(u8 whichPlayerMon, u8 whichInGameTr
     SetMonData(pokemon, MON_DATA_OT_NAME, inGameTrade->otName);
     SetMonData(pokemon, MON_DATA_OT_GENDER, &inGameTrade->otGender);
     SetMonData(pokemon, MON_DATA_ABILITY_NUM, &inGameTrade->abilityNum);
-    if (!ASCENSION_MOVE_LIST)   // Pokémon Ascension (F015): the condition fields hold talent-tree data
+    if (!ASCENSION_CONTEST_FIELDS_REUSED)   // Pokémon Ascension (F015/F019): the condition fields hold talent and energy data
     {
         SetMonData(pokemon, MON_DATA_BEAUTY, &inGameTrade->conditions[1]);
         SetMonData(pokemon, MON_DATA_CUTE, &inGameTrade->conditions[2]);

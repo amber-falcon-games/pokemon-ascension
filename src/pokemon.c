@@ -1,5 +1,6 @@
 #include "global.h"
 #include "ascension_moves.h"
+#include "battle_lab.h"
 #include "malloc.h"
 #include "apprentice.h"
 #include "battle.h"
@@ -2217,6 +2218,10 @@ u32 GetBoxMonData3(struct BoxPokemon *boxMon, s32 field, u8 *data)
         case MON_DATA_POKEBALL:
             retVal = GetSubstruct0(boxMon)->pokeball;
             break;
+        case MON_DATA_ASC_FATIGUE:   // Smart and Tough ribbon tiers + Artist ribbon (contests are cut)
+            retVal = GetSubstruct3(boxMon)->smartRibbon | (GetSubstruct3(boxMon)->toughRibbon << 3)
+                   | (GetSubstruct3(boxMon)->artistRibbon << 6);
+            break;
         case MON_DATA_TALENT_CHOICES:
             retVal = GetSubstruct0(boxMon)->talentChoicesA
                    | (GetSubstruct0(boxMon)->talentChoicesB << 6)
@@ -2344,15 +2349,20 @@ u32 GetBoxMonData3(struct BoxPokemon *boxMon, s32 field, u8 *data)
             {
                 struct PokemonSubstruct3 *substruct3 = GetSubstruct3(boxMon);
                 retVal = 0;
-                retVal += substruct3->coolRibbon;
-                retVal += substruct3->beautyRibbon;
-                retVal += substruct3->cuteRibbon;
-                retVal += substruct3->smartRibbon;
-                retVal += substruct3->toughRibbon;
+                // Pokémon Ascension: with the overhaul on, the contest ribbon tiers and the Artist
+                // ribbon hold talent data (F015) and energy (F019): they are not ribbons.
+                if (!ASCENSION_CONTEST_FIELDS_REUSED)
+                {
+                    retVal += substruct3->coolRibbon;
+                    retVal += substruct3->beautyRibbon;
+                    retVal += substruct3->cuteRibbon;
+                    retVal += substruct3->smartRibbon;
+                    retVal += substruct3->toughRibbon;
+                    retVal += substruct3->artistRibbon;
+                }
                 retVal += substruct3->championRibbon;
                 retVal += substruct3->winningRibbon;
                 retVal += substruct3->victoryRibbon;
-                retVal += substruct3->artistRibbon;
                 retVal += substruct3->effortRibbon;
                 retVal += substruct3->marineRibbon;
                 retVal += substruct3->landRibbon;
@@ -2368,14 +2378,8 @@ u32 GetBoxMonData3(struct BoxPokemon *boxMon, s32 field, u8 *data)
             {
                 struct PokemonSubstruct3 *substruct3 = GetSubstruct3(boxMon);
                 retVal = substruct3->championRibbon
-                       | (substruct3->coolRibbon << 1)
-                       | (substruct3->beautyRibbon << 4)
-                       | (substruct3->cuteRibbon << 7)
-                       | (substruct3->smartRibbon << 10)
-                       | (substruct3->toughRibbon << 13)
                        | (substruct3->winningRibbon << 16)
                        | (substruct3->victoryRibbon << 17)
-                       | (substruct3->artistRibbon << 18)
                        | (substruct3->effortRibbon << 19)
                        | (substruct3->marineRibbon << 20)
                        | (substruct3->landRibbon << 21)
@@ -2384,6 +2388,13 @@ u32 GetBoxMonData3(struct BoxPokemon *boxMon, s32 field, u8 *data)
                        | (substruct3->nationalRibbon << 24)
                        | (substruct3->earthRibbon << 25)
                        | (substruct3->worldRibbon << 26);
+                if (!ASCENSION_CONTEST_FIELDS_REUSED)   // see MON_DATA_RIBBON_COUNT
+                    retVal |= (substruct3->coolRibbon << 1)
+                            | (substruct3->beautyRibbon << 4)
+                            | (substruct3->cuteRibbon << 7)
+                            | (substruct3->smartRibbon << 10)
+                            | (substruct3->toughRibbon << 13)
+                            | (substruct3->artistRibbon << 18);
             }
             break;
         case MON_DATA_HYPER_TRAINED_HP:
@@ -2738,6 +2749,14 @@ void SetBoxMonData(struct BoxPokemon *boxMon, s32 field, const void *dataArg)
         case MON_DATA_POKEBALL:
             SET8(GetSubstruct0(boxMon)->pokeball);
             break;
+        case MON_DATA_ASC_FATIGUE:
+        {
+            u32 fatigue = data[0] > 100 ? 100 : data[0];
+            GetSubstruct3(boxMon)->smartRibbon = fatigue & 7;
+            GetSubstruct3(boxMon)->toughRibbon = (fatigue >> 3) & 7;
+            GetSubstruct3(boxMon)->artistRibbon = (fatigue >> 6) & 1;
+            break;
+        }
         case MON_DATA_TALENT_CHOICES:
         {
             u32 choices = data[0] | (data[1] << 8);
@@ -6545,6 +6564,7 @@ void HealPokemon(struct Pokemon *mon)
     SetMonData(mon, MON_DATA_STATUS, &data);
 
     MonRestorePP(mon);
+    BattleLab_RestoreAllEnergy(mon);   // Pokémon Ascension F019: full heals restore energy too
 }
 
 void HealBoxPokemon(struct BoxPokemon *boxMon)

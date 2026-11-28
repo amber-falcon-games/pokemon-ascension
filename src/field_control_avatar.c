@@ -1,4 +1,5 @@
 #include "global.h"
+#include "battle_lab.h"
 #include "battle_setup.h"
 #include "bike.h"
 #include "coord_event_weather.h"
@@ -753,6 +754,7 @@ static bool8 TryStartStepCountScript(u16 metatileBehavior)
     IncrementRematchStepCounter();
     IncrementDaycareSteps();
     UpdateFriendshipStepCounter();
+    BattleLab_OnPlayerStep();   // Pokémon Ascension F019: walking recovers energy
     UpdateFarawayIslandStepCounter();
     UpdateFollowerStepCounter();
 

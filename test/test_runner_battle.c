@@ -2390,6 +2390,7 @@ void ClearFlagAfterTest(void)
 {
     gAscensionMoveListTestOverride = FALSE;   // Pokémon Ascension: tests that turn the move library on
     gAscensionCombatTestOverride = FALSE;     // ... or the overhaul's combat
+    BattleLab_ResetForTest();
 
     if (DATA.flagId != 0)
     {

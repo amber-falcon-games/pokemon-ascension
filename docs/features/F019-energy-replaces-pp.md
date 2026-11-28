@@ -1,5 +1,5 @@
 # F019 — Energy replaces PP: costs, regeneration, recovery (the overhaul in the campaign)
-Status: SPEC (building)
+Status: BUILDING (steps 1–2 done: campaign combat mode, energy persistence)
 Dependencies: F018 (timeline), F017 spike (Dual bars, D025)
 Owner decision IDs: D016, D023, D024, D025, D026
 Branch / commit: `feature/F019-energy` (stacked on `feature/F018-timeline`)
@@ -63,4 +63,19 @@ Combined overhaul playtest (D026):
 Turn `ASCENSION_COMBAT` off, or revert the branch.
 
 ## Evidence and acceptance
-(to be filled in)
+- **Step 1** (280f12ee2e): campaign battles use Dual bars on the timeline.
+  - Headless: Gym 1 checkpoint, then the debug menu's Trainers → Try Battle (Aroma Lady Rose). The battle shows the Dual-bars HUD on both sides and "The opposing Roselia's stamina was sapped by the blow!".
+- **Step 2** (this commit): energy persists.
+  - `MON_DATA_ASC_FATIGUE` stores it.
+  - Saved every round and at battle end; fainted Pokémon are saved at 20%.
+  - Walking: 1% per 16 steps, up to the health cap.
+  - Full heals (`HealPokemon`) restore it.
+  - The reused contest fields no longer count as ribbons. This fixes an F015 side effect too: talent data showed as ribbons.
+- **Tests:** `test/ascension/energy.c` (2) and `test/ascension/energy_battle.c` (1, a real battle with the overhaul on).
+  - Test battles carry the recorded flags, so campaign mode no longer excludes "recorded" battles. Recorded Battle is cut (D011), and link battles are excluded by the link flag.
+  - The test teardown resets campaign state.
+- **Fixes found along the way:**
+  - **Energy bars after the party menu or bag.** Returning there rebuilds the battle screen and resets every sprite. The bars now rebuild with it; before, they could float in pieces after a switch.
+  - **Lab battles.** They read their rules while setting up, before the Lab battle flag is set, so the active-rules check now picks campaign rules only during a campaign battle. A broken build showed every Lab Pokémon starting at 0 energy.
+  - **AI time.** The combat mode is cached in one byte per battle. The mode checks run in the damage calculation, which the AI uses heavily. The doubles AI thinking-time test measured 31 frames (F018: 29) before the cache, and passes at or under its limit of 30 after it.
+- **Not yet:** PP items as energy items, the in-battle Leppa Berry, and the PP display in the summary screen.

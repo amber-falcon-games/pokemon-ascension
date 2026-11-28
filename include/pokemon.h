@@ -73,6 +73,7 @@ enum MonData {
     MON_DATA_MET_GAME,
     MON_DATA_POKEBALL,
     MON_DATA_TALENT_CHOICES,   // Pokémon Ascension (F015): 2 bits per talent-tree branch (8 branches)
+    MON_DATA_ASC_FATIGUE,      // Pokémon Ascension (F019): energy spent, % of max (0 = full), kept between battles
     MON_DATA_HP_IV,
     MON_DATA_ATK_IV,
     MON_DATA_DEF_IV,
