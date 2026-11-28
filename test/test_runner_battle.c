@@ -1,6 +1,7 @@
 #include "global.h"
 #include "battle.h"
 #include "ascension_moves.h"
+#include "battle_lab.h"
 #include "battle_ai_util.h"
 #include "battle_anim.h"
 #include "battle_controllers.h"
