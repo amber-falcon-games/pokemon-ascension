@@ -116,7 +116,12 @@ void BattleLab_TrimToWildOpponent(void);
 // BattleLab_ShouldAutoOpen: the ROM carries injected scenarios asking to open the Lab (F011).
 #if ASCENSION_BATTLE_LAB
 bool32 BattleLab_IsLabBattle(void);
-bool32 BattleLab_TalentMoves(void);                   // F015: a Lab battle whose rules use talent-tree moves
+bool32 BattleLab_TalentMoves(void);
+bool32 BattleLab_EndTurnSkips(u32 state);              // F018: no new timeline beat, skip this end-of-turn step
+bool32 BattleLab_TimelineBeat(void);
+bool32 BattleLab_SatOutLastRound(u32 battler);       // F018: timeline round where this battler did not act
+u32 BattleLab_PredictOrder(u8 *battlers, u32 count);   // F018: who acts next (timeline battles)
+void BattleLab_DrawTimelineStrip(void);                 // F018: "Next: A > B > ..." at the top of the action menu                   // F015: a Lab battle whose rules use talent-tree moves
 bool32 BattleLab_StaminaMode(void);                   // F017: a Lab battle with energy (Stamina or Dual)
 bool32 BattleLab_DualMode(void);                      // ... with separate health and energy bars
 bool32 BattleLab_DrawEnergyBar(u32 battler, u32 healthboxSpriteId);   // Dual: the player's EXP bar shows energy
@@ -166,6 +171,11 @@ static inline void BattleLab_AiTimerStart(void) {}
 static inline void BattleLab_AiTimerStop(u32 battler) {}
 static inline bool32 BattleLab_IsLabBattle(void) { return FALSE; }
 static inline bool32 BattleLab_TalentMoves(void) { return FALSE; }
+static inline bool32 BattleLab_EndTurnSkips(u32 state) { return FALSE; }
+static inline bool32 BattleLab_TimelineBeat(void) { return FALSE; }
+static inline bool32 BattleLab_SatOutLastRound(u32 battler) { return FALSE; }
+static inline u32 BattleLab_PredictOrder(u8 *battlers, u32 count) { return 0; }
+static inline void BattleLab_DrawTimelineStrip(void) {}
 static inline bool32 BattleLab_ShouldAutoOpen(void) { return FALSE; }
 static inline void BattleLab_LogTurnEnd(void) {}
 static inline void BattleLab_LogBattleEnd(void) {}

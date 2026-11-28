@@ -4772,7 +4772,8 @@ static void TurnValuesCleanUp(bool32 endTurn)
             if (gBattleStruct->battlerState[i].isFirstTurn)
                 gBattleStruct->battlerState[i].isFirstTurn--;
 
-            if (gBattleMons[i].volatiles.rechargeTimer)
+            // Pokémon Ascension F018: on the timeline a recharge waits for the battler's next own action.
+            if (gBattleMons[i].volatiles.rechargeTimer && !BattleLab_SatOutLastRound(i))
                 gBattleMons[i].volatiles.rechargeTimer--;
 
             gBattleStruct->battlerState[i].canPickupItem = FALSE;
