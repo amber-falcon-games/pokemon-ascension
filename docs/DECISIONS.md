@@ -69,4 +69,8 @@ Decided:
 To be raised at F015 (not decided): how to recover save space for an expanded move library — see SAVE_COMPATIBILITY.md options S1–S5.
 
 Open: timeline wait/active, energy/cooldown formulas, reaction ordering, move tree replacement/retention, type immunity override rules, XP timing, save migration and other GAME_DESIGN.md items. Assign numbered decision IDs as needed, recording date, options, recommendation, owner response and implications. No presumed approval.
-
+- D028 (2026-11-28): F020 queueing (owner answers).
+  1. **Queue length: up to 2.** You can line up this action and the next; each runs when your Pokémon's turn comes, without the menu.
+  2. **Automatic cancel** (back to the menu) when: the target fainted or left; your Pokémon became Exhausted; it lost 25% or more of its health since you queued; or it got a status condition.
+  3. **Manual intervention: B clears the queue** while actions resolve. You choose again at your Pokémon's next turn; no jump on the timeline (reacting out of turn is F022).
+  4. **Cancelling is free.** Energy is paid only when an action runs.

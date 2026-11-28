@@ -947,6 +947,11 @@ void HandleInputChooseMove(enum BattlerId battler)
         MoveSelectionDisplayPPNumber(battler);
         PlaySE(SE_SELECT);
     }
+    else if (JOY_NEW(SELECT_BUTTON) && BattleLab_StaminaMode())   // Pokémon Ascension F020: queue as the follow-up (D028)
+    {
+        PlaySE(BattleLab_QueueToggle(battler, gMoveSelectionCursor[battler]) ? SE_BALL_TRAY_ENTER : SE_BALL_TRAY_EXIT);
+        MoveSelectionDisplayPPNumber(battler);
+    }
     else if (JOY_NEW(START_BUTTON))
     {
         if (gBattleStruct->gimmick.usableGimmick[battler] != GIMMICK_NONE

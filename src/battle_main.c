@@ -3797,6 +3797,7 @@ enum
 static void HandleTurnActionSelectionState(void)
 {
     s32 i;
+    u32 queuedSlot, queuedTarget;   // Pokémon Ascension F020
 
     gBattleCommunication[ACTIONS_CONFIRMED_COUNT] = 0;
     for (enum BattlerId battlerIndex = 0; battlerIndex < gBattlersCount; battlerIndex++)
@@ -3842,6 +3843,14 @@ static void HandleTurnActionSelectionState(void)
                         || gBattleMons[battler].volatiles.rechargeTimer > 0)
                     {
                         gChosenActionByBattler[battler] = B_ACTION_USE_MOVE;
+                        gBattleCommunication[battler] = STATE_WAIT_ACTION_CONFIRMED_STANDBY;
+                    }
+                    else if (BattleLab_TakeQueuedMove(battler, &queuedSlot, &queuedTarget))   // Pokémon Ascension F020: queued follow-up
+                    {
+                        gChosenActionByBattler[battler] = B_ACTION_USE_MOVE;
+                        gBattleStruct->chosenMovePositions[battler] = queuedSlot;
+                        gChosenMoveByBattler[battler] = gBattleMons[battler].moves[queuedSlot];
+                        gBattleStruct->moveTarget[battler] = queuedTarget;
                         gBattleCommunication[battler] = STATE_WAIT_ACTION_CONFIRMED_STANDBY;
                     }
                     else if (WILD_DOUBLE_BATTLE
@@ -4136,6 +4145,7 @@ static void HandleTurnActionSelectionState(void)
                             gBattleStruct->chosenMovePositions[battler] = gBattleResources->bufferB[battler][2] & ~RET_GIMMICK;
                             gChosenMoveByBattler[battler] = GetBattlerChosenMove(battler);
                             gBattleStruct->moveTarget[battler] = gBattleResources->bufferB[battler][3];
+                            BattleLab_QueueArm(battler);   // Pokémon Ascension F020: a queued follow-up is now next
                             if (IsBattleMoveStatus(gChosenMoveByBattler[battler]) && GetBattlerAbility(battler) == ABILITY_MYCELIUM_MIGHT)
                                 gProtectStructs[battler].myceliumMight = TRUE;
                             if (GetBattlerHoldEffect(battler) == HOLD_EFFECT_LAGGING_TAIL)
