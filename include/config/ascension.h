@@ -17,4 +17,13 @@
 #define ASCENSION_MOVE_LIST     DISABLED_ON_RELEASE
 #endif
 
+// Combat overhaul in the campaign (F019): every eligible campaign battle uses Dual bars (health and
+// energy) on the timeline. Off in release builds until the overhaul ships; off in the upstream
+// test build, where tests turn it on at run time with gAscensionCombatTestOverride.
+#if TESTING
+#define ASCENSION_COMBAT        (gAscensionCombatTestOverride)
+#else
+#define ASCENSION_COMBAT        DISABLED_ON_RELEASE
+#endif
+
 #endif // GUARD_CONFIG_ASCENSION_H

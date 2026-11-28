@@ -116,6 +116,10 @@ void BattleLab_TrimToWildOpponent(void);
 // BattleLab_ShouldAutoOpen: the ROM carries injected scenarios asking to open the Lab (F011).
 #if ASCENSION_BATTLE_LAB
 bool32 BattleLab_IsLabBattle(void);
+// F019: campaign battles in the overhaul's combat mode (ASCENSION_COMBAT).
+void BattleLab_CampaignBattleInit(void);    // battle init, after gBattleTypeFlags are set: decides the mode
+void BattleLab_CampaignBattleStart(void);   // battle intro, once both parties exist: fills energy
+bool32 BattleLab_CampaignBattle(void);
 bool32 BattleLab_TalentMoves(void);
 bool32 BattleLab_TallHealthboxes(void);               // Dual bars, singles: energy bar inside a taller healthbox
 bool32 BattleLab_EndTurnSkips(u32 state);              // F018: no new timeline beat, skip this end-of-turn step
@@ -171,6 +175,9 @@ static inline const u8 *BattleLab_UsedMoveText(u32 attacker, const u8 *defaultTe
 static inline void BattleLab_AiTimerStart(void) {}
 static inline void BattleLab_AiTimerStop(u32 battler) {}
 static inline bool32 BattleLab_IsLabBattle(void) { return FALSE; }
+static inline void BattleLab_CampaignBattleInit(void) {}
+static inline void BattleLab_CampaignBattleStart(void) {}
+static inline bool32 BattleLab_CampaignBattle(void) { return FALSE; }
 static inline bool32 BattleLab_TalentMoves(void) { return FALSE; }
 static inline bool32 BattleLab_TallHealthboxes(void) { return FALSE; }
 static inline bool32 BattleLab_EndTurnSkips(u32 state) { return FALSE; }
@@ -221,5 +228,9 @@ bool32 BattleLab_RequestEnd(bool32 restart);   // from the in-battle debug menu;
 u32 BattleLab_ResultFromOutcome(u32 outcome, bool32 quit, bool32 restart);
 const u8 *BattleLab_ResultName(u32 result);
 u32 BattleLab_TurnsPlayed(u32 battleTurnCounter);
+
+#if TESTING
+extern bool8 gAscensionCombatTestOverride;
+#endif
 
 #endif // GUARD_BATTLE_LAB_H

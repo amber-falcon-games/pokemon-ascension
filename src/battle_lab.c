@@ -722,9 +722,28 @@ static EWRAM_DATA bool8 sLabHasLastSeed = FALSE;
 // Spike numbers, tuned in the Lab: damaging move ~ power/6 % of max, status 5 %, Protect-type
 // and recovery moves free. A Pokémon's own move never takes it below 1.
 
+// F019: campaign battles use the overhaul's rules when ASCENSION_COMBAT is on (Dual bars; damage
+// 50% in trainer battles, 75% in wild ones; energy x1; costs 100%). Proposed defaults, tuned later.
+#if TESTING
+EWRAM_DATA bool8 gAscensionCombatTestOverride = FALSE;
+#endif
+static EWRAM_DATA bool8 sAscCampaignBattle = FALSE;
+static EWRAM_DATA struct LabRules sCampaignRules = {0};
+
+static const struct LabRules *LabActiveRules(void)
+{
+    return sLabInBattleFlag ? &gBattleLabRules : &sCampaignRules;
+}
+
+bool32 BattleLab_CampaignBattle(void)
+{
+    return sAscCampaignBattle;
+}
+
 bool32 BattleLab_StaminaMode(void)
 {
-    return sLabInBattleFlag && (gBattleLabRules.combat == LAB_COMBAT_STAMINA || gBattleLabRules.combat == LAB_COMBAT_DUAL);
+    const struct LabRules *r = LabActiveRules();
+    return (sLabInBattleFlag || sAscCampaignBattle) && (r->combat == LAB_COMBAT_STAMINA || r->combat == LAB_COMBAT_DUAL);
 }
 
 // Dual (owner idea, 2026-11-27): health and energy are separate bars. Damage takes health
@@ -733,7 +752,7 @@ bool32 BattleLab_StaminaMode(void)
 // Healing costs energy and restores health. Energy is kept per party Pokémon for the battle.
 bool32 BattleLab_DualMode(void)
 {
-    return sLabInBattleFlag && gBattleLabRules.combat == LAB_COMBAT_DUAL;
+    return (sLabInBattleFlag || sAscCampaignBattle) && LabActiveRules()->combat == LAB_COMBAT_DUAL;
 }
 
 // Dual bars in a singles battle: healthboxes 8 px taller with the energy bar inside them.
@@ -1304,15 +1323,15 @@ s32 BattleLab_ScaleDamage(s32 damage)
 {
     if (!BattleLab_StaminaMode() || damage <= 0)
         return damage;
-    damage = damage * sLabDamageScalePercent[gBattleLabRules.damageScale] / 100;
+    damage = damage * sLabDamageScalePercent[LabActiveRules()->damageScale] / 100;
     return damage > 0 ? damage : 1;
 }
 
 // Rules "Energy": multiplies both parties' max (and current) energy before the battle starts.
 void BattleLab_ScaleStartingEnergy(void)
 {
-    u32 i, tenths = sLabEnergyScaleTenths[gBattleLabRules.energyScale];
-    if (gBattleLabRules.combat == LAB_COMBAT_DUAL)
+    u32 i, tenths = sLabEnergyScaleTenths[LabActiveRules()->energyScale];
+    if (LabActiveRules()->combat == LAB_COMBAT_DUAL)
     {
         // Max energy = max HP (species, level) x the Energy rule; everyone starts full.
         for (i = 0; i < PARTY_SIZE * 2; i++)
@@ -1324,7 +1343,7 @@ void BattleLab_ScaleStartingEnergy(void)
         }
         return;
     }
-    if (gBattleLabRules.combat != LAB_COMBAT_STAMINA || tenths == 10)
+    if (LabActiveRules()->combat != LAB_COMBAT_STAMINA || tenths == 10)
         return;
     for (i = 0; i < PARTY_SIZE * 2; i++)
     {
@@ -1350,7 +1369,7 @@ u32 BattleLab_BoostedCost(u32 battler, u32 move)
         cost = LabEnergyMax(battler) / 5;   // Dual: healing costs 20% of max energy (restores health)
     if (cost != 0)
     {
-        cost = cost * sLabCostScalePercent[gBattleLabRules.costScale] / 100;
+        cost = cost * sLabCostScalePercent[LabActiveRules()->costScale] / 100;
         if (cost == 0)
             cost = 1;
     }
@@ -1840,7 +1859,7 @@ static void LabBenchRegen(void)
 
 void BattleLab_LogTurnEnd(void)
 {
-    if (!sLabInBattleFlag)
+    if (!sLabInBattleFlag && !sAscCampaignBattle)
         return;
     if (BattleLab_StaminaMode())
     {
@@ -1857,6 +1876,8 @@ void BattleLab_LogTurnEnd(void)
                 LabDrawEnergyBarValue(battler, *LabEnergyPtr(battler));   // and moved the health cap
         }
     }
+    if (!sLabInBattleFlag)
+        return;
     DebugPrintf("LAB turn %d", gBattleResults.battleTurnCounter + 1);
     LabLogBattlers();
 }
@@ -1866,6 +1887,11 @@ void BattleLab_LogTurnEnd(void)
 // leaves before the turn-end hook.
 void BattleLab_LogBattleEnd(void)
 {
+    if (sAscCampaignBattle)
+    {
+        sAscCampaignBattle = FALSE;   // F019: the campaign battle is over
+        return;
+    }
     if (!sLabInBattleFlag)
         return;
     if (sLabAiDecisions)
@@ -3069,25 +3095,10 @@ static void Task_BattleLab_Input(u8 taskId)
     }
 }
 
-static void Task_BattleLab_StartBattle(u8 taskId)
+
+// Per-battle state of the stamina rules (timeline, energy bars, messages), for Lab and campaign battles.
+static void LabResetBattleState(void)
 {
-    const struct Trainer *opponent = &sLabTrainers[DIFFICULTY_NORMAL][LAB_TRAINER_001_OPPONENT];
-    bool32 wild = (gBattleLabRules.format == LAB_FORMAT_WILD_SINGLE);
-
-    if (gPaletteFade.active)
-        return;
-
-    // A fixed seed covers building the parties too (personality: gender, etc.), so the
-    // whole run replays, not just the battle.
-    // Every Lab battle runs from a known seed (F012): the fixed one, or a fresh one that is
-    // remembered so the battle can be replayed ("Use last seed" in Rules).
-    sLabLastSeed = gBattleLabRules.fixedSeed ? gBattleLabRules.seed : (Random() & 0xFFFF);
-    sLabHasLastSeed = TRUE;
-    SeedRng(sLabLastSeed);
-    BattleLab_LogBattleStart();
-    BattleLab_SetupScenarioParties();
-    BattleLab_ScaleStartingEnergy();
-    sLabInBattleFlag = TRUE;
     sLabEndRequest = LAB_END_NONE;
     sLabProtectedThisTurn = 0;
     sLabAiTicksTotal = 0;
@@ -3108,6 +3119,53 @@ static void Task_BattleLab_StartBattle(u8 taskId)
     sLabRoundPlanned = FALSE;
     sLabTimelineStarted = FALSE;
     memset(sLabBoost, 0, sizeof(sLabBoost));
+}
+
+// F019: decided at battle init (healthbox art depends on it). Link, Frontier, Safari, recorded and
+// other special battles stay classic.
+void BattleLab_CampaignBattleInit(void)
+{
+    sAscCampaignBattle = FALSE;
+    if (sLabInBattleFlag || !ASCENSION_COMBAT)
+        return;
+    if (gBattleTypeFlags & (BATTLE_TYPE_LINK | BATTLE_TYPE_RECORDED | BATTLE_TYPE_SAFARI | BATTLE_TYPE_FRONTIER
+                          | BATTLE_TYPE_EREADER_TRAINER | BATTLE_TYPE_CATCH_TUTORIAL | BATTLE_TYPE_POKEDUDE | BATTLE_TYPE_SECRET_BASE))
+        return;
+    memset(&sCampaignRules, 0, sizeof(sCampaignRules));
+    sCampaignRules.combat = LAB_COMBAT_DUAL;
+    sCampaignRules.energyScale = 0;                                           // x1
+    sCampaignRules.damageScale = (gBattleTypeFlags & BATTLE_TYPE_TRAINER) ? 2 : 1;   // 50% trainers, 75% wild
+    sCampaignRules.costScale = 0;                                             // 100%
+    LabResetBattleState();
+    sAscCampaignBattle = TRUE;
+}
+
+void BattleLab_CampaignBattleStart(void)
+{
+    if (sAscCampaignBattle)
+        BattleLab_ScaleStartingEnergy();
+}
+
+static void Task_BattleLab_StartBattle(u8 taskId)
+{
+    const struct Trainer *opponent = &sLabTrainers[DIFFICULTY_NORMAL][LAB_TRAINER_001_OPPONENT];
+    bool32 wild = (gBattleLabRules.format == LAB_FORMAT_WILD_SINGLE);
+
+    if (gPaletteFade.active)
+        return;
+
+    // A fixed seed covers building the parties too (personality: gender, etc.), so the
+    // whole run replays, not just the battle.
+    // Every Lab battle runs from a known seed (F012): the fixed one, or a fresh one that is
+    // remembered so the battle can be replayed ("Use last seed" in Rules).
+    sLabLastSeed = gBattleLabRules.fixedSeed ? gBattleLabRules.seed : (Random() & 0xFFFF);
+    sLabHasLastSeed = TRUE;
+    SeedRng(sLabLastSeed);
+    BattleLab_LogBattleStart();
+    BattleLab_SetupScenarioParties();
+    BattleLab_ScaleStartingEnergy();
+    sLabInBattleFlag = TRUE;
+    LabResetBattleState();
     gIsDebugBattle = TRUE;   // upstream then keeps the Lab's prebuilt enemy party (battle_main.c)
     gDebugAIFlags = BattleLab_OpponentAiFlags();
     if (wild)
