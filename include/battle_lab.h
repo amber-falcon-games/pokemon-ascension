@@ -123,6 +123,11 @@ bool32 BattleLab_CampaignBattle(void);
 void BattleLab_OnBattleScreenReshown(void);           // after the battle screen is rebuilt
 void BattleLab_OnPlayerStep(void);                   // walking recovers energy
 void BattleLab_RestoreAllEnergy(struct Pokemon *mon);  // full heals
+// PP items restore energy (F019). UseEnergyItem: apply = FALSE only checks it would do something.
+u32 BattleLab_EnergyItemPercent(u32 item);
+u32 BattleLab_CampaignMoveCost(u32 move, u32 maxEnergy);   // energy cost shown outside battle
+bool32 BattleLab_EnergyItemsActive(void);
+bool32 BattleLab_UseEnergyItem(struct Pokemon *mon, u32 item, bool32 apply);
 bool32 BattleLab_TalentMoves(void);
 bool32 BattleLab_TallHealthboxes(void);               // Dual bars, singles: energy bar inside a taller healthbox
 bool32 BattleLab_EndTurnSkips(u32 state);              // F018: no new timeline beat, skip this end-of-turn step
@@ -184,6 +189,10 @@ static inline bool32 BattleLab_CampaignBattle(void) { return FALSE; }
 static inline void BattleLab_OnBattleScreenReshown(void) {}
 static inline void BattleLab_OnPlayerStep(void) {}
 static inline void BattleLab_RestoreAllEnergy(struct Pokemon *mon) {}
+static inline u32 BattleLab_EnergyItemPercent(u32 item) { return 0; }
+static inline u32 BattleLab_CampaignMoveCost(u32 move, u32 maxEnergy) { return 0; }
+static inline bool32 BattleLab_EnergyItemsActive(void) { return FALSE; }
+static inline bool32 BattleLab_UseEnergyItem(struct Pokemon *mon, u32 item, bool32 apply) { return FALSE; }
 static inline bool32 BattleLab_TalentMoves(void) { return FALSE; }
 static inline bool32 BattleLab_TallHealthboxes(void) { return FALSE; }
 static inline bool32 BattleLab_EndTurnSkips(u32 state) { return FALSE; }

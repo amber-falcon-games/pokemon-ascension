@@ -730,6 +730,7 @@ enum StringID
     STRINGID_ASCTALENTGREW,       // Pokémon Ascension F015: level-up growth along a talent branch
     STRINGID_ASCTALENTBRANCHES,
     STRINGID_ASCTALENTTAKEOPTION,
+    STRINGID_ASCITEMRESTOREDENERGY,   // F019: PP items restore energy
     STRINGID_COUNT
 };
 

@@ -621,6 +621,7 @@ const u8 *const gBattleStringsTable[STRINGID_COUNT] =
     [STRINGID_ASCTALENTGREW]                        = COMPOUND_STRING("{B_BUFF1}'s {B_BUFF3} grew into {B_BUFF2}!{WAIT_SE}\p"),
     [STRINGID_ASCTALENTBRANCHES]                    = COMPOUND_STRING("{B_BUFF1}'s talent can grow in more than one way!\p"),
     [STRINGID_ASCTALENTTAKEOPTION]                  = COMPOUND_STRING("Grow into {B_BUFF2}?"),
+    [STRINGID_ASCITEMRESTOREDENERGY]                = COMPOUND_STRING("{B_BUFF1}'s energy was restored!"),
     [STRINGID_TOOEXHAUSTEDTOUSE]                    = COMPOUND_STRING("{B_ATK_NAME_WITH_PREFIX} is too exhausted to use {B_CURRENT_MOVE}!\p"),
 #endif
     [STRINGID_GRAVITYPREVENTSUSAGE]                 = COMPOUND_STRING("{B_ATK_NAME_WITH_PREFIX} can't use {B_CURRENT_MOVE} because of gravity!\p"),

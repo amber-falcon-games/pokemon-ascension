@@ -168,6 +168,12 @@ BattleScript_ItemRestorePP::
 	waitmessage B_WAIT_TIME_LONG
 	end
 
+@ Pokémon Ascension F019: PP items restore energy in energy battles (BS_ItemRestorePP).
+BattleScript_AscItemRestoredEnergy::
+	printstring STRINGID_ASCITEMRESTOREDENERGY
+	waitmessage B_WAIT_TIME_LONG
+	end
+
 BattleScript_BallThrow::
 	jumpifword CMP_COMMON_BITS, gBattleTypeFlags, BATTLE_TYPE_CATCH_TUTORIAL, BattleScript_BallThrowByWally
 	printstring STRINGID_PLAYERUSEDITEM

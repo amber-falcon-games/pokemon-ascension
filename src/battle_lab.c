@@ -1399,6 +1399,14 @@ void BattleLab_ScaleStartingEnergy(void)
     }
 }
 
+// F019: a move's energy cost in campaign battles (Dual bars, costs 100%), for menus outside battle.
+u32 BattleLab_CampaignMoveCost(u32 move, u32 maxEnergy)
+{
+    if (move != MOVE_NONE && IsHealingMove(move))
+        return maxEnergy / 5;
+    return BattleLab_EnergyCost(move, maxEnergy);
+}
+
 u32 BattleLab_BoostedCost(u32 battler, u32 move)
 {
     u32 cost = BattleLab_EnergyCost(move, LabEnergyMax(battler));
@@ -3265,6 +3273,77 @@ void BattleLab_OnPlayerStep(void)
             fatigue--;
             SetMonData(mon, MON_DATA_ASC_FATIGUE, &fatigue);
         }
+    }
+}
+
+// F019: PP items restore energy instead (PP no longer limits moves): Ether 25%, Max Ether 50%,
+// Elixir 50%, Max Elixir 100% of max energy, up to the health cap. Proposed values, tuned later.
+u32 BattleLab_EnergyItemPercent(u32 item)
+{
+    switch (item)
+    {
+    case ITEM_ETHER:      return 25;
+    case ITEM_MAX_ETHER:  return 50;
+    case ITEM_ELIXIR:     return 50;
+    case ITEM_MAX_ELIXIR: return 100;
+    default:              return 0;
+    }
+}
+
+// TRUE while PP items work on energy: in a Lab or campaign battle with energy, or (outside battle)
+// with the overhaul on.
+bool32 BattleLab_EnergyItemsActive(void)
+{
+    return gMain.inBattle ? BattleLab_DualMode() : ASCENSION_COMBAT;
+}
+
+// The battle's party slot for a player party Pokémon, or PARTY_SIZE.
+static u32 LabPlayerPartySlot(struct Pokemon *mon)
+{
+    u32 i;
+    for (i = 0; i < PARTY_SIZE; i++)
+        if (mon == &gParties[B_TRAINER_PLAYER][i])
+            return i;
+    return PARTY_SIZE;
+}
+
+// Restores energy to a player party Pokémon; FALSE (and nothing changes) when it would do nothing.
+bool32 BattleLab_UseEnergyItem(struct Pokemon *mon, u32 item, bool32 apply)
+{
+    u32 percent = BattleLab_EnergyItemPercent(item), cap = LabCapPercent(mon);
+    if (percent == 0 || GetMonData(mon, MON_DATA_HP) == 0 || GetMonData(mon, MON_DATA_IS_EGG))
+        return FALSE;
+    if (gMain.inBattle && BattleLab_DualMode())
+    {
+        u32 slot = LabPlayerPartySlot(mon), max, capEnergy, now, after, battler;
+        if (slot >= PARTY_SIZE || sLabEnergyMax[0][slot] == 0)
+            return FALSE;
+        max = sLabEnergyMax[0][slot];
+        capEnergy = max * cap / 100;
+        now = sLabEnergy[0][slot];
+        if (now >= capEnergy)
+            return FALSE;
+        after = min(now + max * percent / 100, capEnergy);
+        if (!apply)
+            return TRUE;
+        sLabEnergy[0][slot] = after;
+        for (battler = 0; battler < gBattlersCount; battler++)
+            if (IsOnPlayerSide(battler) && gBattlerPartyIndexes[battler] == slot)
+                LabDrawEnergyBarValue(battler, after);
+        return TRUE;
+    }
+    else
+    {
+        u32 fatigue = GetMonData(mon, MON_DATA_ASC_FATIGUE), share = 100 - fatigue;
+        if (share >= cap)
+            return FALSE;
+        if (apply)
+        {
+            share = min(share + percent, cap);
+            fatigue = 100 - share;
+            SetMonData(mon, MON_DATA_ASC_FATIGUE, &fatigue);
+        }
+        return TRUE;
     }
 }
 

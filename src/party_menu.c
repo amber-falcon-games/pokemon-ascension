@@ -48,6 +48,7 @@
 #include "palette.h"
 #include "party_menu.h"
 #include "ascension_moves.h"
+#include "battle_lab.h"
 #include "player_pc.h"
 #include "pokemon.h"
 #include "pokemon_icon.h"
@@ -5427,10 +5428,56 @@ static void Task_HandleWhichMoveInput(u8 taskId)
     }
 }
 
+// Pokémon Ascension F019: with energy replacing PP, PP items restore energy (no move to pick).
+static const u8 sText_AscEnergyRestored[] = _("{STR_VAR_1}'s energy\nwas restored.{PAUSE_UNTIL_PRESS}");
+
+static void AscUseEnergyItem(u8 taskId)
+{
+    struct Pokemon *party = NULL;
+    s8 partySlot = 0;
+    GetPartyAndSlotFromPartyMenuId(gPartyMenu.slotId, &party, &partySlot);
+    struct Pokemon *mon = &party[partySlot];
+    enum Item item = gSpecialVar_ItemId;
+
+    if (party != gParties[B_TRAINER_PLAYER] || !BattleLab_UseEnergyItem(mon, item, FALSE))
+    {
+        gPartyMenuUseExitCallback = FALSE;
+        PlaySE(SE_SELECT);
+        DisplayPartyMenuMessage(gText_WontHaveEffect, TRUE);
+        ScheduleBgCopyTilemapToVram(2);
+        gTasks[taskId].func = Task_ClosePartyMenuAfterText;
+        return;
+    }
+    if (gMain.inBattle)   // the battle script applies it (BS_ItemRestorePP)
+    {
+        gBattleStruct->itemPartyIndex[gBattlerInMenuId] = GetPartyIdFromBattleSlot(gPartyMenu.slotId);
+        gBattleStruct->itemMoveIndex[gBattlerInMenuId] = 0;
+        gPartyMenuUseExitCallback = TRUE;
+        RemoveBagItem(item, 1);
+        ScheduleBgCopyTilemapToVram(2);
+        gTasks[taskId].func = Task_ClosePartyMenuAfterText;
+        return;
+    }
+    BattleLab_UseEnergyItem(mon, item, TRUE);
+    gPartyMenuUseExitCallback = TRUE;
+    PlaySE(SE_USE_ITEM);
+    RemoveBagItem(item, 1);
+    GetMonNickname(mon, gStringVar1);
+    StringExpandPlaceholders(gStringVar4, sText_AscEnergyRestored);
+    DisplayPartyMenuMessage(gStringVar4, TRUE);
+    ScheduleBgCopyTilemapToVram(2);
+    gTasks[taskId].func = Task_ClosePartyMenuAfterText;
+}
+
 void ItemUseCB_PPRecovery(u8 taskId, TaskFunc task)
 {
     const u8 *effect = GetItemEffect(gSpecialVar_ItemId);
 
+    if (BattleLab_EnergyItemsActive() && BattleLab_EnergyItemPercent(gSpecialVar_ItemId) != 0)
+    {
+        AscUseEnergyItem(taskId);
+        return;
+    }
     if (effect == NULL || !(effect[4] & ITEM4_HEAL_PP_ONE))
     {
         gPartyMenu.data1 = 0;
