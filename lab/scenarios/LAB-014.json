@@ -1,0 +1,11 @@
+{
+  "id": "LAB-014",
+  "name": "Talent trees (8 moves)",
+  "rules": { "format": "trainer_single", "combat": "dual", "moves": "tree", "ai": "smart", "seed": 1414 },
+  "player": [
+    { "species": "SWAMPERT", "level": 50, "moves": ["HYDRO_PUMP", "EARTHQUAKE", "HAMMER_ARM", "PROTECT"] }
+  ],
+  "opponent": [
+    { "species": "GARDEVOIR", "level": 50, "moves": ["PSYCHIC", "MOONBLAST", "CALM_MIND", "PROTECT"] }
+  ]
+}

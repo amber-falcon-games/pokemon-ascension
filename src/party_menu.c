@@ -47,6 +47,7 @@
 #include "overworld.h"
 #include "palette.h"
 #include "party_menu.h"
+#include "ascension_moves.h"
 #include "player_pc.h"
 #include "pokemon.h"
 #include "pokemon_icon.h"
@@ -389,10 +390,17 @@ static void ReturnToUseOnWhichMon(u8);
 static void SetSelectedMoveForItem(u8);
 static void TryUseItemOnMove(u8);
 static void Task_LearnedMove(u8);
+static void AscTeachFromItem(u8 taskId, u32 replaceSlot);
 static void Task_ReplaceMoveYesNo(u8);
 static void Task_DoLearnedMoveFanfareAfterText(u8);
 static void Task_LearnNextMoveOrClosePartyMenu(u8);
 static void Task_TryLearningNextMove(u8);
+static void Task_AscTalentGrowthNext(u8 taskId);
+static void Task_AscGrowOptionYesNo(u8 taskId);
+static void Task_AscHandleGrowOptionInput(u8 taskId);
+static EWRAM_DATA struct TalentGrowth sAscPMGrowth = {0};
+static EWRAM_DATA u32 sAscPMIter = 0;
+static EWRAM_DATA u8 sAscPMOption = 0;
 static void Task_HandleReplaceMoveYesNoInput(u8);
 static void Task_ShowSummaryScreenToForgetMove(u8);
 static void StopLearningMovePrompt(u8);
@@ -2799,6 +2807,7 @@ void DisplayPartyMenuStdMessage(u32 stringId)
             break;
         case PARTY_MSG_RESTORE_WHICH_MOVE:
         case PARTY_MSG_BOOST_PP_WHICH_MOVE:
+        case PARTY_MSG_ASC_REPLACE_WHICH_MOVE:
             *windowPtr = AddWindow(&sWhichMoveMsgWindowTemplate);
             break;
         case PARTY_MSG_ALREADY_HOLDING_ONE:
@@ -5576,6 +5585,15 @@ void ItemUseCB_TMHM(u8 taskId, TaskFunc task)
     GetMonNickname(mon, gStringVar1);
     StringCopy(gStringVar2, GetMoveName(move));
 
+    if (Ascension_UsesTalentTree(mon))
+    {
+        if (CanTeachMove(mon, move) == CANNOT_LEARN_MOVE || CanTeachMove(mon, move) == CANNOT_LEARN_MOVE_IS_EGG)
+            DisplayLearnMoveMessageAndClose(taskId, gText_PkmnCantLearnMove);
+        else
+            AscTeachFromItem(taskId, TALENT_SLOT_ASK);
+        return;
+    }
+
     switch (CanTeachMove(mon, move))
     {
     case CANNOT_LEARN_MOVE:
@@ -5599,6 +5617,113 @@ void ItemUseCB_TMHM(u8 taskId, TaskFunc task)
     }
 }
 
+// Pokémon Ascension F015 (D027): with the move library on, a TM moves a talent branch ahead,
+// joins the move's global chain, or is refused; nothing is forgotten except by the player's pick.
+static const u8 sText_AscJumped[] = _("{STR_VAR_1}'s talent jumped\nahead to {STR_VAR_2}!");
+static const u8 sText_AscJoined[] = _("{STR_VAR_1} started a new talent\npath with {STR_VAR_2}!");
+static const u8 sText_AscGrownPast[] = _("{STR_VAR_1} has already grown\npast {STR_VAR_2}.{PAUSE_UNTIL_PRESS}");
+static const u8 sText_AscNoRoom[] = _("{STR_VAR_1} can't follow any more\nnew talent paths.{PAUSE_UNTIL_PRESS}");
+static const u8 sText_AscListFull[] = _("{STR_VAR_1}'s moves are full. Pick\na move for {STR_VAR_2} to replace.{PAUSE_UNTIL_PRESS}");
+static const u8 sText_AscDidNotLearn[] = _("{STR_VAR_1} did not learn\n{STR_VAR_2}.{PAUSE_UNTIL_PRESS}");
+
+static const struct WindowTemplate sAscTalentMovesWindowTemplate =
+{
+    .bg = 2,
+    .tilemapLeft = 19,
+    .tilemapTop = 2,
+    .width = 10,
+    .height = 16,
+    .paletteNum = 14,
+    .baseBlock = 0x2E9,   // 160 tiles, below the give/take windows at 0x39D
+};
+
+static EWRAM_DATA u8 sAscSources[MAX_BATTLE_MOVES] = {0};
+static EWRAM_DATA const u8 *sAscLearnedText = NULL;
+
+static void Task_AscShowReplaceWindow(u8 taskId);
+static void Task_AscHandleReplaceInput(u8 taskId);
+
+static void AscTeachFromItem(u8 taskId, u32 replaceSlot)
+{
+    struct Pokemon *mon = &gParties[B_TRAINER_PLAYER][gPartyMenu.slotId];
+    enum Move move = gPartyMenu.data1;
+
+    GetMonNickname(mon, gStringVar1);
+    StringCopy(gStringVar2, GetMoveName(move));
+    enum TalentTeachResult result = Ascension_TeachMove(mon, move, replaceSlot);
+
+    switch (result)
+    {
+    case TALENT_TEACH_JUMPED:
+    case TALENT_TEACH_JOINED:
+        Ascension_RefreshMoveCache(mon);
+        sAscLearnedText = (result == TALENT_TEACH_JUMPED) ? sText_AscJumped : sText_AscJoined;
+        gTasks[taskId].func = Task_LearnedMove;
+        break;
+    case TALENT_TEACH_ALREADY_KNOWN:
+        DisplayLearnMoveMessageAndClose(taskId, gText_PkmnAlreadyKnows);
+        break;
+    case TALENT_TEACH_GROWN_PAST:
+        DisplayLearnMoveMessageAndClose(taskId, sText_AscGrownPast);
+        break;
+    case TALENT_TEACH_NO_ROOM:
+        DisplayLearnMoveMessageAndClose(taskId, sText_AscNoRoom);
+        break;
+    case TALENT_TEACH_NEEDS_SLOT:
+        StringExpandPlaceholders(gStringVar4, sText_AscListFull);
+        DisplayPartyMenuMessage(gStringVar4, FALSE);
+        ScheduleBgCopyTilemapToVram(2);
+        gTasks[taskId].func = Task_AscShowReplaceWindow;
+        break;
+    default:
+        DisplayLearnMoveMessageAndClose(taskId, gText_PkmnCantLearnMove);
+        break;
+    }
+}
+
+static void Task_AscShowReplaceWindow(u8 taskId)
+{
+    struct Pokemon *mon = &gParties[B_TRAINER_PLAYER][gPartyMenu.slotId];
+    u16 moves[MAX_BATTLE_MOVES];
+    u32 i, count;
+    u8 windowId;
+
+    if (IsPartyMenuTextPrinterActive() == TRUE)
+        return;
+    DisplayPartyMenuStdMessage(PARTY_MSG_ASC_REPLACE_WHICH_MOVE);
+
+    count = Ascension_BuildTalentList(mon, moves, sAscSources);
+    windowId = AddWindow(&sAscTalentMovesWindowTemplate);
+    sPartyMenuInternal->windowId[0] = windowId;
+    DrawStdFrameWithCustomTileAndPalette(windowId, FALSE, 0x4F, 13);
+    for (i = 0; i < count; i++)
+    {
+        u8 fontId = GetFontIdToFit(GetMoveName(moves[i]), FONT_NORMAL, 0, 72);
+        AddTextPrinterParameterized(windowId, fontId, GetMoveName(moves[i]), 8, (i * 16) + 1, TEXT_SKIP_DRAW, NULL);
+    }
+    InitMenuInUpperLeftCornerNormal(windowId, count, 0);
+    ScheduleBgCopyTilemapToVram(2);
+    gTasks[taskId].func = Task_AscHandleReplaceInput;
+}
+
+static void Task_AscHandleReplaceInput(u8 taskId)
+{
+    s8 input = Menu_ProcessInput();
+
+    if (input == MENU_NOTHING_CHOSEN)
+        return;
+    PartyMenuRemoveWindow(&sPartyMenuInternal->windowId[0]);
+    PartyMenuRemoveWindow(&sPartyMenuInternal->windowId[1]);
+    if (input == MENU_B_PRESSED)
+    {
+        PlaySE(SE_SELECT);
+        DisplayLearnMoveMessageAndClose(taskId, sText_AscDidNotLearn);
+        return;
+    }
+    PlaySE(SE_SELECT);
+    AscTeachFromItem(taskId, sAscSources[input]);
+}
+
 static void Task_LearnedMove(u8 taskId)
 {
     struct Pokemon *mon = &gParties[B_TRAINER_PLAYER][gPartyMenu.slotId];
@@ -5612,7 +5737,8 @@ static void Task_LearnedMove(u8 taskId)
     }
     GetMonNickname(mon, gStringVar1);
     StringCopy(gStringVar2, GetMoveName(gPartyMenu.data1));
-    StringExpandPlaceholders(gStringVar4, gText_PkmnLearnedMove3);
+    StringExpandPlaceholders(gStringVar4, sAscLearnedText != NULL ? sAscLearnedText : gText_PkmnLearnedMove3);
+    sAscLearnedText = NULL;
     DisplayPartyMenuMessage(gStringVar4, TRUE);
     ScheduleBgCopyTilemapToVram(2);
     gTasks[taskId].func = Task_DoLearnedMoveFanfareAfterText;
@@ -5972,6 +6098,13 @@ static void Task_TryLearnNewMoves(u8 taskId)
     if (WaitFanfare(FALSE) && ((JOY_NEW(A_BUTTON)) || (JOY_NEW(B_BUTTON))))
     {
         RemoveLevelUpStatsWindow();
+        if (Ascension_UsesTalentTree(&gParties[B_TRAINER_PLAYER][gPartyMenu.slotId]))
+        {
+            gPartyMenu.learnMoveState = 1;
+            sAscPMIter = 0;
+            Task_AscTalentGrowthNext(taskId);
+            return;
+        }
         for (; sInitialLevel <= sFinalLevel; sInitialLevel++)
         {
             SetMonData(&gParties[B_TRAINER_PLAYER][gPartyMenu.slotId], MON_DATA_LEVEL, &sInitialLevel);
@@ -6002,6 +6135,11 @@ static void Task_TryLearnNewMoves(u8 taskId)
 static void Task_TryLearningNextMove(u8 taskId)
 {
     u16 result;
+    if (Ascension_UsesTalentTree(&gParties[B_TRAINER_PLAYER][gPartyMenu.slotId]))
+    {
+        Task_AscTalentGrowthNext(taskId);
+        return;
+    }
     for (; sInitialLevel <= sFinalLevel; sInitialLevel++)
     {
         SetMonData(&gParties[B_TRAINER_PLAYER][gPartyMenu.slotId], MON_DATA_LEVEL, &sInitialLevel);
@@ -6025,6 +6163,96 @@ static void Task_TryLearningNextMove(u8 taskId)
         if (result)
             break;
     }
+}
+
+// Pokémon Ascension F015 (spec item 6): Rare Candy level-ups grow talent branches. Walks the levels
+// gained (sInitialLevel..sFinalLevel); a branch point asks "Grow into X?" for each option in turn.
+static const u8 sText_AscGrew[] = _("{STR_VAR_1}'s {STR_VAR_3}\ngrew into {STR_VAR_2}!");
+static const u8 sText_AscBranches[] = _("{STR_VAR_1}'s talent can grow\nin more than one way!{PAUSE_UNTIL_PRESS}");
+static const u8 sText_AscGrowInto[] = _("Grow into {STR_VAR_2}?");
+
+static void AscShowGrowth(u8 taskId, struct Pokemon *mon)
+{
+    enum Move move = sAscPMGrowth.options[sAscPMOption];
+    GetMonNickname(mon, gStringVar1);
+    StringCopy(gStringVar2, GetMoveName(move));
+    StringCopy(gStringVar3, GetMoveName(sAscPMGrowth.from));
+    StringExpandPlaceholders(gStringVar4, sAscPMGrowth.from != MOVE_NONE ? sText_AscGrew : gText_PkmnLearnedMove3);
+    DisplayPartyMenuMessage(gStringVar4, TRUE);
+    ScheduleBgCopyTilemapToVram(2);
+    gPartyMenu.data1 = move;
+    gPartyMenu.learnMoveState = 1;
+    gTasks[taskId].func = Task_DoLearnedMoveFanfareAfterText;
+}
+
+static void AscAskGrowOption(u8 taskId)
+{
+    StringCopy(gStringVar2, GetMoveName(sAscPMGrowth.options[sAscPMOption]));
+    StringExpandPlaceholders(gStringVar4, sText_AscGrowInto);
+    DisplayPartyMenuMessage(gStringVar4, TRUE);
+    ScheduleBgCopyTilemapToVram(2);
+    gTasks[taskId].func = Task_AscGrowOptionYesNo;
+}
+
+static void Task_AscAskAfterBranchText(u8 taskId)
+{
+    if (IsPartyMenuTextPrinterActive() != TRUE)
+        AscAskGrowOption(taskId);
+}
+
+static void Task_AscGrowOptionYesNo(u8 taskId)
+{
+    if (IsPartyMenuTextPrinterActive() != TRUE)
+    {
+        PartyMenuDisplayYesNoMenu();
+        gTasks[taskId].func = Task_AscHandleGrowOptionInput;
+    }
+}
+
+static void Task_AscHandleGrowOptionInput(u8 taskId)
+{
+    struct Pokemon *mon = &gParties[B_TRAINER_PLAYER][gPartyMenu.slotId];
+    switch (Menu_ProcessInputNoWrapClearOnChoose())
+    {
+    case 0:
+        Ascension_SetTalentChoice(mon, sAscPMGrowth.source, sAscPMOption);
+        Ascension_RefreshMoveCache(mon);
+        AscShowGrowth(taskId, mon);
+        break;
+    case MENU_B_PRESSED:
+        PlaySE(SE_SELECT);
+        // fallthrough
+    case 1:
+        sAscPMOption = (sAscPMOption + 1) % sAscPMGrowth.count;
+        AscAskGrowOption(taskId);
+        break;
+    }
+}
+
+static void Task_AscTalentGrowthNext(u8 taskId)
+{
+    struct Pokemon *mon = &gParties[B_TRAINER_PLAYER][gPartyMenu.slotId];
+
+    for (; sInitialLevel <= sFinalLevel; sInitialLevel++, sAscPMIter = 0)
+    {
+        if (!Ascension_NextTalentGrowth(mon, sInitialLevel, &sAscPMIter, &sAscPMGrowth))
+            continue;
+        sAscPMOption = sAscPMGrowth.source < MAX_BATTLE_MOVES ? Ascension_GetTalentChoice(mon, sAscPMGrowth.source) % sAscPMGrowth.count : 0;
+        if (sAscPMGrowth.count > 1)
+        {
+            GetMonNickname(mon, gStringVar1);
+            StringExpandPlaceholders(gStringVar4, sText_AscBranches);
+            DisplayPartyMenuMessage(gStringVar4, TRUE);
+            ScheduleBgCopyTilemapToVram(2);
+            gTasks[taskId].func = Task_AscAskAfterBranchText;
+            return;
+        }
+        Ascension_RefreshMoveCache(mon);
+        AscShowGrowth(taskId, mon);
+        return;
+    }
+    Ascension_RefreshMoveCache(mon);
+    PartyMenuTryEvolution(taskId);
 }
 
 static void CB2_ReturnToPartyMenuUsingRareCandy(void)

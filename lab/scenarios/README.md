@@ -16,7 +16,8 @@ Up to 14 files fit.
     "weather": "none",                   // none | rain | sun | sand | hail | snow
     "terrain": "none",                   // none | electric | grassy | misty | psychic
     "ai": "scenario",                    // scenario (basic trainer) | smart | random
-    "seed": null                         // null = random, or 0-65535 for a repeatable run
+    "seed": null,                        // null = random, or 0-65535 for a repeatable run
+    "moves": "set"                       // set (the moves below) | tree (talent-tree battle list, F015)
   },
   "player":   [ { ... up to 6 Pokémon ... } ],
   "opponent": [ { ... up to 6 Pokémon ... } ]
@@ -29,7 +30,7 @@ Each Pokémon (only `species` is required):
 |---|---|---|
 | `species` | — | `"SWAMPERT"` (constant name without `SPECIES_`; forms as in the game, e.g. `"ROTOM_WASH"`) |
 | `level` | 50 | 1–100 |
-| `moves` | level-up moves | up to 4, e.g. `["WATERFALL", "ICE_BEAM"]` |
+| `moves` | level-up moves | up to 4, e.g. `["WATERFALL", "ICE_BEAM"]`. Ignored with `"moves": "tree"` in the rules, where each Pokémon uses its talent tree at its level (default branch choices) |
 | `item` | none | `"LEFTOVERS"` |
 | `ability` | 1 | `1`, `2` or `"hidden"` |
 | `nature` | Hardy | `"ADAMANT"` |

@@ -1666,6 +1666,13 @@ enum Move MonTryLearningNewMoveAtLevel(struct Pokemon *mon, bool32 firstMove, u3
     enum Species species = GetMonData(mon, MON_DATA_SPECIES);
     const struct LevelUpMove *learnset = GetSpeciesLevelUpLearnset(species);
 
+    // Pokémon Ascension F015: talent-tree moves grow instead (battle and party menu show it).
+    if (Ascension_UsesTalentTree(mon))
+    {
+        Ascension_RefreshMoveCache(mon);
+        return MOVE_NONE;
+    }
+
     // since you can learn more than one move per level
     // the game needs to know whether you decided to
     // learn it or keep the old set to avoid asking
@@ -2210,6 +2217,12 @@ u32 GetBoxMonData3(struct BoxPokemon *boxMon, s32 field, u8 *data)
         case MON_DATA_POKEBALL:
             retVal = GetSubstruct0(boxMon)->pokeball;
             break;
+        case MON_DATA_TALENT_CHOICES:
+            retVal = GetSubstruct0(boxMon)->talentChoicesA
+                   | (GetSubstruct0(boxMon)->talentChoicesB << 6)
+                   | (GetSubstruct0(boxMon)->talentChoicesC << 9)
+                   | (GetSubstruct1(boxMon)->talentChoicesD << 11);
+            break;
         case MON_DATA_OT_GENDER:
             retVal = GetSubstruct3(boxMon)->otGender;
             break;
@@ -2725,6 +2738,15 @@ void SetBoxMonData(struct BoxPokemon *boxMon, s32 field, const void *dataArg)
         case MON_DATA_POKEBALL:
             SET8(GetSubstruct0(boxMon)->pokeball);
             break;
+        case MON_DATA_TALENT_CHOICES:
+        {
+            u32 choices = data[0] | (data[1] << 8);
+            GetSubstruct0(boxMon)->talentChoicesA = choices;
+            GetSubstruct0(boxMon)->talentChoicesB = choices >> 6;
+            GetSubstruct0(boxMon)->talentChoicesC = choices >> 9;
+            GetSubstruct1(boxMon)->talentChoicesD = choices >> 11;
+            break;
+        }
         case MON_DATA_OT_GENDER:
             SET8(GetSubstruct3(boxMon)->otGender);
             break;
@@ -6197,6 +6219,12 @@ u16 MonTryLearningNewMoveEvolution(struct Pokemon *mon, bool8 firstMove)
     enum Species species = GetMonData(mon, MON_DATA_SPECIES);
     u8 level = GetMonData(mon, MON_DATA_LEVEL);
     const struct LevelUpMove *learnset = GetSpeciesLevelUpLearnset(species);
+
+    if (Ascension_UsesTalentTree(mon))   // Pokémon Ascension F015: see MonTryLearningNewMoveAtLevel
+    {
+        Ascension_RefreshMoveCache(mon);
+        return MOVE_NONE;
+    }
 
     // Since you can learn more than one move per level,
     // the game needs to know whether you decided to

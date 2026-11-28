@@ -2,6 +2,18 @@
 
 `scripts/release.sh` uses the first `##` section below as the release notes, so the next release's section stays at the top.
 
+## Unreleased — combat overhaul (in progress)
+**For players:** nothing yet. The overhaul is built in dev builds only (`ASCENSION_MOVE_LIST` and the stamina rules are off in release) until the owner's combined playtest (D026).
+
+**For development (dev builds):**
+- **Energy and dual bars** (F017, D023–D025): separate health and energy bars, energy costs, Exhausted, Boost, timeline turn order and bench regeneration, tried in the Battle Lab.
+- **Up to 8 moves in battle** (F014): a grouped move menu (attacks, then support), four moves to a page.
+- **Talent trees** (F015, D027): every Pokémon's battle moves come from a generated, editable tree (`data/ascension/talent_trees.json`).
+  - Level-up growth: "Mudkip's Water Gun grew into Water Pulse!"
+  - Branch points ask which move to grow into.
+  - TMs jump a branch ahead, are refused once a Pokémon has grown past the move, or start a new talent path on a global chain. With a full list, the player picks the move it replaces.
+  - Evolving keeps every branch, choice and TM jump.
+
 ## 0.2.0 — 2026-11-26 — Battle Lab foundation
 **For players:** no gameplay changes. The 0.2.0 patch plays exactly like 0.1.0. Everything below is in dev builds only: release builds contain none of the Lab or checkpoint code, and its few small hooks into the battle engine compile to nothing (checked by the nightly CI build).
 

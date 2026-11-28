@@ -727,6 +727,9 @@ enum StringID
     STRINGID_BELCHCANTUSE,
     STRINGID_TOOEXHAUSTEDTOUSE,   // Pokémon Ascension (F017 spike, Battle Lab only)
     STRINGID_LABMESSAGE,          // Pokémon Ascension (F017 spike): end-of-round Lab messages (text built at run time)
+    STRINGID_ASCTALENTGREW,       // Pokémon Ascension F015: level-up growth along a talent branch
+    STRINGID_ASCTALENTBRANCHES,
+    STRINGID_ASCTALENTTAKEOPTION,
     STRINGID_COUNT
 };
 
