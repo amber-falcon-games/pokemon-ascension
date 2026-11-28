@@ -398,6 +398,17 @@ static const struct WindowTemplate sStandardBattleWindowTemplates[] =
         .paletteNum = 5,
         .baseBlock = 0x0350,
     },
+    // Pokémon Ascension F018: turn-order strip at the top of the screen, seen from the action
+    // menu. Tiles 0x2D0-0x2FF are otherwise unused.
+    [B_WIN_ASC_TIMELINE] = {
+        .bg = 0,
+        .tilemapLeft = 3,
+        .tilemapTop = 20,
+        .width = 24,
+        .height = 2,
+        .paletteNum = 5,
+        .baseBlock = 0x02D0,
+    },
     DUMMY_WIN_TEMPLATE
 };
 

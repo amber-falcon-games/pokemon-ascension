@@ -2195,6 +2195,7 @@ static void PlayerHandleChooseAction(enum BattlerId battler)
     gBattlerControllerFuncs[battler] = HandleChooseActionAfterDma3;
     BattleTv_ClearExplosionFaintCause();
     BattlePutTextOnWindow(gText_BattleMenu, B_WIN_ACTION_MENU);
+    BattleLab_DrawTimelineStrip();   // Pokémon Ascension F018: who acts next
 
     for (i = 0; i < 4; i++)
         ActionSelectionDestroyCursorAt(i);

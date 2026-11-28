@@ -1003,6 +1003,8 @@ const u16 gBattleAnimSpritePal_Tendrils[] = INCGFX_U16("graphics/battle_anims/sp
 const u32 gHealthboxSinglesPlayerGfx[] = INCGFX_U32("graphics/battle_interface/healthbox_singles_player.png", ".4bpp.smol", "-mwidth 8 -mheight 8");
 const u32 gHealthboxSinglesOpponentGfx[] = INCGFX_U32("graphics/battle_interface/healthbox_singles_opponent.png", ".4bpp.smol", "-mwidth 8 -mheight 4");
 const u32 gHealthboxSinglesOpponentLargeGfx[] = INCGFX_U32("graphics/battle_interface/healthbox_singles_opponent_large.png", ".4bpp.smol", "-mwidth 8 -mheight 8");
+// Pokémon Ascension: Dual-bars HUD, 24 px wider: HP numbers beside the HP bar (tools/ascension/dual_healthbox.py)
+const u32 gHealthboxSinglesPlayerWideGfx[] = INCGFX_U32("graphics/battle_interface/healthbox_singles_player_wide.png", ".4bpp.smol", "-mwidth 8 -mheight 8");
 const u32 gHealthboxDoublesPlayerGfx[] = INCGFX_U32("graphics/battle_interface/healthbox_doubles_player.png", ".4bpp.smol", "-mwidth 8 -mheight 4");
 const u32 gHealthboxDoublesOpponentGfx[] = INCGFX_U32("graphics/battle_interface/healthbox_doubles_opponent.png", ".4bpp.smol", "-mwidth 8 -mheight 4");
 const u32 gHealthboxSafariGfx[] = INCGFX_U32("graphics/battle_interface/healthbox_safari.png", ".4bpp.smol", "-mwidth 8 -mheight 8");

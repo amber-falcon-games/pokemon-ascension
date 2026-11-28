@@ -1,4 +1,5 @@
 #include "global.h"
+#include "battle_lab.h"
 #include "battle.h"
 #include "battle_hold_effects.h"
 #include "battle_setup.h"
@@ -1669,6 +1670,16 @@ bool32 DoEndTurnEffects(void)
         // Jump out if possible after endTurnEventsCounter was increased in the above code block
         if (gBattleStruct->eventState.endTurn == ENDTURN_COUNT)
             return FALSE;
+
+        // Pokémon Ascension F018: on the timeline, timed effects wait for the next beat.
+        if (BattleLab_EndTurnSkips(gBattleStruct->eventState.endTurn))
+        {
+            gBattleStruct->eventState.endTurnBattler = 0;
+            gBattleStruct->eventState.battlerSide = 0;
+            gBattleStruct->eventState.endTurnBlock = 0;
+            gBattleStruct->eventState.endTurn++;
+            continue;
+        }
 
         battler = gBattlerAttacker = gBattlerByTurnOrder[gBattleStruct->eventState.endTurnBattler];
 
