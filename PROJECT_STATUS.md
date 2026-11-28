@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-28 06:20 UTC (Claude session: F016 PR #21 and F018 PR #22 built; next F019).
+Last updated: 2026-11-28 05:36 UTC (Claude session: F016 PR #21 and F018 PR #22 built; next F019).
 Current phase: Combat track (after the 0.2.0 Battle Lab foundation). D003 gate passed: the Lab is accepted.
 Current feature: F018 built (`feature/F018-timeline`, PR #22, stacked on F016): end-of-turn effects on 1,000-unit beats, recharge waits for the battler's own action, turn-order strip. F016 built (`feature/F016-move-info`, PR #21, stacked on F015 PR #20): talent page on a second L in the move info box; in-battle Pokédex panel on L in the action menu. F015 move library (`feature/F015-move-library`, PR #20, stacked on F014 PR #19). Done: generator, checker, ROM tables, battle list, choices, TM rules (D027), storage, party-menu TM flow with an 8-move replace picker, level-up growth and branch-point prompts (battle and Rare Candy), evolution keeps branch slots (generator plus runtime remap), docs. Lab rule Moves: Set/Tree (LAB-014). Left before release: the old-save migration for contest fields.
 Done: F000–F013, F007b and F017 (spike). Releases: v0.1.0 (c204b79399) and v0.2.0 (3faa92d298, Battle Lab foundation; player build unchanged from 0.1.0).
