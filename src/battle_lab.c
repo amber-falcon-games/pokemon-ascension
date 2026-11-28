@@ -1164,13 +1164,26 @@ static void LabEnsureExhaustedTint(void)
 // Colours come from the healthbox palette: blue fill (red when Exhausted); the empty part that
 // energy can still refill is dark, and the part above the health cap is darker still.
 #define LAB_ENBAR_TAG 0xA5D0
-#define LAB_ENBAR_W 46            // fill width in pixels
-static EWRAM_DATA u8 sLabEnBarSprite[MAX_BATTLERS_COUNT][2] = {0};
+// Up to four sprites per bar: 32+32 px (foe, doubles), or 32+32+32+8 px across your wide box,
+// where the energy bar fills the whole row (owner, 2026-11-28: there is no number beside it).
+#define LAB_ENBAR_PARTS 4
+#define LAB_ENBAR_MAX_W 104
+static EWRAM_DATA u8 sLabEnBarSprite[MAX_BATTLERS_COUNT][LAB_ENBAR_PARTS] = {0};
 
-static void LabEnBarPixel(u8 *tiles, s32 x, s32 y, u32 color)   // 64x8 buffer: tiles 0-3 left half, 4-7 right
+static u32 LabEnBarWidth(u32 battler)
+{
+    return (BattleLab_TallHealthboxes() && IsOnPlayerSide(battler)) ? LAB_ENBAR_MAX_W : 64;
+}
+
+static u32 LabEnBarParts(u32 battler)
+{
+    return LabEnBarWidth(battler) == LAB_ENBAR_MAX_W ? 4 : 2;
+}
+
+static void LabEnBarPixel(u8 *tiles, s32 x, s32 y, u32 color)   // tiles left to right, 8 px each
 {
     u8 *b;
-    if (x < 0 || x >= 64 || y < 0 || y >= 8)
+    if (x < 0 || x >= LAB_ENBAR_MAX_W || y < 0 || y >= 8)
         return;
     b = &tiles[(x / 8) * 32 + y * 4 + (x % 8) / 2];
     if (x & 1)
@@ -1190,8 +1203,8 @@ static void SpriteCB_LabEnBar(struct Sprite *sprite)
     bar = gSprites[healthbox].data[5];   // hMain_HealthBarSpriteId (battle_interface.c)
     if (BattleLab_TallHealthboxes() && bar < MAX_SPRITES && gSprites[bar].inUse)
     {
-        // Same column as the HP bar, on the row under it.
-        sprite->x = gSprites[bar].x + sprite->data[3] * 32;
+        // Same column as the HP bar, on the row under it (the last, 8 px part is centred 12 px earlier).
+        sprite->x = gSprites[bar].x + sprite->data[3] * 32 - (sprite->data[3] == 3 ? 12 : 0);
         sprite->y = gSprites[healthbox].y + 12;
         sprite->x2 = gSprites[bar].x2;
         sprite->y2 = gSprites[healthbox].y2;
@@ -1212,7 +1225,6 @@ static void SpriteCB_LabEnBar(struct Sprite *sprite)
 #define LAB_ENBAR_PAL_TAG 0xA5DF
 extern const u32 gBattleLabEnergyLabelGfx[];      // HP-style "EN" / "EX" label tiles (below)
 extern const u32 gBattleLabExhaustedLabelGfx[];
-#define LAB_ENBAR_PIXELS 48
 static EWRAM_DATA u16 sLabEnBarPal[16] = {0};
 
 static void LabLoadEnBarPalette(void)
@@ -1230,25 +1242,26 @@ static void LabLoadEnBarPalette(void)
 
 static void LabDrawEnergyBarValue(u32 battler, u32 value)
 {
-    u8 tiles[8 * TILE_SIZE_4BPP] ALIGNED(4);
+    u8 tiles[(LAB_ENBAR_MAX_W / 8) * TILE_SIZE_4BPP] ALIGNED(4);
     u32 i, x, pixels, capPixels, max = LabEnergyMax(battler), cap = LabEnergyCap(battler);
+    u32 width = LabEnBarWidth(battler), fillWidth = width - 16, parts = LabEnBarParts(battler);
     bool32 exhausted = BattleLab_IsExhausted(battler);
     const u8 *fill = Ascension_HealthbarFillGfx(exhausted);
     const void *label = (exhausted && !sLabBadgeBlinkOff) ? (const void *)gBattleLabExhaustedLabelGfx : (const void *)gBattleLabEnergyLabelGfx;
     if (sLabEnBarSprite[battler][0] >= MAX_SPRITES || max == 0)
         return;
-    pixels = value * LAB_ENBAR_PIXELS / max;
+    pixels = value * fillWidth / max;
     if (value > 0 && pixels == 0)
         pixels = 1;
-    capPixels = cap * LAB_ENBAR_PIXELS / max;
+    capPixels = cap * fillWidth / max;
     CpuCopy32(label, tiles, 2 * TILE_SIZE_4BPP);
-    for (i = 0; i < 6; i++)
+    for (i = 0; i < fillWidth / 8; i++)
     {
         u32 level = pixels > i * 8 ? min(pixels - i * 8, 8) : 0;
         CpuCopy32(fill + level * TILE_SIZE_4BPP, &tiles[(2 + i) * TILE_SIZE_4BPP], TILE_SIZE_4BPP);
     }
     // beyond the health cap: the empty fill rows (3-4) in the darker colours
-    for (x = capPixels; x < LAB_ENBAR_PIXELS; x++)
+    for (x = capPixels; x < fillWidth; x++)
     {
         if (x < pixels)
             continue;
@@ -1257,16 +1270,21 @@ static void LabDrawEnergyBarValue(u32 battler, u32 value)
     }
     // close the bar's right end, like the HP bar's frame end
     for (x = 2; x <= 5; x++)
-        LabEnBarPixel(tiles, 63, x, 6);
-    LabEnBarPixel(tiles, 63, 1, 0);
-    LabEnBarPixel(tiles, 63, 6, 0);
-    CpuCopy32(tiles, (void *)(OBJ_VRAM0 + gSprites[sLabEnBarSprite[battler][0]].oam.tileNum * TILE_SIZE_4BPP), 4 * TILE_SIZE_4BPP);
-    CpuCopy32(tiles + 4 * TILE_SIZE_4BPP, (void *)(OBJ_VRAM0 + gSprites[sLabEnBarSprite[battler][1]].oam.tileNum * TILE_SIZE_4BPP), 4 * TILE_SIZE_4BPP);
+        LabEnBarPixel(tiles, width - 1, x, 6);
+    LabEnBarPixel(tiles, width - 1, 1, 0);
+    LabEnBarPixel(tiles, width - 1, 6, 0);
+    for (i = 0; i < parts; i++)
+    {
+        u32 n = (i == 3) ? 1 : 4;   // tiles in this part
+        if (sLabEnBarSprite[battler][i] < MAX_SPRITES)
+            CpuCopy32(tiles + i * 4 * TILE_SIZE_4BPP, (void *)(OBJ_VRAM0 + gSprites[sLabEnBarSprite[battler][i]].oam.tileNum * TILE_SIZE_4BPP), n * TILE_SIZE_4BPP);
+    }
 }
 
 static void LabEnsureEnergyBars(void)
 {
     static const struct OamData sOam = {.shape = SPRITE_SHAPE(32x8), .size = SPRITE_SIZE(32x8), .priority = 1};
+    static const struct OamData sOamEnd = {.shape = SPRITE_SHAPE(8x8), .size = SPRITE_SIZE(8x8), .priority = 1};
     u32 battler, half;
     if (!BattleLab_DualMode())
         return;
@@ -1279,11 +1297,12 @@ static void LabEnsureEnergyBars(void)
             continue;
         if (healthbox >= MAX_SPRITES)
             continue;
-        for (half = 0; half < 2; half++)
+        for (half = 0; half < LabEnBarParts(battler); half++)
         {
             u8 blank[128] ALIGNED(4) = {0};
-            struct SpriteSheet sheet = {.data = blank, .size = 128, .tag = LAB_ENBAR_TAG + battler * 2 + half};
-            struct SpriteTemplate tmpl = {.tileTag = LAB_ENBAR_TAG + battler * 2 + half, .paletteTag = LAB_ENBAR_PAL_TAG, .oam = &sOam,
+            struct SpriteSheet sheet = {.data = blank, .size = half == 3 ? 32 : 128, .tag = LAB_ENBAR_TAG + battler * LAB_ENBAR_PARTS + half};
+            struct SpriteTemplate tmpl = {.tileTag = LAB_ENBAR_TAG + battler * LAB_ENBAR_PARTS + half, .paletteTag = LAB_ENBAR_PAL_TAG,
+                                          .oam = half == 3 ? &sOamEnd : &sOam,
                                           .anims = gDummySpriteAnimTable, .images = NULL, .affineAnims = gDummySpriteAffineAnimTable,
                                           .callback = SpriteCB_LabEnBar};
             u32 spriteId;
