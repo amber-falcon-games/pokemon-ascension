@@ -728,6 +728,7 @@ static EWRAM_DATA bool8 sLabHasLastSeed = FALSE;
 EWRAM_DATA bool8 gAscensionCombatTestOverride = FALSE;
 #endif
 static EWRAM_DATA bool8 sAscCampaignBattle = FALSE;
+static void LabQueueCheckCancelButton(void);
 static EWRAM_DATA u8 sActiveCombat = LAB_COMBAT_CLASSIC;   // enum LabCombat of the running battle
 static void LabSaveCampaignEnergy(void);
 static EWRAM_DATA struct LabRules sCampaignRules = {0};
@@ -1124,6 +1125,7 @@ static void Task_LabExhaustedTint(u8 taskId)
         return;
     }
     (*frame)++;
+    LabQueueCheckCancelButton();
     if ((*frame & 31) == 0)   // the EX badge blinks: about half a second on, half off
     {
         sLabBadgeBlinkOff = (*frame >> 5) & 1;
@@ -1471,11 +1473,150 @@ static bool32 LabActsAgain(u32 battler)
         && !((sLabPrevActors | sLabActors) & others);
 }
 
+// ---------------------------------------------------------------- F020 queue (D028)
+// Up to 2 actions: the one you choose now, plus one queued with SELECT in the move menu. The queued
+// move runs at your Pokémon's next turn without the menu, unless it is cancelled first: its target
+// fainted or left; your Pokémon became Exhausted, lost 25%+ of its health since, or got a status
+// condition; or you pressed B while actions resolve. Cancelling is free (energy is paid on use).
+struct LabQueued
+{
+    u8 slot;          // move slot + 1; 0 = nothing queued
+    bool8 armed;      // the current action was confirmed: the queued one is next
+    u8 target;
+    u8 targetParty;
+    u8 partyIndex;    // who queued it (a switch cancels)
+    u16 hp;
+    u32 status1;
+    bool8 confused;
+};
+static EWRAM_DATA struct LabQueued sLabQueue[MAX_BATTLERS_COUNT] = {0};
+static EWRAM_DATA u8 sLabFromQueue = 0;   // battlers acting from the queue this round
+static const u8 sText_LabFollowUp[] = _("{B_ATK_NAME_WITH_PREFIX} follows up\nwith {B_BUFF3}!");
+
+static bool32 LabQueueAllowed(u32 battler)
+{
+    return BattleLab_StaminaMode() && IsOnPlayerSide(battler) && !(gBattleTypeFlags & BATTLE_TYPE_INGAME_PARTNER && GetBattlerPosition(battler) == B_POSITION_PLAYER_RIGHT);
+}
+
+void BattleLab_ClearQueue(u32 battler)
+{
+    if (battler < MAX_BATTLERS_COUNT)
+        memset(&sLabQueue[battler], 0, sizeof(sLabQueue[battler]));
+}
+
+// SELECT on a move: queue it as the follow-up (again on the same move: unqueue). TRUE if queued.
+bool32 BattleLab_QueueToggle(u32 battler, u32 slot)
+{
+    if (!LabQueueAllowed(battler) || slot >= MAX_BATTLE_MOVES)
+        return FALSE;
+    if (sLabQueue[battler].slot == slot + 1)
+    {
+        BattleLab_ClearQueue(battler);
+        return FALSE;
+    }
+    BattleLab_ClearQueue(battler);
+    sLabQueue[battler].slot = slot + 1;
+    return TRUE;
+}
+
+bool32 BattleLab_QueuedSlot(u32 battler, u32 slot)
+{
+    return battler < MAX_BATTLERS_COUNT && sLabQueue[battler].slot == slot + 1;
+}
+
+// The current action was confirmed: remember the state the queued move must still match.
+void BattleLab_QueueArm(u32 battler)
+{
+    struct LabQueued *q = &sLabQueue[battler];
+    if (battler >= MAX_BATTLERS_COUNT || q->slot == 0 || q->armed)
+        return;
+    q->armed = TRUE;
+    q->target = gBattleStruct->moveTarget[battler];
+    q->targetParty = gBattlerPartyIndexes[q->target];
+    q->partyIndex = gBattlerPartyIndexes[battler];
+    q->hp = gBattleMons[battler].hp;
+    q->status1 = gBattleMons[battler].status1;
+    q->confused = gBattleMons[battler].volatiles.confusionTimer != 0;
+}
+
+// The D028 cancel rules, as a pure check (tested on its own).
+bool32 BattleLab_QueueStillValid(const struct AscQueueCheck *c)
+{
+    if (!c->samePokemon || !c->moveUsable || c->exhausted)
+        return FALSE;
+    // A move aimed at yourself or your partner: the target never "leaves" (the rules below on
+    // your own Pokémon's state still apply).
+    if (!c->selfTarget && (!c->targetAlive || !c->sameTarget))
+        return FALSE;
+    if (c->hpBefore > c->hpNow && (c->hpBefore - c->hpNow) * 4 >= c->maxHp)   // lost 25%+ health
+        return FALSE;
+    if (c->statusNow != 0 && c->statusNow != c->statusBefore)                // a new status condition
+        return FALSE;
+    if (c->confusedNow && !c->confusedBefore)
+        return FALSE;
+    return TRUE;
+}
+
+// At the battler's next turn: TRUE with the queued move if it still stands (it is then used up).
+bool32 BattleLab_TakeQueuedMove(u32 battler, u32 *slot, u32 *target)
+{
+    struct LabQueued *q = &sLabQueue[battler];
+    u32 s;
+    bool32 ok;
+    if (battler >= MAX_BATTLERS_COUNT || !q->armed || !LabQueueAllowed(battler))
+        return FALSE;
+    s = q->slot - 1;
+    {
+        struct AscQueueCheck c = {
+            .samePokemon = gBattlerPartyIndexes[battler] == q->partyIndex,
+            .moveUsable = gBattleMons[battler].moves[s] != MOVE_NONE
+                       && !(CheckMoveLimitations(battler, 0, MOVE_LIMITATIONS_ALL) & (1u << s)),
+            .exhausted = BattleLab_IsExhausted(battler),
+            .selfTarget = IsOnPlayerSide(q->target),
+            .targetAlive = IsBattlerAlive(q->target),
+            .sameTarget = gBattlerPartyIndexes[q->target] == q->targetParty,
+            .hpBefore = q->hp, .hpNow = gBattleMons[battler].hp, .maxHp = gBattleMons[battler].maxHP,
+            .statusBefore = q->status1, .statusNow = gBattleMons[battler].status1,
+            .confusedBefore = q->confused, .confusedNow = gBattleMons[battler].volatiles.confusionTimer != 0,
+        };
+        ok = BattleLab_QueueStillValid(&c);
+    }
+    *target = q->target;   // read before the queue is cleared
+    BattleLab_ClearQueue(battler);
+    if (!ok)
+        return FALSE;
+    *slot = s;
+    sLabFromQueue |= 1u << battler;
+    return TRUE;
+}
+
+// B while actions resolve clears every queued follow-up (D028).
+static void LabQueueCheckCancelButton(void)
+{
+    u32 battler;
+    bool32 any = FALSE;
+    if (!JOY_NEW(B_BUTTON))
+        return;
+    for (battler = 0; battler < gBattlersCount; battler++)
+        if (sLabQueue[battler].armed)
+        {
+            BattleLab_ClearQueue(battler);
+            any = TRUE;
+        }
+    if (any)
+        PlaySE(SE_BALL_TRAY_EXIT);
+}
+
 const u8 *BattleLab_UsedMoveText(u32 attacker, const u8 *defaultText)
 {
     u32 boost;
     if (!BattleLab_StaminaMode() || attacker >= MAX_BATTLERS_COUNT)
         return defaultText;
+    if (sLabFromQueue & (1u << attacker))
+    {
+        sLabFromQueue &= ~(1u << attacker);
+        return sText_LabFollowUp;
+    }
     boost = sLabBoost[attacker];
     if (LabActsAgain(attacker))
         return sLabAgainBoostTexts[boost];
@@ -1560,7 +1701,16 @@ void BattleLab_ShowMoveCost(u32 battler, u32 move)
     after = (cost == 0 || hp <= floor) ? hp : (hp > cost + floor ? hp - cost : floor);
     sLabPreviewAfter[battler] = after;
     sLabPreviewTimer = 8;
-    BattlePutTextOnWindow(sLabBoostTag[sLabBoost[battler]], B_WIN_PP);
+    {
+        // F020: the queued follow-up shows "Next" instead of the cost label
+        struct ChooseMoveStruct *moveInfo = (struct ChooseMoveStruct *)(&gBattleResources->bufferA[battler][4]);
+        u32 i;
+        bool32 queued = FALSE;
+        for (i = 0; i < MAX_BATTLE_MOVES; i++)
+            if (moveInfo->moves[i] == move && BattleLab_QueuedSlot(battler, i))
+                queued = TRUE;
+        BattlePutTextOnWindow(queued ? COMPOUND_STRING("Next") : sLabBoostTag[sLabBoost[battler]], B_WIN_PP);
+    }
     ConvertIntToDecimalStringN(gDisplayedStringBattle, cost, STR_CONV_MODE_RIGHT_ALIGN, 3);
     BattlePutTextOnWindow(gDisplayedStringBattle, B_WIN_PP_REMAINING);
     LabDrawPreview(battler, after);
@@ -3148,6 +3298,8 @@ static void Task_BattleLab_Input(u8 taskId)
 // Per-battle state of the stamina rules (timeline, energy bars, messages), for Lab and campaign battles.
 static void LabResetBattleState(void)
 {
+    memset(sLabQueue, 0, sizeof(sLabQueue));
+    sLabFromQueue = 0;
     sLabEndRequest = LAB_END_NONE;
     sLabProtectedThisTurn = 0;
     sLabAiTicksTotal = 0;

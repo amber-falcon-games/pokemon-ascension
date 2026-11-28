@@ -144,6 +144,19 @@ bool32 BattleLab_IsExhausted(u32 battler);
 u32 BattleLab_ExhaustedSpeed(u32 battler, u32 speed);
 bool32 BattleLab_ExhaustionLocksMove(u32 battler, u32 move);
 bool32 BattleLab_TimelineSkips(u32 battler);           // timeline: this battler sits the round out
+// F020 queue (D028): SELECT in the move menu queues a follow-up move.
+struct AscQueueCheck
+{
+    bool8 samePokemon, moveUsable, exhausted, selfTarget, targetAlive, sameTarget, confusedBefore, confusedNow;
+    u16 hpBefore, hpNow, maxHp;
+    u32 statusBefore, statusNow;
+};
+bool32 BattleLab_QueueStillValid(const struct AscQueueCheck *c);
+bool32 BattleLab_QueueToggle(u32 battler, u32 slot);
+bool32 BattleLab_QueuedSlot(u32 battler, u32 slot);
+void BattleLab_QueueArm(u32 battler);
+bool32 BattleLab_TakeQueuedMove(u32 battler, u32 *slot, u32 *target);
+void BattleLab_ClearQueue(u32 battler);
 s32 BattleLab_ScaleDamage(s32 damage);                 // Rules "Damage" scale in stamina battles
 void BattleLab_ScaleStartingEnergy(void);              // Rules "Energy" scale, applied to both parties
 u32 BattleLab_BoostedCost(u32 battler, u32 move);      // Boost (R): energy cost with the chosen boost
@@ -171,6 +184,11 @@ static inline bool32 BattleLab_IsExhausted(u32 battler) { return FALSE; }
 static inline u32 BattleLab_ExhaustedSpeed(u32 battler, u32 speed) { return speed; }
 static inline bool32 BattleLab_ExhaustionLocksMove(u32 battler, u32 move) { return FALSE; }
 static inline bool32 BattleLab_TimelineSkips(u32 battler) { return FALSE; }
+static inline bool32 BattleLab_QueueToggle(u32 battler, u32 slot) { return FALSE; }
+static inline bool32 BattleLab_QueuedSlot(u32 battler, u32 slot) { return FALSE; }
+static inline void BattleLab_QueueArm(u32 battler) {}
+static inline bool32 BattleLab_TakeQueuedMove(u32 battler, u32 *slot, u32 *target) { return FALSE; }
+static inline void BattleLab_ClearQueue(u32 battler) {}
 static inline s32 BattleLab_ScaleDamage(s32 damage) { return damage; }
 static inline u32 BattleLab_BoostPower(u32 battler, u32 power) { return power; }
 static inline void BattleLab_CycleBoost(u32 battler) {}
