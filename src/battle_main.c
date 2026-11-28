@@ -1,4 +1,5 @@
 #include "global.h"
+#include "ascension_battle_dex.h"
 #include "battle.h"
 #include "battle_anim.h"
 #include "battle_ai_main.h"
@@ -2757,6 +2758,7 @@ static void ClearSetBScriptingStruct(void)
 
 static void BattleStartClearSetData(void)
 {
+    Ascension_DexBattleStart();   // Pokémon Ascension F016
     s32 i;
 
     TurnValuesCleanUp(FALSE);

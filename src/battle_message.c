@@ -1868,6 +1868,19 @@ static const struct BattleWindowText sTextOnWindowsInfo_Normal[] =
         .color.accent = 14,
         .color.shadow = 15,
     },
+    [B_WIN_ASC_DEX] = {   // Pokémon Ascension F016: as B_WIN_MOVE_DESCRIPTION
+        .fillValue = PIXEL_FILL(0xE),
+        .fontId = FONT_NARROW,
+        .x = 0,
+        .y = 1,
+        .letterSpacing = 0,
+        .lineSpacing = 0,
+        .speed = 0,
+        .color.foreground = TEXT_DYNAMIC_COLOR_4,
+        .color.background = TEXT_DYNAMIC_COLOR_5,
+        .color.accent = TEXT_DYNAMIC_COLOR_5,
+        .color.shadow = TEXT_DYNAMIC_COLOR_6,
+    },
 };
 
 static const struct BattleWindowText sTextOnWindowsInfo_KantoTutorial[] =
