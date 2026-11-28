@@ -3,6 +3,7 @@
 #include "ascension_moves.h"
 #include "move.h"
 #include "pokemon.h"
+#include "string_util.h"
 #include "constants/moves.h"
 #include "constants/species.h"
 
@@ -274,4 +275,24 @@ TEST("Talent data survives boxing (as in the PC and the save): choices, TM jumps
         EXPECT_EQ(after[i], before[i]);
     EXPECT_EQ(Ascension_GetTalentChoice(&back, 2), 1);
     EXPECT(ListHas(&back, MOVE_SURF));
+}
+
+TEST("Move info talent page (F016): next growth, branch point, fully grown and TM path")
+{
+    struct Pokemon mon;
+    u8 text[160];
+    u8 expect[160];
+    CreateMon(&mon, SPECIES_PIKACHU, 20, 0, OTID_STRUCT_PRESET(0));
+    gAscensionMoveListTestOverride = TRUE;
+    EXPECT(Ascension_DescribeTalentMove(&mon, MOVE_ELECTRO_BALL, text));
+    StringCopy(expect, COMPOUND_STRING("Talent branch 1.\nGrows into Discharge at Lv. 32."));
+    EXPECT_EQ(StringCompare(text, expect), 0);
+    EXPECT(!Ascension_DescribeTalentMove(&mon, MOVE_SURF, text));          // not in its list
+    EXPECT_EQ(Ascension_TeachMove(&mon, MOVE_THUNDER, TALENT_SLOT_ASK), TALENT_TEACH_JUMPED);
+    EXPECT(Ascension_DescribeTalentMove(&mon, MOVE_THUNDER, text));
+    StringCopy(expect, COMPOUND_STRING("Talent branch 1.\nFully grown."));
+    EXPECT_EQ(StringCompare(text, expect), 0);
+    EXPECT_EQ(Ascension_TeachMove(&mon, MOVE_EMBER, TALENT_SLOT_ASK), TALENT_TEACH_JOINED);
+    EXPECT(Ascension_DescribeTalentMove(&mon, MOVE_EMBER, text));
+    gAscensionMoveListTestOverride = FALSE;
 }

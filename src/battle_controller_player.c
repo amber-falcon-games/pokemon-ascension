@@ -1,4 +1,5 @@
 #include "global.h"
+#include "ascension_moves.h"
 #include "battle_lab.h"
 #include "battle.h"
 #include "battle_anim.h"
@@ -119,6 +120,8 @@ static u32 AscCursorPos(enum BattlerId battler)   // 0-3: where the cursor is on
     return AscListIndex(battler, gMoveSelectionCursor[battler]) & 3;
 }
 static void TryMoveSelectionDisplayMoveDescription(enum BattlerId battler);
+static bool32 AscTryShowTalentPage(enum BattlerId battler);
+static EWRAM_DATA bool8 sAscTalentPage = FALSE;   // Pokémon Ascension F016
 static void MoveSelectionDisplayMoveDescription(enum BattlerId battler);
 static void WaitForMonSelection(enum BattlerId battler);
 static void CompleteWhenChoseItem(enum BattlerId battler);
@@ -899,8 +902,13 @@ void HandleInputChooseMove(enum BattlerId battler)
     }
     else if (gBattleStruct->descriptionSubmenu)
     {
-        if (JOY_NEW(B_MOVE_DESCRIPTION_BUTTON) || JOY_NEW(A_BUTTON) || JOY_NEW(B_BUTTON))
+        if (JOY_NEW(B_MOVE_DESCRIPTION_BUTTON) && !sAscTalentPage && AscTryShowTalentPage(battler))
         {
+            PlaySE(SE_SELECT);   // Pokémon Ascension F016: second press shows the talent page
+        }
+        else if (JOY_NEW(B_MOVE_DESCRIPTION_BUTTON) || JOY_NEW(A_BUTTON) || JOY_NEW(B_BUTTON))
+        {
+            sAscTalentPage = FALSE;
             gBattleStruct->descriptionSubmenu = FALSE;
             if (gCategoryIconSpriteId != 0xFF)
             {
@@ -922,6 +930,7 @@ void HandleInputChooseMove(enum BattlerId battler)
         !(B_MOVE_DESCRIPTION_BUTTON == L_BUTTON && gSaveBlock2Ptr->optionsButtonMode == OPTIONS_BUTTON_MODE_L_EQUALS_A))
     {
         gBattleStruct->descriptionSubmenu = TRUE;
+        sAscTalentPage = FALSE;
         TryMoveSelectionDisplayMoveDescription(battler);
     }
     else if (JOY_NEW(R_BUTTON) && BattleLab_StaminaMode())   // Pokémon Ascension (F017 spike): Boost
@@ -1777,6 +1786,33 @@ static void MoveSelectionDisplayMoveType(enum BattlerId battler)
 
     PrependFontIdToFit(txtPtr, end, FONT_NORMAL, WindowWidthPx(B_WIN_MOVE_TYPE) - 25);
     BattlePutTextOnWindow(gDisplayedStringBattle, B_WIN_MOVE_TYPE);
+}
+
+// Pokémon Ascension F016: talent page of the move info box (L, then L again).
+
+static bool32 AscTryShowTalentPage(enum BattlerId battler)
+{
+    struct ChooseMoveStruct *moveInfo = (struct ChooseMoveStruct*)(&gBattleResources->bufferA[battler][4]);
+    struct Pokemon *mon;
+    u8 *end;
+
+    if (GetBattlerSide(battler) != B_SIDE_PLAYER)
+        return FALSE;
+    mon = &GetBattlerParty(battler)[gBattlerPartyIndexes[battler]];
+    if (!Ascension_DescribeTalentMove(mon, moveInfo->moves[gMoveSelectionCursor[battler]], gDisplayedStringBattle))
+        return FALSE;
+    if (gCategoryIconSpriteId != 0xFF)
+    {
+        DestroySprite(&gSprites[gCategoryIconSpriteId]);
+        gCategoryIconSpriteId = 0xFF;
+    }
+    end = gDisplayedStringBattle + StringLength(gDisplayedStringBattle);
+    WrapFontIdToFit(gDisplayedStringBattle, end, FONT_NORMAL, WindowWidthPx(B_WIN_MOVE_DESCRIPTION));
+    FillWindowPixelBuffer(B_WIN_MOVE_DESCRIPTION, PIXEL_FILL(1));
+    BattlePutTextOnWindow(gDisplayedStringBattle, B_WIN_MOVE_DESCRIPTION);
+    CopyWindowToVram(B_WIN_MOVE_DESCRIPTION, COPYWIN_FULL);
+    sAscTalentPage = TRUE;
+    return TRUE;
 }
 
 static void TryMoveSelectionDisplayMoveDescription(enum BattlerId battler)

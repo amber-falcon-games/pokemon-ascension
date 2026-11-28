@@ -43,6 +43,9 @@ void Ascension_RefreshMoveCache(struct Pokemon *mon);
 bool32 Ascension_UsesTalentTree(struct Pokemon *mon);
 // Call right after an evolution sets the new species: carries TM jumps and choices over by move.
 void Ascension_OnEvolve(struct Pokemon *mon, u32 oldSpecies);
+// F016: "Talent branch 2.\nGrows into X at Lv. 39." (or a branch point / TM path / "Fully grown.").
+// FALSE (empty text) when the move is not from this Pokémon's talent tree.
+bool32 Ascension_DescribeTalentMove(struct Pokemon *mon, u16 move, u8 *dest);
 // Level-up growth (spec item 6). Start with *iter = 0 and call until FALSE: each TRUE is one branch
 // (0-7) or joined chain (8+k) whose move changes on reaching `level`. count > 1 is a branch point:
 // the player picks one of options[] (Ascension_SetTalentChoice) and its moves follow that pick.

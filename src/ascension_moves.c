@@ -3,6 +3,8 @@
 #include "battle_lab.h"
 #include "move.h"
 #include "pokemon.h"
+#include "string_util.h"
+#include "constants/characters.h"
 #include "constants/moves.h"
 #include "constants/species.h"
 #include "data/ascension/talent_trees.h"
@@ -441,4 +443,96 @@ u32 Ascension_FillExtraBattleMoves(struct Pokemon *mon, enum Move moves[MAX_BATT
         count++;
     }
     return count;
+}
+
+// F016: the talent page of the in-battle move info (L, then L again).
+static u8 *AppendLevel(u8 *dest, u32 level)
+{
+    dest = StringAppend(dest, COMPOUND_STRING("Lv. "));
+    return ConvertIntToDecimalStringN(dest, level, STR_CONV_MODE_LEFT_ALIGN, 3);
+}
+
+static u8 *AppendNode(u8 *dest, const struct TalentNode *node)
+{
+    u32 i;
+    for (i = 0; i < node->count; i++)
+    {
+        if (i > 0)
+            dest = StringAppend(dest, i + 1 == node->count ? COMPOUND_STRING(" or ") : COMPOUND_STRING(", "));
+        dest = StringAppend(dest, GetMoveName(node->moves[i]));
+    }
+    return dest;
+}
+
+bool32 Ascension_DescribeTalentMove(struct Pokemon *mon, u16 move, u8 *dest)
+{
+    u16 list[MAX_BATTLE_MOVES];
+    u8 sources[MAX_BATTLE_MOVES];
+    u32 species = GetMonData(mon, MON_DATA_SPECIES), level = GetMonData(mon, MON_DATA_LEVEL);
+    u32 i, count;
+
+    *dest = EOS;
+    if (!Ascension_UsesTalentTree(mon))
+        return FALSE;
+    count = Ascension_BuildTalentList(mon, list, sources);
+    for (i = 0; i < count && list[i] != move; i++)
+        ;
+    if (i == count)
+        return FALSE;
+    // A joined chain: the slot's source is the join itself, or a branch slot a join replaced.
+    {
+        u32 k;
+        for (k = 0; k < TALENT_MAX_JOINS; k++)
+        {
+            u32 join = GetJoin(mon, k), pos;
+            const struct TalentGlobalMove *c;
+            if (JOIN_CHAIN(join) < 0 || GlobalChainMove(JOIN_CHAIN(join), JOIN_POS(join), level) != move)
+                continue;
+            c = gTalentGlobalChains[JOIN_CHAIN(join)];
+            for (pos = JOIN_POS(join); c[pos].move != move; pos++)
+                ;
+            dest = StringAppend(dest, COMPOUND_STRING("Talent path from a TM.\n"));
+            if (c[pos + 1].move == MOVE_NONE)
+                StringAppend(dest, COMPOUND_STRING("Fully grown."));
+            else
+            {
+                dest = StringAppend(dest, COMPOUND_STRING("Grows into "));
+                dest = StringAppend(dest, GetMoveName(c[pos + 1].move));
+                dest = StringAppend(dest, COMPOUND_STRING(" at "));
+                dest = AppendLevel(dest, c[pos + 1].level);
+                StringAppend(dest, COMPOUND_STRING("."));
+            }
+            return TRUE;
+        }
+    }
+    if (sources[i] < Ascension_TalentBranchCount(species))
+    {
+        u32 b = sources[i];
+        const struct TalentBranch *br = &gTalentTrees[species].branches[b];
+        s32 cur = TalentBranchNode(species, b, level, (s32)((GetJumps(mon) >> (3 * b)) & 7) - 1);
+        dest = StringAppend(dest, COMPOUND_STRING("Talent branch "));
+        dest = ConvertIntToDecimalStringN(dest, b + 1, STR_CONV_MODE_LEFT_ALIGN, 1);
+        dest = StringAppend(dest, COMPOUND_STRING(".\n"));
+        if (cur + 1 >= br->nodeCount)
+        {
+            StringAppend(dest, COMPOUND_STRING("Fully grown."));
+        }
+        else if (br->nodes[cur + 1].count > 1)
+        {
+            dest = AppendLevel(dest, br->nodes[cur + 1].level);
+            dest = StringAppend(dest, COMPOUND_STRING(": "));
+            dest = AppendNode(dest, &br->nodes[cur + 1]);
+            StringAppend(dest, COMPOUND_STRING("."));
+        }
+        else
+        {
+            dest = StringAppend(dest, COMPOUND_STRING("Grows into "));
+            dest = StringAppend(dest, GetMoveName(br->nodes[cur + 1].moves[0]));
+            dest = StringAppend(dest, COMPOUND_STRING(" at "));
+            dest = AppendLevel(dest, br->nodes[cur + 1].level);
+            StringAppend(dest, COMPOUND_STRING("."));
+        }
+        return TRUE;
+    }
+    return FALSE;
 }
