@@ -185,3 +185,4 @@
         - [F015 Move library: talent trees, learning and saving](./features/F015-move-library.md)
         - [F016 Quick move info and in-battle Pokédex](./features/F016-move-info-and-battle-dex.md)
         - [F018 Initiative timeline: who acts next, and when](./features/F018-initiative-timeline.md)
+        - [F019 Energy replaces PP (the overhaul in the campaign)](./features/F019-energy-replaces-pp.md)

@@ -9504,6 +9504,17 @@ void BS_ItemRestorePP(void)
 {
     NATIVE_ARGS();
     const u8 *effect = GetItemEffect(gLastUsedItem);
+
+    // Pokémon Ascension F019: in an energy battle, PP items restore energy.
+    if (BattleLab_EnergyItemsActive() && BattleLab_EnergyItemPercent(gLastUsedItem) != 0
+     && GetBattlerSide(gBattlerAttacker) == B_SIDE_PLAYER)
+    {
+        struct Pokemon *target = &gParties[B_TRAINER_PLAYER][gBattleStruct->itemPartyIndex[gBattlerAttacker]];
+        BattleLab_UseEnergyItem(target, gLastUsedItem, TRUE);
+        PREPARE_SPECIES_BUFFER(gBattleTextBuff1, GetMonData(target, MON_DATA_SPECIES));
+        gBattlescriptCurrInstr = BattleScript_AscItemRestoredEnergy;
+        return;
+    }
     u32 i, pp, maxPP, loopEnd;
     enum BattlerId battler = MAX_BATTLERS_COUNT;
     struct Pokemon *mon = &gParties[GetBattlerTrainer(gBattlerAttacker)][gBattleStruct->itemPartyIndex[gBattlerAttacker]];

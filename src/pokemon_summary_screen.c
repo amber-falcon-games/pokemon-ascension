@@ -1,4 +1,5 @@
 #include "global.h"
+#include "battle_lab.h"
 #include "main.h"
 #include "battle.h"
 #include "battle_anim.h"
@@ -4047,7 +4048,22 @@ static void PrintMoveNameAndPP(u8 moveIndex)
     u8 ppValueWindowId = AddWindowFromTemplateList(sPageMovesTemplate, PSS_DATA_WINDOW_MOVE_PP);
     enum Move move = summary->moves[moveIndex];
 
-    if (move != 0)
+    if (move != 0 && ASCENSION_COMBAT)
+    {
+        // Pokémon Ascension F019: energy replaces PP; show what the move costs (max energy = max HP).
+        u32 cost = BattleLab_CampaignMoveCost(move, GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_MAX_HP));
+        u8 *end;
+        PrintTextOnWindowToFit(moveNameWindowId, GetMoveName(move), 0, moveIndex * 16 + 1, 0, 1);
+        end = StringCopy(gStringVar4, COMPOUND_STRING("EN "));
+        if (cost == 0)
+            StringCopy(end, COMPOUND_STRING("free"));
+        else
+            ConvertIntToDecimalStringN(end, cost, STR_CONV_MODE_LEFT_ALIGN, 3);
+        text = gStringVar4;
+        ppState = 9;
+        x = GetStringRightAlignXOffset(FONT_NORMAL, text, 44);
+    }
+    else if (move != 0)
     {
         pp = CalculatePPWithBonus(move, summary->ppBonuses, moveIndex);
         PrintTextOnWindowToFit(moveNameWindowId, GetMoveName(move), 0, moveIndex * 16 + 1, 0, 1);

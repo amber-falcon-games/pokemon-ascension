@@ -1002,7 +1002,7 @@ static void AddPokeblockToConditions(struct Pokeblock *pokeblock, struct Pokemon
     u8 data;
 
     // Pokémon Ascension (F015): the condition fields hold talent-tree data; Pokéblocks no longer change them.
-    if (!ASCENSION_MOVE_LIST && GetMonData(mon, MON_DATA_SHEEN) != MAX_SHEEN)
+    if (!ASCENSION_CONTEST_FIELDS_REUSED && GetMonData(mon, MON_DATA_SHEEN) != MAX_SHEEN)
     {
         CalculatePokeblockEffectiveness(pokeblock, mon);
         for (i = 0; i < CONDITION_COUNT; i++)

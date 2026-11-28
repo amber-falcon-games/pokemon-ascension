@@ -750,5 +750,6 @@ extern const u8 BattleScript_TakeHeart[];
 extern const u8 BattleScript_LearnedNewMove[];
 extern const u8 BattleScript_AscTalentGrew[];
 extern const u8 BattleScript_AscTalentBranchPoint[];
+extern const u8 BattleScript_AscItemRestoredEnergy[];
 
 #endif // GUARD_BATTLE_SCRIPTS_H

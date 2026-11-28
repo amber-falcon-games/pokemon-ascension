@@ -511,6 +511,8 @@ static void CB2_InitBattleInternal(void)
 {
     s32 i;
 
+    BattleLab_CampaignBattleInit();   // Pokémon Ascension F019: overhaul combat in campaign battles
+
     SetHBlankCallback(NULL);
     SetVBlankCallback(NULL);
 
@@ -2728,6 +2730,7 @@ void BeginBattleIntroDummy(void)
 void BeginBattleIntro(void)
 {
     BattleStartClearSetData();
+    BattleLab_CampaignBattleStart();   // Pokémon Ascension F019: starting energy
     gBattleCommunication[1] = 0;
     gBattleStruct->eventState.battleIntro = 0;
     gBattleMainFunc = DoBattleIntro;

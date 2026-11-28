@@ -9,6 +9,7 @@
 // move library: the species' most recent level-up moves it doesn't already know).
 #if TESTING
 extern bool8 gAscensionMoveListTestOverride;
+extern bool8 gAscensionCombatTestOverride;   // ASCENSION_COMBAT in tests (battle_lab.c)
 #endif
 // Talent trees (F015, D027): generated ROM tables, see tools/ascension/talent_trees.py.
 #define TALENT_MAX_CHOICES 4

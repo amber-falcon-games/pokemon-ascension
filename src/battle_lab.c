@@ -722,9 +722,46 @@ static EWRAM_DATA bool8 sLabHasLastSeed = FALSE;
 // Spike numbers, tuned in the Lab: damaging move ~ power/6 % of max, status 5 %, Protect-type
 // and recovery moves free. A Pokémon's own move never takes it below 1.
 
+// F019: campaign battles use the overhaul's rules when ASCENSION_COMBAT is on (Dual bars; damage
+// 50% in trainer battles, 75% in wild ones; energy x1; costs 100%). Proposed defaults, tuned later.
+#if TESTING
+EWRAM_DATA bool8 gAscensionCombatTestOverride = FALSE;
+#endif
+static EWRAM_DATA bool8 sAscCampaignBattle = FALSE;
+static EWRAM_DATA u8 sActiveCombat = LAB_COMBAT_CLASSIC;   // enum LabCombat of the running battle
+static void LabSaveCampaignEnergy(void);
+static EWRAM_DATA struct LabRules sCampaignRules = {0};
+
+// The campaign record only in a campaign battle; otherwise the Lab's rules (which the Lab also reads
+// while setting a battle up, before its battle flag is set).
+static const struct LabRules *LabActiveRules(void)
+{
+    return sAscCampaignBattle ? &sCampaignRules : &gBattleLabRules;
+}
+
+bool32 BattleLab_CampaignBattle(void)
+{
+    return sAscCampaignBattle;
+}
+
+#if TESTING
+static void Task_LabExhaustedTint(u8 taskId);
+// Test teardown: a test battle can stop before the battle-end hook that ends campaign mode.
+void BattleLab_ResetForTest(void)
+{
+    u8 taskId = FindTaskIdByFunc(Task_LabExhaustedTint);
+    sAscCampaignBattle = FALSE;
+    sActiveCombat = LAB_COMBAT_CLASSIC;
+    if (taskId != TASK_NONE)
+        DestroyTask(taskId);
+}
+#endif
+
+// Hot path (damage calculation, AI scoring): the battle's combat mode is cached in one byte, set
+// when a Lab or campaign battle starts and cleared when it ends.
 bool32 BattleLab_StaminaMode(void)
 {
-    return sLabInBattleFlag && (gBattleLabRules.combat == LAB_COMBAT_STAMINA || gBattleLabRules.combat == LAB_COMBAT_DUAL);
+    return sActiveCombat != LAB_COMBAT_CLASSIC;
 }
 
 // Dual (owner idea, 2026-11-27): health and energy are separate bars. Damage takes health
@@ -733,7 +770,7 @@ bool32 BattleLab_StaminaMode(void)
 // Healing costs energy and restores health. Energy is kept per party Pokémon for the battle.
 bool32 BattleLab_DualMode(void)
 {
-    return sLabInBattleFlag && gBattleLabRules.combat == LAB_COMBAT_DUAL;
+    return sActiveCombat == LAB_COMBAT_DUAL;
 }
 
 // Dual bars in a singles battle: healthboxes 8 px taller with the energy bar inside them.
@@ -1127,13 +1164,26 @@ static void LabEnsureExhaustedTint(void)
 // Colours come from the healthbox palette: blue fill (red when Exhausted); the empty part that
 // energy can still refill is dark, and the part above the health cap is darker still.
 #define LAB_ENBAR_TAG 0xA5D0
-#define LAB_ENBAR_W 46            // fill width in pixels
-static EWRAM_DATA u8 sLabEnBarSprite[MAX_BATTLERS_COUNT][2] = {0};
+// Up to four sprites per bar: 32+32 px (foe, doubles), or 32+32+32+8 px across your wide box,
+// where the energy bar fills the whole row (owner, 2026-11-28: there is no number beside it).
+#define LAB_ENBAR_PARTS 4
+#define LAB_ENBAR_MAX_W 104
+static EWRAM_DATA u8 sLabEnBarSprite[MAX_BATTLERS_COUNT][LAB_ENBAR_PARTS] = {0};
 
-static void LabEnBarPixel(u8 *tiles, s32 x, s32 y, u32 color)   // 64x8 buffer: tiles 0-3 left half, 4-7 right
+static u32 LabEnBarWidth(u32 battler)
+{
+    return (BattleLab_TallHealthboxes() && IsOnPlayerSide(battler)) ? LAB_ENBAR_MAX_W : 64;
+}
+
+static u32 LabEnBarParts(u32 battler)
+{
+    return LabEnBarWidth(battler) == LAB_ENBAR_MAX_W ? 4 : 2;
+}
+
+static void LabEnBarPixel(u8 *tiles, s32 x, s32 y, u32 color)   // tiles left to right, 8 px each
 {
     u8 *b;
-    if (x < 0 || x >= 64 || y < 0 || y >= 8)
+    if (x < 0 || x >= LAB_ENBAR_MAX_W || y < 0 || y >= 8)
         return;
     b = &tiles[(x / 8) * 32 + y * 4 + (x % 8) / 2];
     if (x & 1)
@@ -1153,8 +1203,8 @@ static void SpriteCB_LabEnBar(struct Sprite *sprite)
     bar = gSprites[healthbox].data[5];   // hMain_HealthBarSpriteId (battle_interface.c)
     if (BattleLab_TallHealthboxes() && bar < MAX_SPRITES && gSprites[bar].inUse)
     {
-        // Same column as the HP bar, on the row under it.
-        sprite->x = gSprites[bar].x + sprite->data[3] * 32;
+        // Same column as the HP bar, on the row under it (the last, 8 px part is centred 12 px earlier).
+        sprite->x = gSprites[bar].x + sprite->data[3] * 32 - (sprite->data[3] == 3 ? 12 : 0);
         sprite->y = gSprites[healthbox].y + 12;
         sprite->x2 = gSprites[bar].x2;
         sprite->y2 = gSprites[healthbox].y2;
@@ -1175,7 +1225,6 @@ static void SpriteCB_LabEnBar(struct Sprite *sprite)
 #define LAB_ENBAR_PAL_TAG 0xA5DF
 extern const u32 gBattleLabEnergyLabelGfx[];      // HP-style "EN" / "EX" label tiles (below)
 extern const u32 gBattleLabExhaustedLabelGfx[];
-#define LAB_ENBAR_PIXELS 48
 static EWRAM_DATA u16 sLabEnBarPal[16] = {0};
 
 static void LabLoadEnBarPalette(void)
@@ -1193,25 +1242,26 @@ static void LabLoadEnBarPalette(void)
 
 static void LabDrawEnergyBarValue(u32 battler, u32 value)
 {
-    u8 tiles[8 * TILE_SIZE_4BPP] ALIGNED(4);
+    u8 tiles[(LAB_ENBAR_MAX_W / 8) * TILE_SIZE_4BPP] ALIGNED(4);
     u32 i, x, pixels, capPixels, max = LabEnergyMax(battler), cap = LabEnergyCap(battler);
+    u32 width = LabEnBarWidth(battler), fillWidth = width - 16, parts = LabEnBarParts(battler);
     bool32 exhausted = BattleLab_IsExhausted(battler);
     const u8 *fill = Ascension_HealthbarFillGfx(exhausted);
     const void *label = (exhausted && !sLabBadgeBlinkOff) ? (const void *)gBattleLabExhaustedLabelGfx : (const void *)gBattleLabEnergyLabelGfx;
     if (sLabEnBarSprite[battler][0] >= MAX_SPRITES || max == 0)
         return;
-    pixels = value * LAB_ENBAR_PIXELS / max;
+    pixels = value * fillWidth / max;
     if (value > 0 && pixels == 0)
         pixels = 1;
-    capPixels = cap * LAB_ENBAR_PIXELS / max;
+    capPixels = cap * fillWidth / max;
     CpuCopy32(label, tiles, 2 * TILE_SIZE_4BPP);
-    for (i = 0; i < 6; i++)
+    for (i = 0; i < fillWidth / 8; i++)
     {
         u32 level = pixels > i * 8 ? min(pixels - i * 8, 8) : 0;
         CpuCopy32(fill + level * TILE_SIZE_4BPP, &tiles[(2 + i) * TILE_SIZE_4BPP], TILE_SIZE_4BPP);
     }
     // beyond the health cap: the empty fill rows (3-4) in the darker colours
-    for (x = capPixels; x < LAB_ENBAR_PIXELS; x++)
+    for (x = capPixels; x < fillWidth; x++)
     {
         if (x < pixels)
             continue;
@@ -1220,16 +1270,21 @@ static void LabDrawEnergyBarValue(u32 battler, u32 value)
     }
     // close the bar's right end, like the HP bar's frame end
     for (x = 2; x <= 5; x++)
-        LabEnBarPixel(tiles, 63, x, 6);
-    LabEnBarPixel(tiles, 63, 1, 0);
-    LabEnBarPixel(tiles, 63, 6, 0);
-    CpuCopy32(tiles, (void *)(OBJ_VRAM0 + gSprites[sLabEnBarSprite[battler][0]].oam.tileNum * TILE_SIZE_4BPP), 4 * TILE_SIZE_4BPP);
-    CpuCopy32(tiles + 4 * TILE_SIZE_4BPP, (void *)(OBJ_VRAM0 + gSprites[sLabEnBarSprite[battler][1]].oam.tileNum * TILE_SIZE_4BPP), 4 * TILE_SIZE_4BPP);
+        LabEnBarPixel(tiles, width - 1, x, 6);
+    LabEnBarPixel(tiles, width - 1, 1, 0);
+    LabEnBarPixel(tiles, width - 1, 6, 0);
+    for (i = 0; i < parts; i++)
+    {
+        u32 n = (i == 3) ? 1 : 4;   // tiles in this part
+        if (sLabEnBarSprite[battler][i] < MAX_SPRITES)
+            CpuCopy32(tiles + i * 4 * TILE_SIZE_4BPP, (void *)(OBJ_VRAM0 + gSprites[sLabEnBarSprite[battler][i]].oam.tileNum * TILE_SIZE_4BPP), n * TILE_SIZE_4BPP);
+    }
 }
 
 static void LabEnsureEnergyBars(void)
 {
     static const struct OamData sOam = {.shape = SPRITE_SHAPE(32x8), .size = SPRITE_SIZE(32x8), .priority = 1};
+    static const struct OamData sOamEnd = {.shape = SPRITE_SHAPE(8x8), .size = SPRITE_SIZE(8x8), .priority = 1};
     u32 battler, half;
     if (!BattleLab_DualMode())
         return;
@@ -1242,11 +1297,12 @@ static void LabEnsureEnergyBars(void)
             continue;
         if (healthbox >= MAX_SPRITES)
             continue;
-        for (half = 0; half < 2; half++)
+        for (half = 0; half < LabEnBarParts(battler); half++)
         {
             u8 blank[128] ALIGNED(4) = {0};
-            struct SpriteSheet sheet = {.data = blank, .size = 128, .tag = LAB_ENBAR_TAG + battler * 2 + half};
-            struct SpriteTemplate tmpl = {.tileTag = LAB_ENBAR_TAG + battler * 2 + half, .paletteTag = LAB_ENBAR_PAL_TAG, .oam = &sOam,
+            struct SpriteSheet sheet = {.data = blank, .size = half == 3 ? 32 : 128, .tag = LAB_ENBAR_TAG + battler * LAB_ENBAR_PARTS + half};
+            struct SpriteTemplate tmpl = {.tileTag = LAB_ENBAR_TAG + battler * LAB_ENBAR_PARTS + half, .paletteTag = LAB_ENBAR_PAL_TAG,
+                                          .oam = half == 3 ? &sOamEnd : &sOam,
                                           .anims = gDummySpriteAnimTable, .images = NULL, .affineAnims = gDummySpriteAffineAnimTable,
                                           .callback = SpriteCB_LabEnBar};
             u32 spriteId;
@@ -1304,15 +1360,15 @@ s32 BattleLab_ScaleDamage(s32 damage)
 {
     if (!BattleLab_StaminaMode() || damage <= 0)
         return damage;
-    damage = damage * sLabDamageScalePercent[gBattleLabRules.damageScale] / 100;
+    damage = damage * sLabDamageScalePercent[LabActiveRules()->damageScale] / 100;
     return damage > 0 ? damage : 1;
 }
 
 // Rules "Energy": multiplies both parties' max (and current) energy before the battle starts.
 void BattleLab_ScaleStartingEnergy(void)
 {
-    u32 i, tenths = sLabEnergyScaleTenths[gBattleLabRules.energyScale];
-    if (gBattleLabRules.combat == LAB_COMBAT_DUAL)
+    u32 i, tenths = sLabEnergyScaleTenths[LabActiveRules()->energyScale];
+    if (LabActiveRules()->combat == LAB_COMBAT_DUAL)
     {
         // Max energy = max HP (species, level) x the Energy rule; everyone starts full.
         for (i = 0; i < PARTY_SIZE * 2; i++)
@@ -1324,7 +1380,7 @@ void BattleLab_ScaleStartingEnergy(void)
         }
         return;
     }
-    if (gBattleLabRules.combat != LAB_COMBAT_STAMINA || tenths == 10)
+    if (LabActiveRules()->combat != LAB_COMBAT_STAMINA || tenths == 10)
         return;
     for (i = 0; i < PARTY_SIZE * 2; i++)
     {
@@ -1343,6 +1399,14 @@ void BattleLab_ScaleStartingEnergy(void)
     }
 }
 
+// F019: a move's energy cost in campaign battles (Dual bars, costs 100%), for menus outside battle.
+u32 BattleLab_CampaignMoveCost(u32 move, u32 maxEnergy)
+{
+    if (move != MOVE_NONE && IsHealingMove(move))
+        return maxEnergy / 5;
+    return BattleLab_EnergyCost(move, maxEnergy);
+}
+
 u32 BattleLab_BoostedCost(u32 battler, u32 move)
 {
     u32 cost = BattleLab_EnergyCost(move, LabEnergyMax(battler));
@@ -1350,7 +1414,7 @@ u32 BattleLab_BoostedCost(u32 battler, u32 move)
         cost = LabEnergyMax(battler) / 5;   // Dual: healing costs 20% of max energy (restores health)
     if (cost != 0)
     {
-        cost = cost * sLabCostScalePercent[gBattleLabRules.costScale] / 100;
+        cost = cost * sLabCostScalePercent[LabActiveRules()->costScale] / 100;
         if (cost == 0)
             cost = 1;
     }
@@ -1840,7 +1904,7 @@ static void LabBenchRegen(void)
 
 void BattleLab_LogTurnEnd(void)
 {
-    if (!sLabInBattleFlag)
+    if (!sLabInBattleFlag && !sAscCampaignBattle)
         return;
     if (BattleLab_StaminaMode())
     {
@@ -1857,6 +1921,10 @@ void BattleLab_LogTurnEnd(void)
                 LabDrawEnergyBarValue(battler, *LabEnergyPtr(battler));   // and moved the health cap
         }
     }
+    if (sAscCampaignBattle)
+        LabSaveCampaignEnergy();   // F019: kept up to date every round, and again at the end
+    if (!sLabInBattleFlag)
+        return;
     DebugPrintf("LAB turn %d", gBattleResults.battleTurnCounter + 1);
     LabLogBattlers();
 }
@@ -1866,6 +1934,13 @@ void BattleLab_LogTurnEnd(void)
 // leaves before the turn-end hook.
 void BattleLab_LogBattleEnd(void)
 {
+    if (sAscCampaignBattle)
+    {
+        LabSaveCampaignEnergy();
+        sAscCampaignBattle = FALSE;   // F019: the campaign battle is over
+        sActiveCombat = LAB_COMBAT_CLASSIC;
+        return;
+    }
     if (!sLabInBattleFlag)
         return;
     if (sLabAiDecisions)
@@ -3069,25 +3144,10 @@ static void Task_BattleLab_Input(u8 taskId)
     }
 }
 
-static void Task_BattleLab_StartBattle(u8 taskId)
+
+// Per-battle state of the stamina rules (timeline, energy bars, messages), for Lab and campaign battles.
+static void LabResetBattleState(void)
 {
-    const struct Trainer *opponent = &sLabTrainers[DIFFICULTY_NORMAL][LAB_TRAINER_001_OPPONENT];
-    bool32 wild = (gBattleLabRules.format == LAB_FORMAT_WILD_SINGLE);
-
-    if (gPaletteFade.active)
-        return;
-
-    // A fixed seed covers building the parties too (personality: gender, etc.), so the
-    // whole run replays, not just the battle.
-    // Every Lab battle runs from a known seed (F012): the fixed one, or a fresh one that is
-    // remembered so the battle can be replayed ("Use last seed" in Rules).
-    sLabLastSeed = gBattleLabRules.fixedSeed ? gBattleLabRules.seed : (Random() & 0xFFFF);
-    sLabHasLastSeed = TRUE;
-    SeedRng(sLabLastSeed);
-    BattleLab_LogBattleStart();
-    BattleLab_SetupScenarioParties();
-    BattleLab_ScaleStartingEnergy();
-    sLabInBattleFlag = TRUE;
     sLabEndRequest = LAB_END_NONE;
     sLabProtectedThisTurn = 0;
     sLabAiTicksTotal = 0;
@@ -3108,6 +3168,212 @@ static void Task_BattleLab_StartBattle(u8 taskId)
     sLabRoundPlanned = FALSE;
     sLabTimelineStarted = FALSE;
     memset(sLabBoost, 0, sizeof(sLabBoost));
+}
+
+// F019: decided at battle init (healthbox art depends on it). Link, Frontier, Safari and other
+// special battles stay classic.
+void BattleLab_CampaignBattleInit(void)
+{
+    sAscCampaignBattle = FALSE;
+    if (sLabInBattleFlag)
+        return;
+    sActiveCombat = LAB_COMBAT_CLASSIC;
+    if (!ASCENSION_COMBAT)
+        return;
+    // (Recorded Battle is cut, D011; the test runner's battles carry the recorded flags.)
+    if (gBattleTypeFlags & (BATTLE_TYPE_LINK | BATTLE_TYPE_SAFARI | BATTLE_TYPE_FRONTIER
+                          | BATTLE_TYPE_EREADER_TRAINER | BATTLE_TYPE_CATCH_TUTORIAL | BATTLE_TYPE_POKEDUDE | BATTLE_TYPE_SECRET_BASE))
+        return;
+    memset(&sCampaignRules, 0, sizeof(sCampaignRules));
+    sCampaignRules.combat = LAB_COMBAT_DUAL;
+    sCampaignRules.energyScale = 0;                                           // x1
+    sCampaignRules.damageScale = (gBattleTypeFlags & BATTLE_TYPE_TRAINER) ? 2 : 1;   // 50% trainers, 75% wild
+    sCampaignRules.costScale = 0;                                             // 100%
+    LabResetBattleState();
+    sAscCampaignBattle = TRUE;
+    sActiveCombat = sCampaignRules.combat;
+}
+
+// Energy share (percent) a Pokémon can hold at its current health (D024: lost health caps energy).
+static u32 LabCapPercent(struct Pokemon *mon)
+{
+    u32 maxHp = GetMonData(mon, MON_DATA_MAX_HP);
+    return maxHp == 0 ? 100 : 50 + 50 * GetMonData(mon, MON_DATA_HP) / maxHp;
+}
+
+// F019: your party starts from the energy it kept since its last battle (MON_DATA_ASC_FATIGUE,
+// capped by health); opponents start full.
+// The battle screen was rebuilt (back from the party menu or bag): every sprite was reset, so the
+// energy bars' sprite ids are stale. Forget them and make new bars.
+void BattleLab_OnBattleScreenReshown(void)
+{
+    memset(sLabEnBarSprite, 0xFF, sizeof(sLabEnBarSprite));
+    sLabTintedMask = 0;
+    LabEnsureEnergyBars();
+}
+
+void BattleLab_CampaignBattleStart(void)
+{
+    u32 i;
+    if (!sAscCampaignBattle)
+        return;
+    BattleLab_ScaleStartingEnergy();
+    for (i = 0; i < PARTY_SIZE; i++)
+    {
+        struct Pokemon *mon = &gParties[B_TRAINER_PLAYER][i];
+        u32 share, max = sLabEnergyMax[0][i];
+        if (max == 0 || GetMonData(mon, MON_DATA_SPECIES) == SPECIES_NONE)
+            continue;
+        share = 100 - min(GetMonData(mon, MON_DATA_ASC_FATIGUE), 100);
+        share = min(share, LabCapPercent(mon));
+        sLabEnergy[0][i] = max * share / 100;
+    }
+}
+
+// F019: at the end of a campaign battle your party keeps the energy it has left. A fainted
+// Pokémon is saved at 20%, so it wakes still Exhausted when revived (D023).
+#define ASC_FAINTED_ENERGY_PERCENT 20
+static void LabSaveCampaignEnergy(void)
+{
+    u32 i;
+    for (i = 0; i < PARTY_SIZE; i++)
+    {
+        struct Pokemon *mon = &gParties[B_TRAINER_PLAYER][i];
+        u32 share, fatigue, max = sLabEnergyMax[0][i];
+        if (max == 0 || GetMonData(mon, MON_DATA_SPECIES) == SPECIES_NONE || GetMonData(mon, MON_DATA_IS_EGG))
+            continue;
+        if (GetMonData(mon, MON_DATA_HP) == 0)
+            share = ASC_FAINTED_ENERGY_PERCENT;
+        else
+            share = min((sLabEnergy[0][i] * 100 + max / 2) / max, 100);
+        fatigue = 100 - share;
+        SetMonData(mon, MON_DATA_ASC_FATIGUE, &fatigue);
+    }
+}
+
+// F019: outside battle, energy comes back while walking (1% every 16 steps, up to the health cap;
+// not for fainted Pokémon) and fully with any full heal (Pokémon Center, bed, HealPlayerParty).
+#define ASC_WALK_STEPS_PER_PERCENT 16
+void BattleLab_OnPlayerStep(void)
+{
+    static EWRAM_DATA u8 sSteps = 0;
+    u32 i;
+    if (!ASCENSION_COMBAT || ++sSteps < ASC_WALK_STEPS_PER_PERCENT)
+        return;
+    sSteps = 0;
+    for (i = 0; i < PARTY_SIZE; i++)
+    {
+        struct Pokemon *mon = &gParties[B_TRAINER_PLAYER][i];
+        u32 fatigue;
+        if (GetMonData(mon, MON_DATA_SPECIES) == SPECIES_NONE || GetMonData(mon, MON_DATA_IS_EGG) || GetMonData(mon, MON_DATA_HP) == 0)
+            continue;
+        fatigue = GetMonData(mon, MON_DATA_ASC_FATIGUE);
+        if (fatigue > 0 && 100 - fatigue < LabCapPercent(mon))
+        {
+            fatigue--;
+            SetMonData(mon, MON_DATA_ASC_FATIGUE, &fatigue);
+        }
+    }
+}
+
+// F019: PP items restore energy instead (PP no longer limits moves): Ether 25%, Max Ether 50%,
+// Elixir 50%, Max Elixir 100% of max energy, up to the health cap. Proposed values, tuned later.
+u32 BattleLab_EnergyItemPercent(u32 item)
+{
+    switch (item)
+    {
+    case ITEM_ETHER:      return 25;
+    case ITEM_MAX_ETHER:  return 50;
+    case ITEM_ELIXIR:     return 50;
+    case ITEM_MAX_ELIXIR: return 100;
+    default:              return 0;
+    }
+}
+
+// TRUE while PP items work on energy: in a Lab or campaign battle with energy, or (outside battle)
+// with the overhaul on.
+bool32 BattleLab_EnergyItemsActive(void)
+{
+    return gMain.inBattle ? BattleLab_DualMode() : ASCENSION_COMBAT;
+}
+
+// The battle's party slot for a player party Pokémon, or PARTY_SIZE.
+static u32 LabPlayerPartySlot(struct Pokemon *mon)
+{
+    u32 i;
+    for (i = 0; i < PARTY_SIZE; i++)
+        if (mon == &gParties[B_TRAINER_PLAYER][i])
+            return i;
+    return PARTY_SIZE;
+}
+
+// Restores energy to a player party Pokémon; FALSE (and nothing changes) when it would do nothing.
+bool32 BattleLab_UseEnergyItem(struct Pokemon *mon, u32 item, bool32 apply)
+{
+    u32 percent = BattleLab_EnergyItemPercent(item), cap = LabCapPercent(mon);
+    if (percent == 0 || GetMonData(mon, MON_DATA_HP) == 0 || GetMonData(mon, MON_DATA_IS_EGG))
+        return FALSE;
+    if (gMain.inBattle && BattleLab_DualMode())
+    {
+        u32 slot = LabPlayerPartySlot(mon), max, capEnergy, now, after, battler;
+        if (slot >= PARTY_SIZE || sLabEnergyMax[0][slot] == 0)
+            return FALSE;
+        max = sLabEnergyMax[0][slot];
+        capEnergy = max * cap / 100;
+        now = sLabEnergy[0][slot];
+        if (now >= capEnergy)
+            return FALSE;
+        after = min(now + max * percent / 100, capEnergy);
+        if (!apply)
+            return TRUE;
+        sLabEnergy[0][slot] = after;
+        for (battler = 0; battler < gBattlersCount; battler++)
+            if (IsOnPlayerSide(battler) && gBattlerPartyIndexes[battler] == slot)
+                LabDrawEnergyBarValue(battler, after);
+        return TRUE;
+    }
+    else
+    {
+        u32 fatigue = GetMonData(mon, MON_DATA_ASC_FATIGUE), share = 100 - fatigue;
+        if (share >= cap)
+            return FALSE;
+        if (apply)
+        {
+            share = min(share + percent, cap);
+            fatigue = 100 - share;
+            SetMonData(mon, MON_DATA_ASC_FATIGUE, &fatigue);
+        }
+        return TRUE;
+    }
+}
+
+void BattleLab_RestoreAllEnergy(struct Pokemon *mon)
+{
+    u32 zero = 0;
+    SetMonData(mon, MON_DATA_ASC_FATIGUE, &zero);
+}
+
+static void Task_BattleLab_StartBattle(u8 taskId)
+{
+    const struct Trainer *opponent = &sLabTrainers[DIFFICULTY_NORMAL][LAB_TRAINER_001_OPPONENT];
+    bool32 wild = (gBattleLabRules.format == LAB_FORMAT_WILD_SINGLE);
+
+    if (gPaletteFade.active)
+        return;
+
+    // A fixed seed covers building the parties too (personality: gender, etc.), so the
+    // whole run replays, not just the battle.
+    // Every Lab battle runs from a known seed (F012): the fixed one, or a fresh one that is
+    // remembered so the battle can be replayed ("Use last seed" in Rules).
+    sLabLastSeed = gBattleLabRules.fixedSeed ? gBattleLabRules.seed : (Random() & 0xFFFF);
+    sLabHasLastSeed = TRUE;
+    SeedRng(sLabLastSeed);
+    BattleLab_LogBattleStart();
+    BattleLab_SetupScenarioParties();
+    BattleLab_ScaleStartingEnergy();
+    sLabInBattleFlag = TRUE;
+    sActiveCombat = gBattleLabRules.combat;
+    LabResetBattleState();
     gIsDebugBattle = TRUE;   // upstream then keeps the Lab's prebuilt enemy party (battle_main.c)
     gDebugAIFlags = BattleLab_OpponentAiFlags();
     if (wild)
@@ -3140,6 +3406,7 @@ static void CB2_BattleLab_ReturnFromBattle(void)
     gIsDebugBattle = FALSE;
     gDebugAiTrainerOverride = NULL;
     sLabInBattleFlag = FALSE;
+    sActiveCombat = LAB_COMBAT_CLASSIC;
     memset(&gStartingStatuses, 0, sizeof(gStartingStatuses));
     sLabLastResult = BattleLab_ResultFromOutcome(gBattleOutcome, sLabEndRequest == LAB_END_QUIT, sLabEndRequest == LAB_END_RESTART);
     sLabLastTurns = BattleLab_TurnsPlayed(gBattleResults.battleTurnCounter);
