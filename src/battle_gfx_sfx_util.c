@@ -57,11 +57,12 @@ static const struct CompressedSpriteSheet sSpriteSheet_SinglesOpponentLargeHealt
     gHealthboxSinglesOpponentLargeGfx, 0x1000, TAG_HEALTHBOX_OPPONENT1_TILE
 };
 
-// Pokémon Ascension (Dual bars): healthboxes 8 px taller, with room for the energy bar inside.
-// The opponent's is upstream's large box (its top matches the normal one).
-static const struct CompressedSpriteSheet sSpriteSheet_SinglesPlayerTallHealthbox =
+// Pokémon Ascension (Dual bars): room for the energy bar inside the healthboxes. The foe's is
+// upstream's large box (8 px taller; its top matches the normal one); yours is 24 px wider, with
+// the HP numbers beside the HP bar and the energy bar on the row below.
+static const struct CompressedSpriteSheet sSpriteSheet_SinglesPlayerWideHealthbox =
 {
-    gHealthboxSinglesPlayerTallGfx, 0x1000, TAG_HEALTHBOX_PLAYER1_TILE
+    gHealthboxSinglesPlayerWideGfx, 0x1000, TAG_HEALTHBOX_PLAYER1_TILE
 };
 
 static const struct CompressedSpriteSheet sSpriteSheets_DoublesPlayerHealthbox[2] =
@@ -740,7 +741,7 @@ bool8 BattleLoadAllHealthBoxesGfx(u8 state)
         case 2:
             if (GetBattlerCoordsIndex(GetBattlerAtPosition(B_POSITION_PLAYER_LEFT)) == BATTLE_COORDS_SINGLES)
             {
-                spriteSheet = BattleLab_TallHealthboxes() ? &sSpriteSheet_SinglesPlayerTallHealthbox : &sSpriteSheet_SinglesPlayerHealthbox;
+                spriteSheet = BattleLab_TallHealthboxes() ? &sSpriteSheet_SinglesPlayerWideHealthbox : &sSpriteSheet_SinglesPlayerHealthbox;
             }
             else
             {
@@ -777,7 +778,7 @@ bool8 BattleLoadAllHealthBoxesGfx(u8 state)
         {
         case 2:
             spriteSheet = (gBattleTypeFlags & BATTLE_TYPE_SAFARI) ? &sSpriteSheet_SafariHealthbox
-                        : BattleLab_TallHealthboxes() ? &sSpriteSheet_SinglesPlayerTallHealthbox : &sSpriteSheet_SinglesPlayerHealthbox;
+                        : BattleLab_TallHealthboxes() ? &sSpriteSheet_SinglesPlayerWideHealthbox : &sSpriteSheet_SinglesPlayerHealthbox;
             break;
         case 3:
             spriteSheet = (B_HP_PERCENTAGE_DISPLAY || BattleLab_TallHealthboxes()) ? &sSpriteSheet_SinglesOpponentLargeHealthbox : &sSpriteSheet_SinglesOpponentHealthbox;

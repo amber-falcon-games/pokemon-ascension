@@ -1144,66 +1144,87 @@ static void LabEnBarPixel(u8 *tiles, s32 x, s32 y, u32 color)   // 64x8 buffer: 
 
 static void SpriteCB_LabEnBar(struct Sprite *sprite)
 {
-    u32 battler = sprite->data[0], healthbox = gHealthboxSpriteIds[battler];
+    u32 battler = sprite->data[0], healthbox = gHealthboxSpriteIds[battler], bar;
     if (!BattleLab_DualMode() || healthbox >= MAX_SPRITES || !gSprites[healthbox].inUse)
     {
         sprite->invisible = TRUE;
         return;
     }
-    sprite->x = gSprites[healthbox].x + sprite->data[1];
-    sprite->y = gSprites[healthbox].y + sprite->data[2];
-    sprite->x2 = gSprites[healthbox].x2;
-    sprite->y2 = gSprites[healthbox].y2;
+    bar = gSprites[healthbox].data[5];   // hMain_HealthBarSpriteId (battle_interface.c)
+    if (BattleLab_TallHealthboxes() && bar < MAX_SPRITES && gSprites[bar].inUse)
+    {
+        // Same column as the HP bar, on the row under it.
+        sprite->x = gSprites[bar].x + sprite->data[3] * 32;
+        sprite->y = gSprites[healthbox].y + 12;
+        sprite->x2 = gSprites[bar].x2;
+        sprite->y2 = gSprites[healthbox].y2;
+    }
+    else
+    {
+        sprite->x = gSprites[healthbox].x + sprite->data[1];
+        sprite->y = gSprites[healthbox].y + sprite->data[2];
+        sprite->x2 = gSprites[healthbox].x2;
+        sprite->y2 = gSprites[healthbox].y2;
+    }
     sprite->invisible = gSprites[healthbox].invisible || gBattleMons[battler].hp == 0;
+}
+
+// The energy bar is drawn like the HP bar: the "EN" label (EX, blinking, when Exhausted), then
+// the HP bar's own fill tiles, in blue (red when Exhausted) from a copy of its palette. The empty
+// part above the health cap is darker: energy can't refill there until health returns.
+#define LAB_ENBAR_PAL_TAG 0xA5DF
+extern const u32 gBattleLabEnergyLabelGfx[];      // HP-style "EN" / "EX" label tiles (below)
+extern const u32 gBattleLabExhaustedLabelGfx[];
+#define LAB_ENBAR_PIXELS 48
+static EWRAM_DATA u16 sLabEnBarPal[16] = {0};
+
+static void LabLoadEnBarPalette(void)
+{
+    struct SpritePalette pal = {.data = sLabEnBarPal, .tag = LAB_ENBAR_PAL_TAG};
+    if (IndexOfSpritePaletteTag(LAB_ENBAR_PAL_TAG) != 0xFF)
+        return;
+    CpuCopy16(gBattleInterface_BallDisplayPal, sLabEnBarPal, sizeof(sLabEnBarPal));
+    sLabEnBarPal[10] = RGB(12, 21, 31);   // fill, lower row (the HP bar's light green)
+    sLabEnBarPal[11] = RGB(7, 15, 28);    // fill, upper row
+    sLabEnBarPal[12] = RGB(5, 5, 7);      // empty beyond the health cap
+    sLabEnBarPal[13] = RGB(3, 3, 5);
+    LoadSpritePalette(&pal);
 }
 
 static void LabDrawEnergyBarValue(u32 battler, u32 value)
 {
-    static const u8 sEn[2][5] = {{7, 4, 6, 4, 7}, {5, 7, 7, 5, 5}};   // "E", "N" in 3x5
-    u8 tiles[64 * 8 / 2] ALIGNED(4);
-    u32 i, x, y, fill, capFill, max = LabEnergyMax(battler), cap = LabEnergyCap(battler);
-    u32 color = BattleLab_IsExhausted(battler) ? 14 : 11, shade = BattleLab_IsExhausted(battler) ? 14 : 15;
+    u8 tiles[8 * TILE_SIZE_4BPP] ALIGNED(4);
+    u32 i, x, pixels, capPixels, max = LabEnergyMax(battler), cap = LabEnergyCap(battler);
+    bool32 exhausted = BattleLab_IsExhausted(battler);
+    const u8 *fill = Ascension_HealthbarFillGfx(exhausted);
+    const void *label = (exhausted && !sLabBadgeBlinkOff) ? (const void *)gBattleLabExhaustedLabelGfx : (const void *)gBattleLabEnergyLabelGfx;
     if (sLabEnBarSprite[battler][0] >= MAX_SPRITES || max == 0)
         return;
-    fill = value * LAB_ENBAR_W / max;
-    if (value > 0 && fill == 0)
-        fill = 1;
-    capFill = cap * LAB_ENBAR_W / max;
-    memset(tiles, 0, sizeof(tiles));
-    // "EN" label, dark outline then cream letters
-    for (i = 0; i < 2; i++)
-        for (y = 0; y < 5; y++)
-            for (x = 0; x < 3; x++)
-                if (sEn[i][y] & (4 >> x))
-                {
-                    s32 dx, dy;
-                    for (dy = -1; dy <= 1; dy++)
-                        for (dx = -1; dx <= 1; dx++)
-                            LabEnBarPixel(tiles, 2 + i * 4 + x + dx, 1 + y + dy, 1);
-                }
-    for (i = 0; i < 2; i++)
-        for (y = 0; y < 5; y++)
-            for (x = 0; x < 3; x++)
-                if (sEn[i][y] & (4 >> x))
-                    LabEnBarPixel(tiles, 2 + i * 4 + x, 1 + y, 2);
-    // bar frame (dark) x 11..60, rows 1..6; inside x 12..57+, rows 2..5
-    for (x = 11; x < 13 + LAB_ENBAR_W + 1; x++)
-        for (y = 1; y <= 6; y++)
-            LabEnBarPixel(tiles, x, y, 1);
-    for (x = 0; x < LAB_ENBAR_W; x++)
-        for (y = 2; y <= 5; y++)
-        {
-            u32 c;
-            if (x < fill)
-                c = (y <= 3) ? color : shade;
-            else if (x < capFill)
-                c = 6;    // empty, can refill
-            else
-                c = 8;    // beyond the health cap: can't refill until health returns
-            LabEnBarPixel(tiles, 13 + x, y, c);
-        }
-    CpuCopy32(tiles, (void *)(OBJ_VRAM0 + gSprites[sLabEnBarSprite[battler][0]].oam.tileNum * TILE_SIZE_4BPP), 128);
-    CpuCopy32(tiles + 128, (void *)(OBJ_VRAM0 + gSprites[sLabEnBarSprite[battler][1]].oam.tileNum * TILE_SIZE_4BPP), 128);
+    pixels = value * LAB_ENBAR_PIXELS / max;
+    if (value > 0 && pixels == 0)
+        pixels = 1;
+    capPixels = cap * LAB_ENBAR_PIXELS / max;
+    CpuCopy32(label, tiles, 2 * TILE_SIZE_4BPP);
+    for (i = 0; i < 6; i++)
+    {
+        u32 level = pixels > i * 8 ? min(pixels - i * 8, 8) : 0;
+        CpuCopy32(fill + level * TILE_SIZE_4BPP, &tiles[(2 + i) * TILE_SIZE_4BPP], TILE_SIZE_4BPP);
+    }
+    // beyond the health cap: the empty fill rows (3-4) in the darker colours
+    for (x = capPixels; x < LAB_ENBAR_PIXELS; x++)
+    {
+        if (x < pixels)
+            continue;
+        LabEnBarPixel(tiles, 16 + x, 3, 12);
+        LabEnBarPixel(tiles, 16 + x, 4, 13);
+    }
+    // close the bar's right end, like the HP bar's frame end
+    for (x = 2; x <= 5; x++)
+        LabEnBarPixel(tiles, 63, x, 6);
+    LabEnBarPixel(tiles, 63, 1, 0);
+    LabEnBarPixel(tiles, 63, 6, 0);
+    CpuCopy32(tiles, (void *)(OBJ_VRAM0 + gSprites[sLabEnBarSprite[battler][0]].oam.tileNum * TILE_SIZE_4BPP), 4 * TILE_SIZE_4BPP);
+    CpuCopy32(tiles + 4 * TILE_SIZE_4BPP, (void *)(OBJ_VRAM0 + gSprites[sLabEnBarSprite[battler][1]].oam.tileNum * TILE_SIZE_4BPP), 4 * TILE_SIZE_4BPP);
 }
 
 static void LabEnsureEnergyBars(void)
@@ -1212,6 +1233,7 @@ static void LabEnsureEnergyBars(void)
     u32 battler, half;
     if (!BattleLab_DualMode())
         return;
+    LabLoadEnBarPalette();
     for (battler = 0; battler < gBattlersCount; battler++)
     {
         u32 healthbox = gHealthboxSpriteIds[battler];
@@ -1224,7 +1246,7 @@ static void LabEnsureEnergyBars(void)
         {
             u8 blank[128] ALIGNED(4) = {0};
             struct SpriteSheet sheet = {.data = blank, .size = 128, .tag = LAB_ENBAR_TAG + battler * 2 + half};
-            struct SpriteTemplate tmpl = {.tileTag = LAB_ENBAR_TAG + battler * 2 + half, .paletteTag = TAG_NONE, .oam = &sOam,
+            struct SpriteTemplate tmpl = {.tileTag = LAB_ENBAR_TAG + battler * 2 + half, .paletteTag = LAB_ENBAR_PAL_TAG, .oam = &sOam,
                                           .anims = gDummySpriteAnimTable, .images = NULL, .affineAnims = gDummySpriteAffineAnimTable,
                                           .callback = SpriteCB_LabEnBar};
             u32 spriteId;
@@ -1233,20 +1255,11 @@ static void LabEnsureEnergyBars(void)
             spriteId = CreateSprite(&tmpl, 0, 0, 0);
             if (spriteId >= MAX_SPRITES)
                 return;
-            gSprites[spriteId].oam.paletteNum = gSprites[healthbox].oam.paletteNum;
             gSprites[spriteId].data[0] = battler;
-            if (BattleLab_TallHealthboxes())
-            {
-                // Inside the tall healthbox: the foe's under its HP bar, yours under the HP numbers.
-                gSprites[spriteId].data[1] = (IsOnPlayerSide(battler) ? 15 : 8) + half * 32;
-                gSprites[spriteId].data[2] = IsOnPlayerSide(battler) ? 20 : 12;
-            }
-            else
-            {
-                // Doubles: just under the foe's healthbox, just above yours.
-                gSprites[spriteId].data[1] = (IsOnPlayerSide(battler) ? 16 : 8) + half * 32;
-                gSprites[spriteId].data[2] = IsOnPlayerSide(battler) ? -18 : 15;
-            }
+            gSprites[spriteId].data[3] = half;
+            // Doubles: just under the foe's healthbox, just above yours.
+            gSprites[spriteId].data[1] = (IsOnPlayerSide(battler) ? 16 : 8) + half * 32;
+            gSprites[spriteId].data[2] = IsOnPlayerSide(battler) ? -18 : 15;
             sLabEnBarSprite[battler][half] = spriteId;
             SpriteCB_LabEnBar(&gSprites[spriteId]);
         }
@@ -1421,9 +1434,9 @@ const void *BattleLab_HealthbarLabelGfx(u32 battler, const void *hpLabel)
 {
     if (!BattleLab_StaminaMode())
         return hpLabel;
-    if (BattleLab_IsExhausted(battler))
+    if (BattleLab_IsExhausted(battler) && !BattleLab_DualMode())
         return gBattleLabExhaustedLabelGfx;
-    if (BattleLab_DualMode())   // the health bar keeps its "HP" label
+    if (BattleLab_DualMode())   // the health bar keeps its "HP" label; EX shows on the energy bar
         return hpLabel != NULL ? hpLabel : (const void *)gHealthboxElementsGfxTable[1];   // upstream "HP" tiles (HEALTHBOX_GFX_1)
     return gBattleLabEnergyLabelGfx;
 }
@@ -1433,6 +1446,12 @@ static void LabRefreshEnergyLabel(u32 battler)
 {
     u32 barSpriteId;
     const void *gfx;
+    if (BattleLab_DualMode())   // the EN/EX label is part of the energy bar
+    {
+        if (gBattleMons[battler].hp != 0)
+            LabDrawEnergyBarValue(battler, *LabEnergyPtr(battler));
+        return;
+    }
     if (!BattleLab_StaminaMode() || gBattleMons[battler].status1 != 0 || gBattleMons[battler].hp == 0)
         return;
     barSpriteId = gSprites[gHealthboxSpriteIds[battler]].data[5];   // hMain_HealthBarSpriteId (battle_interface.c)

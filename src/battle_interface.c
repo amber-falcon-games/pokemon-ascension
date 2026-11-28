@@ -731,6 +731,13 @@ static const u8 *GetHealthboxElementGfxPtr(u8 elementId)
     return gHealthboxElementsGfxTable[elementId];
 }
 
+// Pokémon Ascension (Dual bars): the HP bar's fill tiles (9 levels of 8 px), green or red, so the
+// energy bar can be drawn in the same style.
+const u8 *Ascension_HealthbarFillGfx(bool32 red)
+{
+    return GetHealthboxElementGfxPtr(red ? HEALTHBOX_GFX_HP_BAR_RED : HEALTHBOX_GFX_HP_BAR_GREEN);
+}
+
 // Syncs the position of healthbar accordingly with the healthbox.
 static void SpriteCB_HealthBar(struct Sprite *sprite)
 {
@@ -739,7 +746,8 @@ static void SpriteCB_HealthBar(struct Sprite *sprite)
     switch (sprite->hBar_Data6)
     {
     case 0:
-        sprite->x = gSprites[healthboxSpriteId].x + 16;
+        // Pokémon Ascension: in the wide (Dual bars) box the HP bar moves 16 px left for the numbers.
+        sprite->x = gSprites[healthboxSpriteId].x + (BattleLab_TallHealthboxes() ? 0 : 16);
         sprite->y = gSprites[healthboxSpriteId].y;
         break;
     case 1:
@@ -862,9 +870,9 @@ void GetBattlerHealthboxCoords(enum BattlerId battler, s16 *x, s16 *y)
 
     *x = sBattlerHealthboxCoords[index][position][0];
     *y = sBattlerHealthboxCoords[index][position][1];
-    // Pokémon Ascension: the player's tall (Dual bars) box sits 8 px higher to clear the message box.
+    // Pokémon Ascension: the player's wide (Dual bars) box sits 16 px further left to stay on screen.
     if (index == BATTLE_COORDS_SINGLES && position == B_POSITION_PLAYER_LEFT && BattleLab_TallHealthboxes())
-        *y -= 8;
+        *x -= 16;
 }
 
 void InitBattlerHealthboxCoords(enum BattlerId battler)
@@ -901,8 +909,9 @@ static void UpdateLvlInHealthbox(u8 healthboxSpriteId, u8 lvl)
 
     if (IsOnPlayerSide(battler))
     {
-        FillSpriteRectColor(spriteId, 8, 5, 24, 11, HEALTHBOX_BG_INDEX);
-        AddSpriteTextPrinterParameterized6(spriteId, FONT_SMALL, 32 - width, 3, 0, 0, sHealthBoxTextColor, 0, text);
+        u32 shift = (GetBattlerCoordsIndex(battler) == BATTLE_COORDS_SINGLES && BattleLab_TallHealthboxes()) ? 24 : 0;   // wide box
+        FillSpriteRectColor(spriteId, 8 + shift, 5, 24, 11, HEALTHBOX_BG_INDEX);
+        AddSpriteTextPrinterParameterized6(spriteId, FONT_SMALL, 32 + shift - width, 3, 0, 0, sHealthBoxTextColor, 0, text);
     }
     else
     {
@@ -948,6 +957,34 @@ static void PrintHpOnHealthbox(u32 spriteId, s16 currHp, s16 maxHp, u32 bgColor,
     gSprites[spriteId2].data[1] = savedValue2;
 }
 
+
+// Pokémon Ascension (Dual bars): "136/136" on the HP bar's row, right-aligned to the wide box.
+#define HP_BESIDE_BAR_RIGHT 120
+#define HP_BESIDE_BAR_LEFT  82
+static void PrintHpBesideHealthbar(u32 spriteId, s16 currHp, s16 maxHp)
+{
+    u8 text[2 * HP_MAX_DIGITS + 2], *txtPtr;
+    u32 width, spriteId2 = gSprites[spriteId].oam.affineParam;
+    s16 savedValue1 = gSprites[spriteId].data[1], savedValue2 = gSprites[spriteId2].data[1];
+
+    txtPtr = ConvertIntToDecimalStringN(text, currHp, STR_CONV_MODE_LEFT_ALIGN, HP_MAX_DIGITS);
+    *txtPtr++ = CHAR_SLASH;
+    ConvertIntToDecimalStringN(txtPtr, maxHp, STR_CONV_MODE_LEFT_ALIGN, HP_MAX_DIGITS);
+    gSprites[spriteId].data[1] = spriteId2;
+    gSprites[spriteId2].data[1] = SPRITE_NONE;
+    // Clear the old number (entirely on the right sprite: HP_BESIDE_BAR_LEFT >= 64).
+    FillSpriteRectColor(spriteId2, HP_BESIDE_BAR_LEFT - 64, 15, HP_BESIDE_BAR_RIGHT - HP_BESIDE_BAR_LEFT, 11, HEALTHBOX_BG_INDEX);
+    width = GetStringWidth(HP_FONT, text, -1) + GetFontAttribute(HP_FONT, FONTATTR_LETTER_SPACING);
+    if (width > HP_BESIDE_BAR_RIGHT - HP_BESIDE_BAR_LEFT)
+        width = HP_BESIDE_BAR_RIGHT - HP_BESIDE_BAR_LEFT;
+    // A printer started past the left sprite drops its first glyph: start on the right one then.
+    if (HP_BESIDE_BAR_RIGHT - width >= 64)
+        AddSpriteTextPrinterParameterized6(spriteId2, HP_FONT, HP_BESIDE_BAR_RIGHT - width - 64, 13, 0, 0, sHealthBoxTextColor, 0, text);
+    else
+        AddSpriteTextPrinterParameterized6(spriteId, HP_FONT, HP_BESIDE_BAR_RIGHT - width, 13, 0, 0, sHealthBoxTextColor, 0, text);
+    gSprites[spriteId].data[1] = savedValue1;
+    gSprites[spriteId2].data[1] = savedValue2;
+}
 
 static void PrintHPPercentageOnHealthbox(u32 spriteId, s16 currHp, s16 maxHp, u32 bgColor, s8 xOffset, s8 yOffset)
 {
@@ -1093,7 +1130,10 @@ void UpdateHpTextInHealthbox(u32 healthboxSpriteId, u32 maxOrCurrent, s16 currHp
     {
         if (IsOnPlayerSide(battler)) // Player
         {
-            PrintHpOnHealthbox(healthboxSpriteId, currHp, maxHp, HEALTHBOX_BG_INDEX, 0, 16);
+            if (BattleLab_TallHealthboxes())   // Pokémon Ascension: numbers beside the HP bar
+                PrintHpBesideHealthbar(healthboxSpriteId, currHp, maxHp);
+            else
+                PrintHpOnHealthbox(healthboxSpriteId, currHp, maxHp, HEALTHBOX_BG_INDEX, 0, 16);
         }
         else // Opponent
         {
@@ -1883,7 +1923,9 @@ static void UpdateStatusIconInHealthbox(u8 healthboxSpriteId)
         switch (GetBattlerCoordsIndex(battler))
         {
         case BATTLE_COORDS_SINGLES:
-            tileNumAdder = 0x1A;
+            // Pokémon Ascension: in the wide box the energy bar takes the bottom row, so the
+            // status icon moves to the name row, between the name and the level (right half).
+            tileNumAdder = BattleLab_TallHealthboxes() ? 64 + 8 + 1 : 0x1A;
             break;
         default:
             tileNumAdder = 0x12;
@@ -2263,8 +2305,7 @@ static void MoveBattleBarGraphically(enum BattlerId battler, u8 whichBar)
             for (i = 0; i < 8; i++)
                 array[i] = 0;
         }
-        // Pokémon Ascension: in the tall (Dual bars) box the EXP strip is one tile row (8 tiles) lower.
-        u32 expRow = BattleLab_TallHealthboxes() ? 8 : 0;
+        u32 expRow = 0;
         for (i = 0; i < 8; i++)
         {
             if (i < 4)

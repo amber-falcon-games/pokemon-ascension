@@ -144,4 +144,6 @@ void UpdateNickInHealthbox(u8 healthboxSpriteId, struct Pokemon *mon);
 void CreateItemPopUp(enum BattlerId battlerId);
 void FreeAbilityPopUpGfx(void);
 
+const u8 *Ascension_HealthbarFillGfx(bool32 red);   // Pokémon Ascension: HP bar fill tiles for the energy bar
+
 #endif // GUARD_BATTLE_INTERFACE_H
