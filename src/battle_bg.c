@@ -387,6 +387,17 @@ static const struct WindowTemplate sStandardBattleWindowTemplates[] =
         .paletteNum = 5,
         .baseBlock = 0x03BC,
     },
+    // Pokémon Ascension F016: the description box's place, seen from the action menu. It shares the
+    // description box's tiles: the two are never on screen together.
+    [B_WIN_ASC_DEX] = {
+        .bg = 0,
+        .tilemapLeft = 1,
+        .tilemapTop = 27,
+        .width = 18,
+        .height = 6,
+        .paletteNum = 5,
+        .baseBlock = 0x0350,
+    },
     DUMMY_WIN_TEMPLATE
 };
 

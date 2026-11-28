@@ -1,4 +1,5 @@
 #include "global.h"
+#include "ascension_battle_dex.h"
 #include "battle_lab.h"
 #include "battle.h"
 #include "battle_arena.h"
@@ -654,6 +655,7 @@ static enum CancelerResult CancelerAttackstring(struct BattleCalcValues *cv)
         gBattleStruct->battlerState[gBattlerAttacker].lastMoveTarget = gBattlerTarget;
         gLastPrintedMoves[gBattlerAttacker] = gChosenMove;
         RecordKnownMove(gBattlerAttacker, gChosenMove);
+        Ascension_DexRecordMove(gBattlerAttacker, gChosenMove);   // Pokémon Ascension F016
     }
     return CANCELER_RESULT_RUN_SCRIPT_AND_INCREMENT;
 }

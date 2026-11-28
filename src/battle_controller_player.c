@@ -1,5 +1,6 @@
 #include "global.h"
 #include "ascension_moves.h"
+#include "ascension_battle_dex.h"
 #include "battle_lab.h"
 #include "battle.h"
 #include "battle_anim.h"
@@ -121,6 +122,8 @@ static u32 AscCursorPos(enum BattlerId battler)   // 0-3: where the cursor is on
 }
 static void TryMoveSelectionDisplayMoveDescription(enum BattlerId battler);
 static bool32 AscTryShowTalentPage(enum BattlerId battler);
+static bool32 AscDexAvailable(void);
+static void AscDexOpen(enum BattlerId battler);
 static EWRAM_DATA bool8 sAscTalentPage = FALSE;   // Pokémon Ascension F016
 static void MoveSelectionDisplayMoveDescription(enum BattlerId battler);
 static void WaitForMonSelection(enum BattlerId battler);
@@ -435,6 +438,11 @@ static void HandleInputChooseAction(enum BattlerId battler)
     else if (JOY_NEW(START_BUTTON))
     {
         SwapHpBarsWithHpText();
+    }
+    else if (JOY_NEW(L_BUTTON) && AscDexAvailable()
+          && !(gSaveBlock2Ptr->optionsButtonMode == OPTIONS_BUTTON_MODE_L_EQUALS_A))
+    {
+        AscDexOpen(battler);   // Pokémon Ascension F016: in-battle Pokédex panel
     }
     else if (DEBUG_BATTLE_MENU == TRUE && JOY_NEW(SELECT_BUTTON))
     {
@@ -1786,6 +1794,105 @@ static void MoveSelectionDisplayMoveType(enum BattlerId battler)
 
     PrependFontIdToFit(txtPtr, end, FONT_NORMAL, WindowWidthPx(B_WIN_MOVE_TYPE) - 25);
     BattlePutTextOnWindow(gDisplayedStringBattle, B_WIN_MOVE_TYPE);
+}
+
+// Pokémon Ascension F016: in-battle Pokédex panel. L opens it from the action menu and turns the
+// pages, LEFT/RIGHT switch opponent in doubles, B closes it. It never uses a turn.
+static EWRAM_DATA u8 sAscDexTarget = 0;
+static EWRAM_DATA u8 sAscDexPage = 0;
+#define ASC_DEX_RECT_X 0    // the panel's window and frame on bg0's tilemap (32 tiles wide)
+#define ASC_DEX_RECT_Y 26
+#define ASC_DEX_RECT_W 20
+#define ASC_DEX_RECT_H 8
+static EWRAM_DATA u16 sAscDexSavedTiles[ASC_DEX_RECT_H][ASC_DEX_RECT_W] = {0};
+
+static void AscDexSaveOrRestoreTiles(bool32 restore)
+{
+    u16 *map = GetBgTilemapBuffer(0);
+    u32 x, y;
+    for (y = 0; y < ASC_DEX_RECT_H; y++)
+        for (x = 0; x < ASC_DEX_RECT_W; x++)
+        {
+            u16 *tile = &map[(ASC_DEX_RECT_Y + y) * 32 + ASC_DEX_RECT_X + x];
+            if (restore)
+                *tile = sAscDexSavedTiles[y][x];
+            else
+                sAscDexSavedTiles[y][x] = *tile;
+        }
+}
+
+static bool32 AscDexAvailable(void)
+{
+    return ASCENSION_MOVE_LIST && gBattleScripting.windowsType == B_WIN_TYPE_NORMAL
+        && !(gBattleTypeFlags & (BATTLE_TYPE_SAFARI | BATTLE_TYPE_LINK | BATTLE_TYPE_RECORDED));
+}
+
+static bool32 AscDexTargetValid(u32 target)
+{
+    return target < gBattlersCount && GetBattlerSide(target) == B_SIDE_OPPONENT && IsBattlerAlive(target);
+}
+
+static void AscDexDraw(void)
+{
+    u8 *end;
+    Ascension_DexPageText(sAscDexTarget, sAscDexPage, gDisplayedStringBattle);
+    end = gDisplayedStringBattle + StringLength(gDisplayedStringBattle);
+    WrapFontIdToFit(gDisplayedStringBattle, end, FONT_NARROW, WindowWidthPx(B_WIN_ASC_DEX));
+    LoadMessageBoxAndBorderGfx();
+    DrawStdWindowFrame(B_WIN_ASC_DEX, FALSE);
+    FillWindowPixelBuffer(B_WIN_ASC_DEX, PIXEL_FILL(0xE));
+    BattlePutTextOnWindow(gDisplayedStringBattle, B_WIN_ASC_DEX);
+    CopyWindowToVram(B_WIN_ASC_DEX, COPYWIN_FULL);
+}
+
+static void AscDexClose(enum BattlerId battler)
+{
+    AscDexSaveOrRestoreTiles(TRUE);
+    CopyBgTilemapBufferToVram(0);
+    gBattlerControllerFuncs[battler] = HandleInputChooseAction;
+}
+
+static void AscHandleDexInput(enum BattlerId battler)
+{
+    if (JOY_NEW(B_BUTTON))
+    {
+        PlaySE(SE_SELECT);
+        AscDexClose(battler);
+    }
+    else if (JOY_NEW(L_BUTTON | A_BUTTON))
+    {
+        PlaySE(SE_SELECT);
+        if (++sAscDexPage >= Ascension_DexPageCount(sAscDexTarget))
+            AscDexClose(battler);
+        else
+            AscDexDraw();
+    }
+    else if (JOY_NEW(DPAD_LEFT | DPAD_RIGHT))
+    {
+        u32 other = GetPartnerBattler(sAscDexTarget);
+        if (AscDexTargetValid(other))
+        {
+            PlaySE(SE_SELECT);
+            sAscDexTarget = other;
+            sAscDexPage = 0;
+            AscDexDraw();
+        }
+    }
+}
+
+static void AscDexOpen(enum BattlerId battler)
+{
+    u32 target = GetBattlerAtPosition(B_POSITION_OPPONENT_LEFT);
+    if (!AscDexTargetValid(target))
+        target = GetBattlerAtPosition(B_POSITION_OPPONENT_RIGHT);
+    if (!AscDexTargetValid(target))
+        return;
+    PlaySE(SE_SELECT);
+    sAscDexTarget = target;
+    sAscDexPage = 0;
+    AscDexSaveOrRestoreTiles(FALSE);
+    AscDexDraw();
+    gBattlerControllerFuncs[battler] = AscHandleDexInput;
 }
 
 // Pokémon Ascension F016: talent page of the move info box (L, then L again).
