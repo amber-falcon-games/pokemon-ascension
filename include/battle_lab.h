@@ -117,6 +117,7 @@ void BattleLab_TrimToWildOpponent(void);
 #if ASCENSION_BATTLE_LAB
 bool32 BattleLab_IsLabBattle(void);
 bool32 BattleLab_TalentMoves(void);
+bool32 BattleLab_TallHealthboxes(void);               // Dual bars, singles: energy bar inside a taller healthbox
 bool32 BattleLab_EndTurnSkips(u32 state);              // F018: no new timeline beat, skip this end-of-turn step
 bool32 BattleLab_TimelineBeat(void);
 bool32 BattleLab_SatOutLastRound(u32 battler);       // F018: timeline round where this battler did not act
@@ -171,6 +172,7 @@ static inline void BattleLab_AiTimerStart(void) {}
 static inline void BattleLab_AiTimerStop(u32 battler) {}
 static inline bool32 BattleLab_IsLabBattle(void) { return FALSE; }
 static inline bool32 BattleLab_TalentMoves(void) { return FALSE; }
+static inline bool32 BattleLab_TallHealthboxes(void) { return FALSE; }
 static inline bool32 BattleLab_EndTurnSkips(u32 state) { return FALSE; }
 static inline bool32 BattleLab_TimelineBeat(void) { return FALSE; }
 static inline bool32 BattleLab_SatOutLastRound(u32 battler) { return FALSE; }

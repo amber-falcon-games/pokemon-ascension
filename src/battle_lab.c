@@ -736,6 +736,12 @@ bool32 BattleLab_DualMode(void)
     return sLabInBattleFlag && gBattleLabRules.combat == LAB_COMBAT_DUAL;
 }
 
+// Dual bars in a singles battle: healthboxes 8 px taller with the energy bar inside them.
+bool32 BattleLab_TallHealthboxes(void)
+{
+    return BattleLab_DualMode() && !IsDoubleBattle() && !(gBattleTypeFlags & BATTLE_TYPE_SAFARI);
+}
+
 static EWRAM_DATA u16 sLabEnergy[2][PARTY_SIZE] = {0};
 static EWRAM_DATA u8 sLabSapped = 0;         // battler mask: health capped energy this round (message)
 static EWRAM_DATA u16 sLabEnergyMax[2][PARTY_SIZE] = {0};
@@ -1229,9 +1235,18 @@ static void LabEnsureEnergyBars(void)
                 return;
             gSprites[spriteId].oam.paletteNum = gSprites[healthbox].oam.paletteNum;
             gSprites[spriteId].data[0] = battler;
-            // Foe: just under its healthbox. Player: just above it.
-            gSprites[spriteId].data[1] = (IsOnPlayerSide(battler) ? 16 : 8) + half * 32;
-            gSprites[spriteId].data[2] = IsOnPlayerSide(battler) ? -18 : 15;
+            if (BattleLab_TallHealthboxes())
+            {
+                // Inside the tall healthbox: the foe's under its HP bar, yours under the HP numbers.
+                gSprites[spriteId].data[1] = (IsOnPlayerSide(battler) ? 15 : 8) + half * 32;
+                gSprites[spriteId].data[2] = IsOnPlayerSide(battler) ? 20 : 12;
+            }
+            else
+            {
+                // Doubles: just under the foe's healthbox, just above yours.
+                gSprites[spriteId].data[1] = (IsOnPlayerSide(battler) ? 16 : 8) + half * 32;
+                gSprites[spriteId].data[2] = IsOnPlayerSide(battler) ? -18 : 15;
+            }
             sLabEnBarSprite[battler][half] = spriteId;
             SpriteCB_LabEnBar(&gSprites[spriteId]);
         }

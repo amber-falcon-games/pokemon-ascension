@@ -636,7 +636,7 @@ u8 CreateBattlerHealthboxSprites(enum BattlerId battler)
             healthboxLeftSpriteId = CreateSprite(&sHealthboxOpponentSpriteTemplates[0], DISPLAY_WIDTH, DISPLAY_HEIGHT, 1);
             healthboxRightSpriteId = CreateSpriteAtEnd(&sHealthboxOpponentSpriteTemplates[0], DISPLAY_WIDTH, DISPLAY_HEIGHT, 1);
 
-            if (B_HP_PERCENTAGE_DISPLAY)
+            if (B_HP_PERCENTAGE_DISPLAY || BattleLab_TallHealthboxes())   // Pokémon Ascension: tall box (Dual bars)
             {
                 gSprites[healthboxLeftSpriteId].oam.shape = ST_OAM_SQUARE;
                 gSprites[healthboxRightSpriteId].oam.shape = ST_OAM_SQUARE;
@@ -862,6 +862,9 @@ void GetBattlerHealthboxCoords(enum BattlerId battler, s16 *x, s16 *y)
 
     *x = sBattlerHealthboxCoords[index][position][0];
     *y = sBattlerHealthboxCoords[index][position][1];
+    // Pokémon Ascension: the player's tall (Dual bars) box sits 8 px higher to clear the message box.
+    if (index == BATTLE_COORDS_SINGLES && position == B_POSITION_PLAYER_LEFT && BattleLab_TallHealthboxes())
+        *y -= 8;
 }
 
 void InitBattlerHealthboxCoords(enum BattlerId battler)
@@ -2260,14 +2263,16 @@ static void MoveBattleBarGraphically(enum BattlerId battler, u8 whichBar)
             for (i = 0; i < 8; i++)
                 array[i] = 0;
         }
+        // Pokémon Ascension: in the tall (Dual bars) box the EXP strip is one tile row (8 tiles) lower.
+        u32 expRow = BattleLab_TallHealthboxes() ? 8 : 0;
         for (i = 0; i < 8; i++)
         {
             if (i < 4)
                 CpuCopy32(GetHealthboxElementGfxPtr(HEALTHBOX_GFX_12) + array[i] * 32,
-                          (void *)(OBJ_VRAM0 + (gSprites[gBattleSpritesDataPtr->battleBars[battler].healthboxSpriteId].oam.tileNum + 0x24 + i) * TILE_SIZE_4BPP), 32);
+                          (void *)(OBJ_VRAM0 + (gSprites[gBattleSpritesDataPtr->battleBars[battler].healthboxSpriteId].oam.tileNum + 0x24 + expRow + i) * TILE_SIZE_4BPP), 32);
             else
                 CpuCopy32(GetHealthboxElementGfxPtr(HEALTHBOX_GFX_12) + array[i] * 32,
-                          (void *)(OBJ_VRAM0 + 0xB80 + (i + gSprites[gBattleSpritesDataPtr->battleBars[battler].healthboxSpriteId].oam.tileNum) * TILE_SIZE_4BPP), 32);
+                          (void *)(OBJ_VRAM0 + 0xB80 + (i + expRow + gSprites[gBattleSpritesDataPtr->battleBars[battler].healthboxSpriteId].oam.tileNum) * TILE_SIZE_4BPP), 32);
         }
         break;
     }
