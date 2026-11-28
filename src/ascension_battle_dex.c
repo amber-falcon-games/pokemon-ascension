@@ -8,13 +8,14 @@
 #include "pokedex.h"
 #include "pokemon.h"
 #include "string_util.h"
+#include "text.h"
 #include "constants/characters.h"
 
 // Pokémon Ascension F016: the in-battle Pokédex panel (L in the action menu). What it shows follows
 // what the player's Pokédex knows: types for every Pokémon met (the field Pokédex shows them once
 // seen); abilities, base stats and weaknesses once caught. Lab battles show everything.
 
-enum { DEX_PAGE_BASICS, DEX_PAGE_ABILITIES, DEX_PAGE_STATS, DEX_PAGE_MOVES };
+enum { DEX_PAGE_BASICS, DEX_PAGE_WEAK, DEX_PAGE_ABILITIES, DEX_PAGE_STATS, DEX_PAGE_MOVES };
 
 bool32 Ascension_DexKnowsAll(u32 species)
 {
@@ -66,7 +67,7 @@ static u32 SeenMoveCount(u32 battler)
 u32 Ascension_DexPageCount(u32 battler)
 {
     u32 movePages = SeenMoveCount(battler) > 4 ? 2 : 1;
-    return (Ascension_DexKnowsAll(gBattleMons[battler].species) ? 3 : 1) + movePages;
+    return (Ascension_DexKnowsAll(GetBattlerVisualSpecies(battler)) ? DEX_PAGE_MOVES : 1) + movePages;
 }
 
 static u8 *AppendNum(u8 *dest, u32 n)
@@ -90,7 +91,7 @@ static u8 *AppendWeaknesses(u8 *dest, u32 species)
 {
     enum Type t1 = GetSpeciesType(species, 0), t2 = GetSpeciesType(species, 1), atk;
     u32 count = 0;
-    dest = StringAppend(dest, COMPOUND_STRING("Weak: "));
+    dest = StringAppend(dest, COMPOUND_STRING("Weak to: "));
     for (atk = TYPE_NONE + 1; atk < NUMBER_OF_MON_TYPES; atk++)
     {
         uq4_12_t mod;
@@ -112,7 +113,8 @@ static u8 *AppendWeaknesses(u8 *dest, u32 species)
 
 void Ascension_DexPageText(u32 battler, u32 page, u8 *dest)
 {
-    u32 species = gBattleMons[battler].species, i, count = 0;
+    // The visible species: an Illusion keeps its disguise here too.
+    u32 species = GetBattlerVisualSpecies(battler), i, count = 0;
     bool32 all = Ascension_DexKnowsAll(species);
 
     *dest = EOS;
@@ -132,11 +134,11 @@ void Ascension_DexPageText(u32 battler, u32 page, u8 *dest)
         dest = AppendNum(dest, gBattleMons[battler].level);
         dest = StringAppend(dest, COMPOUND_STRING("\n"));
         dest = AppendTypes(dest, species);
-        dest = StringAppend(dest, COMPOUND_STRING("\n"));
-        if (all)
-            AppendWeaknesses(dest, species);
-        else
-            StringAppend(dest, COMPOUND_STRING("Catch one to learn more."));
+        if (!all)
+            StringAppend(dest, COMPOUND_STRING("\nCatch one to learn more."));
+        break;
+    case DEX_PAGE_WEAK:
+        AppendWeaknesses(dest, species);
         break;
     case DEX_PAGE_ABILITIES:
         dest = StringAppend(dest, COMPOUND_STRING("Abilities:"));
@@ -176,13 +178,46 @@ void Ascension_DexPageText(u32 battler, u32 page, u8 *dest)
                 continue;
             if (count >= movePage * 4 && count < movePage * 4 + 4)
             {
-                dest = StringAppend(dest, count % 2 == 0 ? COMPOUND_STRING("\n") : COMPOUND_STRING(", "));
+                dest = StringAppend(dest, count % 4 == 0 ? COMPOUND_STRING(" ") : COMPOUND_STRING(", "));
                 dest = StringAppend(dest, GetMoveName(m));
             }
             count++;
         }
         if (count == 0)
-            StringAppend(dest, COMPOUND_STRING("\nnone yet"));
+            StringAppend(dest, COMPOUND_STRING(" none yet"));
         break;
+    }
+}
+
+// Breaks lines at spaces so no line is wider than width pixels in fontId (existing line breaks
+// are kept). Font narrowing alone can still clip a long list.
+void Ascension_WrapText(u8 *text, u32 fontId, u32 width)
+{
+    u8 *lineStart = text, *lastSpace = NULL, *p;
+    for (p = text; ; p++)
+    {
+        if (*p == CHAR_SPACE || *p == CHAR_NEWLINE || *p == EOS)
+        {
+            u8 saved = *p;
+            *p = EOS;
+            if (GetStringWidth(fontId, lineStart, 0) > (s32)width && lastSpace != NULL)
+            {
+                *lastSpace = CHAR_NEWLINE;
+                lineStart = lastSpace + 1;
+                lastSpace = NULL;
+            }
+            *p = saved;
+            if (saved == EOS)
+                return;
+            if (saved == CHAR_NEWLINE)
+            {
+                lineStart = p + 1;
+                lastSpace = NULL;
+            }
+            else
+            {
+                lastSpace = p;
+            }
+        }
     }
 }

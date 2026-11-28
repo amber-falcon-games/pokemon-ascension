@@ -24,7 +24,8 @@ Give the player the detail they need to choose well, on demand, without crowding
      - It never uses a turn.
    - What it shows follows the Pokédex (proposed defaults; the owner may change them at the playtest):
      - **Always:** name, level and types (the field Pokédex shows types once a Pokémon is seen, and meeting it in battle marks it seen), plus "Moves seen": the moves this party member has used in this battle, four to a page.
-     - **Caught** (Pokédex "owned" flag): also the types it is weak to (x4 marked), its possible abilities and its base stats.
+     - **Caught** (Pokédex "owned" flag): also a page of the types it is weak to (x4 marked), its possible abilities and its base stats.
+     - Text is word-wrapped to the panel (at most three lines a page). An Illusion shows the disguise's species, as the healthbox does.
      - **Not caught:** "Catch one to learn more."
    - Wild and trainer battles behave the same. Lab battles count every species as caught. It is off in Safari, link and recorded battles, and in the Battle Arena and Kanto-tutorial window layouts.
 
