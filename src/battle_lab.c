@@ -1544,9 +1544,9 @@ bool32 BattleLab_QueueStillValid(const struct AscQueueCheck *c)
 {
     if (!c->samePokemon || !c->moveUsable || c->exhausted)
         return FALSE;
-    if (c->selfTarget)   // a move aimed at yourself or your partner: the target never "leaves"
-        return TRUE;
-    if (!c->targetAlive || !c->sameTarget)
+    // A move aimed at yourself or your partner: the target never "leaves" (the rules below on
+    // your own Pokémon's state still apply).
+    if (!c->selfTarget && (!c->targetAlive || !c->sameTarget))
         return FALSE;
     if (c->hpBefore > c->hpNow && (c->hpBefore - c->hpNow) * 4 >= c->maxHp)   // lost 25%+ health
         return FALSE;
@@ -1581,11 +1581,11 @@ bool32 BattleLab_TakeQueuedMove(u32 battler, u32 *slot, u32 *target)
         };
         ok = BattleLab_QueueStillValid(&c);
     }
+    *target = q->target;   // read before the queue is cleared
     BattleLab_ClearQueue(battler);
     if (!ok)
         return FALSE;
     *slot = s;
-    *target = q->target;
     sLabFromQueue |= 1u << battler;
     return TRUE;
 }

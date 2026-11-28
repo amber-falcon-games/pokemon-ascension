@@ -34,4 +34,6 @@ TEST("Queue (F020): cancelled by a 25% hit, a new status or confusion, Exhaustio
     c = Base(); c.samePokemon = FALSE;             EXPECT(!BattleLab_QueueStillValid(&c));   // switched out
     c = Base(); c.moveUsable = FALSE;              EXPECT(!BattleLab_QueueStillValid(&c));   // disabled, taunted, too costly
     c = Base(); c.selfTarget = TRUE; c.targetAlive = FALSE; EXPECT(BattleLab_QueueStillValid(&c));
+    c = Base(); c.selfTarget = TRUE; c.hpNow = 70;         EXPECT(!BattleLab_QueueStillValid(&c));   // own state still counts
+    c = Base(); c.selfTarget = TRUE; c.statusNow = STATUS1_POISON; EXPECT(!BattleLab_QueueStillValid(&c));
 }
