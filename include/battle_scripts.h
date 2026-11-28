@@ -746,4 +746,9 @@ extern const u8 BattleScript_Stockpile[];
 extern const u8 BattleScript_Memento[];
 extern const u8 BattleScript_TakeHeart[];
 
+// Pokémon Ascension F015: talent growth on level-up.
+extern const u8 BattleScript_LearnedNewMove[];
+extern const u8 BattleScript_AscTalentGrew[];
+extern const u8 BattleScript_AscTalentBranchPoint[];
+
 #endif // GUARD_BATTLE_SCRIPTS_H

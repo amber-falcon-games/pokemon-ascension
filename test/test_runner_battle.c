@@ -1,5 +1,6 @@
 #include "global.h"
 #include "battle.h"
+#include "ascension_moves.h"
 #include "battle_ai_util.h"
 #include "battle_anim.h"
 #include "battle_controllers.h"
@@ -2386,6 +2387,8 @@ void TieBreakTarget(u32 sourceLine, enum TargetTieResolution targetTieRes, u32 v
 
 void ClearFlagAfterTest(void)
 {
+    gAscensionMoveListTestOverride = FALSE;   // Pokémon Ascension: tests that turn the move library on
+
     if (DATA.flagId != 0)
     {
         FlagClear(DATA.flagId);

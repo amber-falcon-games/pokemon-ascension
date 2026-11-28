@@ -1,5 +1,5 @@
 # F015 — Move library: talent trees, learning and saving
-Status: SPEC (in progress)
+Status: BUILT except the Lab integration (item 7); awaiting the combined owner playtest (D026)
 Dependencies: F014 (8-move battle list)
 Owner decision IDs: D015, D027 (2026-11-27)
 Branch / commit: `feature/F015-move-library` (stacked on `feature/F014-move-menu`)
@@ -12,13 +12,23 @@ Every Pokémon's battle moves come from a **talent tree** for its evolution line
    - `tools/ascension/talent_trees.py` generates `data/ascension/talent_trees.json` from upstream level-up learnsets. Same type and category, rising power, forms a chain. Moves learned within a few levels of each other in different chains become a branch point. Each line is capped at 8 branches.
    - The owner edits the JSON (any line, any move or level). The build compiles it into ROM tables, so edits never touch C.
    - A checker validates the file: unknown moves, more than 8 branches, levels out of order.
+   - **Evolving keeps slots.** An evolution's tree starts with its pre-evolution's branches in the same order, and new branches are appended (at most 2 status branches in all). The checker enforces this for hand edits, because choices, TM jumps and joins are stored per slot. On evolving, the game carries each TM jump and choice over by move, since a slot's nodes can differ between stages.
 3. **Global branches for taught moves (D027-2).** One generic chain per type and category covers every TM, tutor and egg move, e.g. Electric special: Thunder Shock → Thunderbolt → Thunder.
 4. **Teaching a move (TM, tutor, egg):**
    - In the Pokémon's own tree, not yet reached: its branch jumps forward to that move.
    - In its own tree, already passed: the TM is refused ("already grown past it").
    - Not in its own tree: the Pokémon joins the global branch containing the move, at that move, and grows along it with level from there. If its 8 branches are full, the player replaces one.
+   - Party menu messages:
+     - "X's talent jumped ahead to Y!"
+     - "X started a new talent path with Y!"
+     - "X has already grown past Y."
+     - "X can't follow any more new talent paths." (two joined chains at most)
+     - With a full list: "X's moves are full. Pick a move for Y to replace.", then an 8-move picker. B cancels and keeps the TM.
 5. **Battle list.** In battle, each branch contributes its current move, giving the F014 8-move list. The menu grouping (attacks, then support) is unchanged.
 6. **Learning on level-up.** Reaching a move's level replaces the branch's move with a short message ("Charmander's Ember grew into Flamethrower!"). A branch point asks the player to choose.
+   - This works in battle (experience) and with Rare Candy. A branch point says "X's talent can grow in more than one way!", then asks "Grow into A?" for each option in turn. NO moves on to the next option, wrapping round.
+   - Upstream's "wants to learn / forget a move" flow is off for Pokémon with a tree. The daycare and evolution relearning refresh the moves silently.
+   - Recorded battles (and the test runner's wild battles) cannot take input: a branch point keeps the saved choice there.
 7. **Lab.** The slot editor shows the battle list from the tree. Scenario files can name branch choices.
 
 ## Save model
@@ -70,6 +80,29 @@ Every Pokémon's battle moves come from a **talent tree** for its evolution line
   - save and load of the new fields
   - battle list built from the tree
 - Full upstream suite green. Lab checks of trees for starters.
+
+## Evidence (2026-11-28)
+- Core (fda7a5ad20): tree lookup, choices, the three TM cases, joined chains and the battle list.
+- UI and growth: this commit. Tests in `test/ascension/move_list.c`, 18 in all:
+  - teaching asks for a slot when the list is full and replaces only the picked move
+  - the saved 4 moves follow the tree
+  - growth reports from and to only at its level
+  - a TM jump suppresses growth into nodes it passed
+  - a branch point's pick is what the branch grows into
+  - evolving carries a jump over
+  - talent data survives boxing
+- `test/ascension/talent_growth_battle.c`: in a real battle, levelling up shows "Pikachu's Thunder Shock grew into Electro Ball!" and updates the saved moves.
+- Headless checks in the real game (Gym 8 and Poké Balls checkpoints; Rare Candy was added only in a local, uncommitted build):
+  - Rock Tomb on Swampert (8 branches): the full-list message, the 8-move picker, then "Swampert started a new talent path with Rock Tomb!"
+  - Rare Candy on Mudkip, level 7 to 12:
+    - "Mudkip learned Rock Throw!" (a new branch)
+    - "Mudkip's Water Gun grew into Water Pulse!" (a Marshtomp run)
+    - At 12: "Mudkip's talent can grow in more than one way!", then "Grow into Protect?" (yes/no), then "Mudkip's Growl grew into Protect!"
+- Not yet seen on screen: the in-battle branch-point prompt. It uses upstream's yes/no box, and the battle growth path is covered by the test above.
+- Still to do:
+  - **Lab (item 7):** Lab battles keep the scenario's hand-set moves.
+  - **Save migration** for old saves with contest data (SAVE_COMPATIBILITY.md).
+- Generator: evolution slot order (1,333 species, checker 0 errors). Python tool tests 16/16.
 
 ## Rollback
 Turn `ASCENSION_MOVE_LIST` off: the battle list falls back to the 4 saved moves. Revert the branch for save-layout changes.

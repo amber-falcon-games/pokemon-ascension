@@ -1,4 +1,5 @@
 #include "global.h"
+#include "ascension_moves.h"
 #include "battle_lab.h"
 #include "battle.h"
 #include "battle_hold_effects.h"
@@ -3761,6 +3762,72 @@ static void Cmd_returntoball(void)
     gBattlescriptCurrInstr = cmd->nextInstr;
 }
 
+// Pokémon Ascension F015 (spec item 6): talent-tree Pokémon grow along their branches on level-up
+// instead of learning moves. Walks every level gained; a branch point asks the player to pick.
+static EWRAM_DATA struct TalentGrowth sAscGrowth = {0};
+static EWRAM_DATA u8 sAscGrowLevel = 0;
+static EWRAM_DATA u8 sAscGrowOption = 0;
+static EWRAM_DATA u32 sAscGrowIter = 0;
+
+static bool32 AscTalentGrowth(const u8 *learnedPtr, const u8 *nothingPtr, bool32 isFirst, u32 monId, u32 currLvl)
+{
+    struct Pokemon *mon = &gParties[B_TRAINER_PLAYER][monId];
+
+    if (!Ascension_UsesTalentTree(mon))
+        return FALSE;
+    if (isFirst)
+    {
+        sAscGrowLevel = gBattleResources->beforeLvlUp->level + 1;
+        sAscGrowIter = 0;
+    }
+    while (sAscGrowLevel <= currLvl && !Ascension_NextTalentGrowth(mon, sAscGrowLevel, &sAscGrowIter, &sAscGrowth))
+    {
+        sAscGrowLevel++;
+        sAscGrowIter = 0;
+    }
+    if (sAscGrowLevel > currLvl)
+    {
+        gBattleResources->beforeLvlUp->level = currLvl;
+        Ascension_RefreshMoveCache(mon);
+        gBattlescriptCurrInstr = nothingPtr;
+        return TRUE;
+    }
+    sAscGrowOption = sAscGrowth.source < MAX_BATTLE_MOVES ? Ascension_GetTalentChoice(mon, sAscGrowth.source) % sAscGrowth.count : 0;
+    gMoveToLearn = sAscGrowth.options[sAscGrowOption];
+    PREPARE_MOVE_BUFFER(gBattleTextBuff3, sAscGrowth.from);
+    // Recorded battles can't take input: a branch point keeps the saved choice.
+    if (sAscGrowth.count > 1 && !RECORDED_WILD_BATTLE)
+    {
+        gBattlescriptCurrInstr = BattleScript_AscTalentBranchPoint;
+        return TRUE;
+    }
+    Ascension_RefreshMoveCache(mon);
+    gBattlescriptCurrInstr = (sAscGrowth.from == MOVE_NONE) ? learnedPtr : BattleScript_AscTalentGrew;
+    return TRUE;
+}
+
+void BS_AscTalentNextOption(void);
+void BS_AscTalentTakeOption(void);
+
+// Branch point: "Grow into X?" for each option in turn (NO moves on to the next, wrapping round).
+void BS_AscTalentNextOption(void)
+{
+    NATIVE_ARGS();
+    sAscGrowOption = (sAscGrowOption + 1) % max(1, sAscGrowth.count);
+    gMoveToLearn = sAscGrowth.options[sAscGrowOption];
+    gBattlescriptCurrInstr = cmd->nextInstr;
+}
+
+void BS_AscTalentTakeOption(void)
+{
+    NATIVE_ARGS();
+    struct Pokemon *mon = &gParties[B_TRAINER_PLAYER][gBattleStruct->expGetterMonId];
+    Ascension_SetTalentChoice(mon, sAscGrowth.source, sAscGrowOption);
+    Ascension_RefreshMoveCache(mon);
+    (void)cmd;
+    gBattlescriptCurrInstr = (sAscGrowth.from == MOVE_NONE) ? BattleScript_LearnedNewMove : BattleScript_AscTalentGrew;
+}
+
 static void Cmd_handlelearnnewmove(void)
 {
     CMD_ARGS(const u8 *learnedMovePtr, const u8 *nothingToLearnPtr, bool8 isFirstMove);
@@ -3768,6 +3835,9 @@ static void Cmd_handlelearnnewmove(void)
     enum Move learnMove = MOVE_NONE;
     u32 monId = gBattleStruct->expGetterMonId;
     u32 currLvl = GetMonData(&gParties[B_TRAINER_PLAYER][monId], MON_DATA_LEVEL);
+
+    if (AscTalentGrowth(cmd->learnedMovePtr, cmd->nothingToLearnPtr, cmd->isFirstMove, monId, currLvl))
+        return;
 
     if (!gBattleResources->beforeLvlUp->learnMultipleMoves && gBattleResources->beforeLvlUp->level != (currLvl - 1))
         gBattleResources->beforeLvlUp->learnMultipleMoves = TRUE;

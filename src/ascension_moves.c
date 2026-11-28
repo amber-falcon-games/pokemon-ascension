@@ -107,7 +107,7 @@ static u16 GlobalChainMove(u32 chain, u32 pos, u32 level)
     return c[i].move;
 }
 
-u32 Ascension_BuildTalentList(struct Pokemon *mon, u16 moves[MAX_BATTLE_MOVES])
+u32 Ascension_BuildTalentList(struct Pokemon *mon, u16 moves[MAX_BATTLE_MOVES], u8 *sources)
 {
     u32 species = GetMonData(mon, MON_DATA_SPECIES), level = GetMonData(mon, MON_DATA_LEVEL);
     u32 jumps = GetJumps(mon), n = Ascension_TalentBranchCount(species), i, k, count = 0;
@@ -138,10 +138,18 @@ u32 Ascension_BuildTalentList(struct Pokemon *mon, u16 moves[MAX_BATTLE_MOVES])
         for (j = 0; j < count && !dup; j++)
             dup = (moves[j] == list[i]);
         if (!dup)
+        {
+            if (sources != NULL)
+                sources[count] = i;
             moves[count++] = list[i];
+        }
     }
     for (i = count; i < MAX_BATTLE_MOVES; i++)
+    {
+        if (sources != NULL)
+            sources[i] = TALENT_SLOT_ASK;
         moves[i] = MOVE_NONE;
+    }
     return count;
 }
 
@@ -202,12 +210,174 @@ enum TalentTeachResult Ascension_TeachMove(struct Pokemon *mon, u16 move, u32 re
             }
             if (freeSlot == TALENT_MAX_JOINS)
                 return TALENT_TEACH_NO_ROOM;
-            // A free battle-list place goes after the tree's branches; a full list replaces replaceSlot.
-            SetJoin(mon, freeSlot, MAKE_JOIN(c, pos, n + freeSlot < MAX_BATTLE_MOVES ? MAX_BATTLE_MOVES - 1 : replaceSlot % MAX_BATTLE_MOVES));
+            // A free battle-list place goes after the tree's branches.
+            if (n + freeSlot < MAX_BATTLE_MOVES)
+            {
+                SetJoin(mon, freeSlot, MAKE_JOIN(c, pos, MAX_BATTLE_MOVES - 1));
+                return TALENT_TEACH_JOINED;
+            }
+            // A full list: the player picks the move it replaces (a source from BuildTalentList).
+            if (replaceSlot == TALENT_SLOT_ASK)
+                return TALENT_TEACH_NEEDS_SLOT;
+            if (replaceSlot >= MAX_BATTLE_MOVES)   // replacing a joined chain: take over that join
+            {
+                k = (replaceSlot - MAX_BATTLE_MOVES) % TALENT_MAX_JOINS;
+                SetJoin(mon, k, MAKE_JOIN(c, pos, JOIN_SLOT(GetJoin(mon, k))));
+            }
+            else
+            {
+                SetJoin(mon, freeSlot, MAKE_JOIN(c, pos, replaceSlot));
+            }
             return TALENT_TEACH_JOINED;
         }
     }
     return TALENT_TEACH_CANNOT;
+}
+
+bool32 Ascension_UsesTalentTree(struct Pokemon *mon)
+{
+    return ASCENSION_MOVE_LIST && Ascension_TalentBranchCount(GetMonData(mon, MON_DATA_SPECIES)) > 0
+        && !BattleLab_IsLabBattle();
+}
+
+bool32 Ascension_NextTalentGrowth(struct Pokemon *mon, u32 level, u32 *iter, struct TalentGrowth *out)
+{
+    u32 species = GetMonData(mon, MON_DATA_SPECIES), jumps = GetJumps(mon), n = Ascension_TalentBranchCount(species);
+    u32 hidden = 0, k, i;
+
+    if (level <= 1)
+        return FALSE;
+    for (k = 0; k < TALENT_MAX_JOINS; k++)   // branches a joined chain replaced don't grow on screen
+    {
+        u32 join = GetJoin(mon, k);
+        if (JOIN_CHAIN(join) >= 0 && JOIN_SLOT(join) < n)
+            hidden |= 1u << JOIN_SLOT(join);
+    }
+    for (; *iter < MAX_BATTLE_MOVES + TALENT_MAX_JOINS; (*iter)++)
+    {
+        u32 src = *iter;
+        if (src < MAX_BATTLE_MOVES)
+        {
+            const struct TalentBranch *br;
+            s32 minNode, cur, prev;
+            if (src >= n || (hidden & (1u << src)))
+                continue;
+            br = &gTalentTrees[species].branches[src];
+            minNode = (s32)((jumps >> (3 * src)) & 7) - 1;
+            cur = TalentBranchNode(species, src, level, minNode);
+            prev = TalentBranchNode(species, src, level - 1, minNode);
+            if (cur == prev || cur < 0)
+                continue;
+            out->source = src;
+            out->count = br->nodes[cur].count;
+            out->from = prev >= 0 ? br->nodes[prev].moves[Ascension_GetTalentChoice(mon, src) % br->nodes[prev].count] : MOVE_NONE;
+            for (i = 0; i < TALENT_MAX_CHOICES; i++)
+                out->options[i] = i < out->count ? br->nodes[cur].moves[i] : MOVE_NONE;
+        }
+        else
+        {
+            u32 join = GetJoin(mon, src - MAX_BATTLE_MOVES);
+            u16 before, after;
+            if (JOIN_CHAIN(join) < 0)
+                continue;
+            before = GlobalChainMove(JOIN_CHAIN(join), JOIN_POS(join), level - 1);
+            after = GlobalChainMove(JOIN_CHAIN(join), JOIN_POS(join), level);
+            if (before == after)
+                continue;
+            out->source = src;
+            out->count = 1;
+            out->from = before;
+            out->options[0] = after;
+            for (i = 1; i < TALENT_MAX_CHOICES; i++)
+                out->options[i] = MOVE_NONE;
+        }
+        (*iter)++;
+        return TRUE;
+    }
+    return FALSE;
+}
+
+static s32 NodeWithMove(const struct TalentBranch *br, u16 move)
+{
+    s32 i, c;
+    for (i = 0; i < br->nodeCount; i++)
+        for (c = 0; c < br->nodes[i].count; c++)
+            if (br->nodes[i].moves[c] == move)
+                return i;
+    return -1;
+}
+
+// Evolving keeps branch slots (the generator puts a pre-evolution's branches first), but a slot's
+// nodes can differ between stages: carry each TM jump and branch choice over by move.
+void Ascension_OnEvolve(struct Pokemon *mon, u32 oldSpecies)
+{
+    u32 newSpecies = GetMonData(mon, MON_DATA_SPECIES), level = GetMonData(mon, MON_DATA_LEVEL);
+    u32 nOld = Ascension_TalentBranchCount(oldSpecies), nNew = Ascension_TalentBranchCount(newSpecies);
+    u32 jumps = GetJumps(mon), newJumps = 0, b;
+
+    if (nNew == 0 || newSpecies == oldSpecies)
+        return;
+    for (b = 0; b < nNew && b < MAX_BATTLE_MOVES; b++)
+    {
+        const struct TalentBranch *nb = &gTalentTrees[newSpecies].branches[b];
+        s32 jumpNode = -1, oldCur, newCur;
+        u16 curMove = MOVE_NONE;
+        u32 choice = Ascension_GetTalentChoice(mon, b);
+        if (b < nOld)
+        {
+            const struct TalentBranch *ob = &gTalentTrees[oldSpecies].branches[b];
+            s32 oldJump = (s32)((jumps >> (3 * b)) & 7) - 1;
+            oldCur = TalentBranchNode(oldSpecies, b, level, oldJump);
+            if (oldCur >= 0)
+                curMove = ob->nodes[oldCur].moves[choice % ob->nodes[oldCur].count];
+            if (oldJump >= 0)
+            {
+                s32 i;
+                jumpNode = NodeWithMove(nb, curMove);
+                // Not on the new branch: the furthest node at or below the old jump's level.
+                for (i = nb->nodeCount - 1; i >= 0 && jumpNode < 0; i--)
+                    if (nb->nodes[i].level <= ob->nodes[oldJump].level)
+                        jumpNode = i;
+            }
+        }
+        if (jumpNode >= 0)
+            newJumps |= (u32)(jumpNode + 1) << (3 * b);
+        newCur = TalentBranchNode(newSpecies, b, level, jumpNode);
+        if (b >= nOld)
+        {
+            Ascension_SetTalentChoice(mon, b, 0);
+        }
+        else if (newCur >= 0 && curMove != MOVE_NONE)
+        {
+            u32 c;
+            for (c = 0; c < nb->nodes[newCur].count; c++)
+                if (nb->nodes[newCur].moves[c] == curMove)
+                    Ascension_SetTalentChoice(mon, b, c);
+        }
+    }
+    for (; b < MAX_BATTLE_MOVES; b++)
+        Ascension_SetTalentChoice(mon, b, 0);
+    SetJumps(mon, newJumps);
+    Ascension_RefreshMoveCache(mon);
+}
+
+// Keeps the saved 4 move slots a cache of the first four tree moves (PP kept for unchanged moves).
+void Ascension_RefreshMoveCache(struct Pokemon *mon)
+{
+    u16 list[MAX_BATTLE_MOVES];
+    u32 i;
+    if (!Ascension_UsesTalentTree(mon))
+        return;
+    Ascension_BuildTalentList(mon, list, NULL);
+    for (i = 0; i < MAX_MON_MOVES; i++)
+    {
+        u32 move = list[i], pp;
+        if (GetMonData(mon, MON_DATA_MOVE1 + i) == move)
+            continue;
+        pp = move != MOVE_NONE ? GetMovePP(move) : 0;
+        SetMonData(mon, MON_DATA_MOVE1 + i, &move);
+        SetMonData(mon, MON_DATA_PP1 + i, &pp);
+    }
 }
 
 // Builds the battle move list (and PP). With a talent tree, every branch contributes its current
@@ -234,7 +404,7 @@ u32 Ascension_FillExtraBattleMoves(struct Pokemon *mon, enum Move moves[MAX_BATT
     if (Ascension_TalentBranchCount(species) > 0 && !BattleLab_IsLabBattle())
     {
         u16 list[MAX_BATTLE_MOVES];
-        count = Ascension_BuildTalentList(mon, list);
+        count = Ascension_BuildTalentList(mon, list, NULL);
         for (i = 0; i < MAX_BATTLE_MOVES; i++)
             moves[i] = list[i];
         for (i = 0; i < MAX_BATTLE_MOVES; i++)

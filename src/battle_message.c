@@ -618,6 +618,9 @@ const u8 *const gBattleStringsTable[STRINGID_COUNT] =
 #if ASCENSION_BATTLE_LAB
     // Text is built at run time (BattleLab_PendingMessageText); this sample keeps the string tests honest.
     [STRINGID_LABMESSAGE]                           = COMPOUND_STRING("{B_ATK_NAME_WITH_PREFIX}'s stamina\nwas sapped by the blow!\p"),
+    [STRINGID_ASCTALENTGREW]                        = COMPOUND_STRING("{B_BUFF1}'s {B_BUFF3} grew into {B_BUFF2}!{WAIT_SE}\p"),
+    [STRINGID_ASCTALENTBRANCHES]                    = COMPOUND_STRING("{B_BUFF1}'s talent can grow in more than one way!\p"),
+    [STRINGID_ASCTALENTTAKEOPTION]                  = COMPOUND_STRING("Grow into {B_BUFF2}?"),
     [STRINGID_TOOEXHAUSTEDTOUSE]                    = COMPOUND_STRING("{B_ATK_NAME_WITH_PREFIX} is too exhausted to use {B_CURRENT_MOVE}!\p"),
 #endif
     [STRINGID_GRAVITYPREVENTSUSAGE]                 = COMPOUND_STRING("{B_ATK_NAME_WITH_PREFIX} can't use {B_CURRENT_MOVE} because of gravity!\p"),

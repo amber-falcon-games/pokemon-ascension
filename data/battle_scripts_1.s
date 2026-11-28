@@ -3127,6 +3127,27 @@ BattleScript_LearnedNewMove::
 BattleScript_LearnMoveReturn::
 	return
 
+@ Pokémon Ascension F015: talent growth on level-up (see AscTalentGrowth).
+BattleScript_AscTalentGrew::
+	buffermovetolearn
+	fanfare MUS_LEVEL_UP
+	printstring STRINGID_ASCTALENTGREW
+	waitmessage B_WAIT_TIME_LONG
+	goto BattleScript_TryLearnMoveLoop
+BattleScript_AscTalentBranchPoint::
+	printstring STRINGID_ASCTALENTBRANCHES
+	waitmessage B_WAIT_TIME_LONG
+BattleScript_AscTalentAskOption::
+	buffermovetolearn
+	printstring STRINGID_ASCTALENTTAKEOPTION
+	waitstate
+	setbyte sLEARNMOVE_STATE, 0
+	yesnoboxstoplearningmove BattleScript_AscTalentOptionDeclined
+	callnative BS_AscTalentTakeOption   @ goes on to the learned or grew message
+BattleScript_AscTalentOptionDeclined::
+	callnative BS_AscTalentNextOption
+	goto BattleScript_AscTalentAskOption
+
 BattleScript_WeatherAbilityActivates::
 	pause B_WAIT_TIME_SHORT
 	call BattleScript_AbilityPopUp

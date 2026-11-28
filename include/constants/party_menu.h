@@ -64,6 +64,7 @@
 #define PARTY_MSG_NO_POKEMON                29
 #define PARTY_MSG_CHOOSE_MON_FOR_BOX        30
 #define PARTY_MSG_MOVE_ITEM_WHERE           31
+#define PARTY_MSG_ASC_REPLACE_WHICH_MOVE    32 // Pokémon Ascension F015
 
 #define PARTY_MSG_NONE                      127
 

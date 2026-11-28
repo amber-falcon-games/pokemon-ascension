@@ -1666,6 +1666,13 @@ enum Move MonTryLearningNewMoveAtLevel(struct Pokemon *mon, bool32 firstMove, u3
     enum Species species = GetMonData(mon, MON_DATA_SPECIES);
     const struct LevelUpMove *learnset = GetSpeciesLevelUpLearnset(species);
 
+    // Pokémon Ascension F015: talent-tree moves grow instead (battle and party menu show it).
+    if (Ascension_UsesTalentTree(mon))
+    {
+        Ascension_RefreshMoveCache(mon);
+        return MOVE_NONE;
+    }
+
     // since you can learn more than one move per level
     // the game needs to know whether you decided to
     // learn it or keep the old set to avoid asking
@@ -6212,6 +6219,12 @@ u16 MonTryLearningNewMoveEvolution(struct Pokemon *mon, bool8 firstMove)
     enum Species species = GetMonData(mon, MON_DATA_SPECIES);
     u8 level = GetMonData(mon, MON_DATA_LEVEL);
     const struct LevelUpMove *learnset = GetSpeciesLevelUpLearnset(species);
+
+    if (Ascension_UsesTalentTree(mon))   // Pokémon Ascension F015: see MonTryLearningNewMoveAtLevel
+    {
+        Ascension_RefreshMoveCache(mon);
+        return MOVE_NONE;
+    }
 
     // Since you can learn more than one move per level,
     // the game needs to know whether you decided to

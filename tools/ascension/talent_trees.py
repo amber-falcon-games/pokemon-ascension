@@ -75,8 +75,10 @@ def chain_key(move, moves):
     return info["type"][5:] + "_" + cat
 
 
-def build_branches(learned, moves):
-    """learned: [(level, move)] for one species including its pre-evolutions (earliest level kept)."""
+def build_branches(learned, moves, keep=()):
+    """learned: [(level, move)] for one species including its pre-evolutions (earliest level kept).
+    keep: the pre-evolution's branch names, kept first and in the same slots (saved choices, TM
+    jumps and joins are stored per slot, so evolving must not move a branch)."""
     first = {}
     for lvl, mv in learned:
         if mv in moves and mv != "MOVE_NONE":
@@ -99,9 +101,18 @@ def build_branches(learned, moves):
         score = (damaging, len(nodes), max(moves[m]["power"] for n in nodes for m in n["moves"]))
         branches.append((score, {"name": key.replace("_", " ").title(), "nodes": nodes}))
     branches.sort(key=lambda b: b[0], reverse=True)
+    by_name = {b["name"]: b for _, b in branches}
+    kept = [by_name[n] for n in keep if n in by_name]
+    if len(kept) != len(keep):
+        raise SystemExit(f"pre-evolution branches {list(keep)} missing from an evolution")
+    rest = [(s, b) for s, b in branches if b["name"] not in keep]
+    if kept:   # an evolution: the pre-evolution's slots, then its best new branches (status cap kept)
+        room_status = max(0, 2 - sum(1 for b in kept if b["name"].endswith("Status")))
+        new = [b for sc, b in rest if sc[0]] + [b for sc, b in rest if not sc[0]][:room_status]
+        return kept + new[:MAX_BRANCHES - len(kept)]
     # keep at most 2 status branches, then the best damaging ones, up to MAX_BRANCHES
-    status = [b for s, b in branches if not s[0]][:2]
-    damaging = [b for s, b in branches if s[0]][:MAX_BRANCHES - len(status)]
+    status = [b for s, b in rest if not s[0]][:2]
+    damaging = [b for s, b in rest if s[0]][:MAX_BRANCHES - len(status)]
     return damaging + status
 
 
@@ -131,7 +142,13 @@ def generate():
         for evo, lvl in info["evolves_to"]:
             pre.setdefault(evo, (sp, lvl))
     lines = {}
-    for sp, info in species.items():
+    def depth(sp):
+        d, cur, seen = 0, sp, set()
+        while cur in pre and cur not in seen:
+            seen.add(cur); cur = pre[cur][0]; d += 1
+        return d
+    for sp in sorted(species, key=depth):   # pre-evolutions first, so evolutions can keep their slots
+        info = species[sp]
         chain, cur, seen = [], sp, set()
         while cur and cur not in seen and cur in species:
             seen.add(cur); chain.append(cur); cur = pre.get(cur, (None, None))[0]
@@ -147,7 +164,9 @@ def generate():
                 learned.append((lvl, mv))
             known |= {mv for _, mv in sets.get(species[member]["learnset"], [])}
         if learned:
-            lines[sp] = {"branches": build_branches(learned, moves)}
+            parent = pre.get(sp, (None, None))[0]
+            keep = [b["name"] for b in lines[parent]["branches"]] if parent in lines else []
+            lines[sp] = {"branches": build_branches(learned, moves, keep)}
     # Typical level of each move: the median level at which species learn it naturally (level 2+).
     learned_at = {}
     for entries in sets.values():
@@ -195,6 +214,14 @@ def check(path=JSON_OUT):
                 for mv in n["moves"]:
                     if mv not in moves:
                         errors.append(f"{sp} {b['name']}: unknown move {mv}")
+    # Evolving keeps branch slots: an evolution's tree starts with its pre-evolution's branches.
+    for sp, info in parse_species().items():
+        for evo, _ in info["evolves_to"]:
+            if sp in data["species"] and evo in data["species"]:
+                a = [b["name"] for b in data["species"][sp]["branches"]]
+                b = [x["name"] for x in data["species"][evo]["branches"]]
+                if b[:len(a)] != a:
+                    errors.append(f"{evo}: branches must start with {sp}'s, in order ({a})")
     for key, chain in data["global"].items():
         last = 0
         if len(chain) > 127:

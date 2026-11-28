@@ -28,11 +28,26 @@ enum TalentTeachResult
     TALENT_TEACH_GROWN_PAST,    // in its own tree but already grown past it: refused
     TALENT_TEACH_NO_ROOM,       // would join a chain but has no free join slot
     TALENT_TEACH_CANNOT,        // move is in no tree or chain
+    TALENT_TEACH_NEEDS_SLOT,    // would join a chain but the list is full: ask which move it replaces
 };
 #define TALENT_MAX_JOINS 2
-// replaceSlot: which battle-list position a joined chain takes when the list is full (0-7).
+#define TALENT_SLOT_ASK 0xFF
+// replaceSlot: when joining with a full list, the source (from BuildTalentList) of the move the
+// joined chain replaces; TALENT_SLOT_ASK changes nothing and returns TALENT_TEACH_NEEDS_SLOT.
 enum TalentTeachResult Ascension_TeachMove(struct Pokemon *mon, u16 move, u32 replaceSlot);
-u32 Ascension_BuildTalentList(struct Pokemon *mon, u16 moves[MAX_BATTLE_MOVES]);
+// The battle move list. sources (optional, MAX_BATTLE_MOVES): where each move comes from:
+// 0-7 a tree branch (or a join replacing it), 8+k joined chain k; TALENT_SLOT_ASK for empty places.
+u32 Ascension_BuildTalentList(struct Pokemon *mon, u16 moves[MAX_BATTLE_MOVES], u8 *sources);
+void Ascension_RefreshMoveCache(struct Pokemon *mon);
+// TRUE when this Pokémon's moves come from its talent tree (move library on, has a tree, not a Lab battle).
+bool32 Ascension_UsesTalentTree(struct Pokemon *mon);
+// Call right after an evolution sets the new species: carries TM jumps and choices over by move.
+void Ascension_OnEvolve(struct Pokemon *mon, u32 oldSpecies);
+// Level-up growth (spec item 6). Start with *iter = 0 and call until FALSE: each TRUE is one branch
+// (0-7) or joined chain (8+k) whose move changes on reaching `level`. count > 1 is a branch point:
+// the player picks one of options[] (Ascension_SetTalentChoice) and its moves follow that pick.
+struct TalentGrowth { u8 source; u8 count; u16 from; u16 options[TALENT_MAX_CHOICES]; };
+bool32 Ascension_NextTalentGrowth(struct Pokemon *mon, u32 level, u32 *iter, struct TalentGrowth *out);
 
 struct Pokemon;
 struct BattlePokemon;

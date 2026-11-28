@@ -107,7 +107,7 @@ TEST("Talent tree: a branch choice is saved with the Pokémon and picks that opt
 static bool32 ListHas(struct Pokemon *mon, u16 move)
 {
     u16 list[MAX_BATTLE_MOVES];
-    u32 i, n = Ascension_BuildTalentList(mon, list);
+    u32 i, n = Ascension_BuildTalentList(mon, list, NULL);
     for (i = 0; i < n; i++)
         if (list[i] == move)
             return TRUE;
@@ -146,4 +146,132 @@ TEST("Teaching (D027): a move outside its tree joins that move's global chain, t
     EXPECT(!ListHas(&mon, MOVE_EMBER));                   // grew along the fire chain
     EXPECT_EQ(Ascension_TeachMove(&mon, MOVE_SURF, 0), TALENT_TEACH_JOINED);
     EXPECT_EQ(Ascension_TeachMove(&mon, MOVE_ICE_BEAM, 0), TALENT_TEACH_NO_ROOM);   // two joins at most
+}
+
+TEST("Teaching (D027): with a full list, joining asks which move to replace, and replaces only that one")
+{
+    struct Pokemon mon;
+    u16 before[MAX_BATTLE_MOVES], after[MAX_BATTLE_MOVES];
+    u8 sources[MAX_BATTLE_MOVES];
+    u32 i, n, replaced = MAX_BATTLE_MOVES;
+    CreateMon(&mon, SPECIES_SWAMPERT, 50, 0, OTID_STRUCT_PRESET(0));
+    EXPECT_EQ(Ascension_TalentBranchCount(SPECIES_SWAMPERT), MAX_BATTLE_MOVES);
+    n = Ascension_BuildTalentList(&mon, before, sources);
+    EXPECT_EQ(Ascension_TeachMove(&mon, MOVE_EMBER, TALENT_SLOT_ASK), TALENT_TEACH_NEEDS_SLOT);
+    EXPECT(!ListHas(&mon, MOVE_EMBER));                   // asking changes nothing
+    EXPECT_EQ(Ascension_TeachMove(&mon, MOVE_EMBER, sources[n - 1]), TALENT_TEACH_JOINED);
+    EXPECT(ListHas(&mon, MOVE_EMBER) || !ListHas(&mon, before[n - 1]));
+    Ascension_BuildTalentList(&mon, after, NULL);
+    for (i = 0; i < n; i++)
+    {
+        u32 j;
+        bool32 found = FALSE;
+        for (j = 0; j < MAX_BATTLE_MOVES; j++)
+            found |= (after[j] == before[i]);
+        if (!found)
+            replaced = i;
+    }
+    EXPECT_EQ(replaced, n - 1);                           // only the picked move is gone
+}
+
+TEST("Teaching: the saved 4 move slots follow the tree after a TM")
+{
+    struct Pokemon mon;
+    u16 list[MAX_BATTLE_MOVES];
+    u32 i;
+    CreateMon(&mon, SPECIES_PIKACHU, 20, 0, OTID_STRUCT_PRESET(0));
+    EXPECT_EQ(Ascension_TeachMove(&mon, MOVE_THUNDERBOLT, TALENT_SLOT_ASK), TALENT_TEACH_JUMPED);
+    gAscensionMoveListTestOverride = TRUE;
+    Ascension_RefreshMoveCache(&mon);
+    gAscensionMoveListTestOverride = FALSE;
+    Ascension_BuildTalentList(&mon, list, NULL);
+    for (i = 0; i < MAX_MON_MOVES; i++)
+        EXPECT_EQ(GetMonData(&mon, MON_DATA_MOVE1 + i), list[i]);
+}
+
+static bool32 FindGrowth(struct Pokemon *mon, u32 level, u16 to, struct TalentGrowth *out)
+{
+    u32 iter = 0;
+    while (Ascension_NextTalentGrowth(mon, level, &iter, out))
+    {
+        u32 i;
+        for (i = 0; i < out->count; i++)
+            if (out->options[i] == to)
+                return TRUE;
+    }
+    return FALSE;
+}
+
+TEST("Level-up growth: a branch reports the move it grows from and into, only at that level")
+{
+    struct Pokemon mon;
+    struct TalentGrowth g;
+    CreateMon(&mon, SPECIES_PIKACHU, 12, 0, OTID_STRUCT_PRESET(0));
+    EXPECT(FindGrowth(&mon, 12, MOVE_ELECTRO_BALL, &g));
+    EXPECT_EQ(g.from, MOVE_THUNDER_SHOCK);
+    EXPECT_EQ(g.count, 1);
+    EXPECT(!FindGrowth(&mon, 13, MOVE_ELECTRO_BALL, &g));
+}
+
+TEST("Level-up growth: a TM jump suppresses growth into nodes it already passed")
+{
+    struct Pokemon mon;
+    struct TalentGrowth g;
+    CreateMon(&mon, SPECIES_PIKACHU, 20, 0, OTID_STRUCT_PRESET(0));
+    EXPECT_EQ(Ascension_TeachMove(&mon, MOVE_THUNDERBOLT, TALENT_SLOT_ASK), TALENT_TEACH_JUMPED);
+    EXPECT(!FindGrowth(&mon, 32, MOVE_DISCHARGE, &g));
+    EXPECT(FindGrowth(&mon, 44, MOVE_THUNDER, &g));
+    EXPECT_EQ(g.from, MOVE_THUNDERBOLT);
+}
+
+TEST("Level-up growth: a branch point offers its options, and the pick is what it grows into")
+{
+    struct Pokemon mon;
+    struct TalentGrowth g;
+    u16 list[MAX_BATTLE_MOVES];
+    u32 i;
+    bool32 found = FALSE;
+    CreateMon(&mon, SPECIES_SWAMPERT, 39, 0, OTID_STRUCT_PRESET(0));
+    EXPECT(FindGrowth(&mon, 39, MOVE_MUDDY_WATER, &g));
+    EXPECT_EQ(g.count, 2);
+    EXPECT_EQ(g.options[0], MOVE_HYDRO_PUMP);
+    Ascension_SetTalentChoice(&mon, g.source, 1);
+    Ascension_BuildTalentList(&mon, list, NULL);
+    for (i = 0; i < MAX_BATTLE_MOVES; i++)
+    {
+        found |= (list[i] == MOVE_MUDDY_WATER);
+        EXPECT_NE(list[i], MOVE_HYDRO_PUMP);
+    }
+    EXPECT(found);
+}
+
+TEST("Evolving keeps talent slots: a TM jump and the current move carry over to the evolved tree")
+{
+    struct Pokemon mon;
+    u32 species = SPECIES_RAICHU;
+    CreateMon(&mon, SPECIES_PIKACHU, 20, 0, OTID_STRUCT_PRESET(0));
+    EXPECT_EQ(Ascension_TeachMove(&mon, MOVE_THUNDERBOLT, TALENT_SLOT_ASK), TALENT_TEACH_JUMPED);
+    EXPECT(ListHas(&mon, MOVE_THUNDERBOLT));
+    SetMonData(&mon, MON_DATA_SPECIES, &species);
+    Ascension_OnEvolve(&mon, SPECIES_PIKACHU);
+    EXPECT(ListHas(&mon, MOVE_THUNDERBOLT));
+    EXPECT_EQ(Ascension_TeachMove(&mon, MOVE_THUNDERBOLT, TALENT_SLOT_ASK), TALENT_TEACH_ALREADY_KNOWN);
+}
+
+TEST("Talent data survives boxing (as in the PC and the save): choices, TM jumps and joined chains")
+{
+    struct Pokemon mon, back;
+    u16 before[MAX_BATTLE_MOVES], after[MAX_BATTLE_MOVES];
+    u32 i;
+    CreateMon(&mon, SPECIES_PIKACHU, 30, 0, OTID_STRUCT_PRESET(0));
+    Ascension_SetTalentChoice(&mon, 2, 1);
+    EXPECT_EQ(Ascension_TeachMove(&mon, MOVE_THUNDERBOLT, TALENT_SLOT_ASK), TALENT_TEACH_JUMPED);
+    EXPECT_EQ(Ascension_TeachMove(&mon, MOVE_SURF, TALENT_SLOT_ASK), TALENT_TEACH_JOINED);
+    Ascension_BuildTalentList(&mon, before, NULL);
+    BoxMonToMon(&mon.box, &back);
+    Ascension_BuildTalentList(&back, after, NULL);
+    for (i = 0; i < MAX_BATTLE_MOVES; i++)
+        EXPECT_EQ(after[i], before[i]);
+    EXPECT_EQ(Ascension_GetTalentChoice(&back, 2), 1);
+    EXPECT(ListHas(&back, MOVE_SURF));
 }

@@ -11,6 +11,9 @@ SaveBlock2 84 B free of 3,968; SaveBlock1 304 B free of 15,872; PokemonStorage 1
 |---|---|---|---|---|---|
 | upstream 1.17.2 | baseline | 15,568 | 3,884 | 34,144 | — |
 | F005b (pre-0.1.0) | link/e-Reader data freed, extra Pokédex flags freed, 14 → 10 PC boxes | 14,160 | 2,544 | 24,504 | none: no released saves; dev saves must start a new game |
+| F015 (dev builds, behind `ASCENSION_MOVE_LIST`) | per-Pokémon talent data in existing fields, sizes unchanged: branch choices in 16 upstream spare bits (`talentChoicesA–D`); TM jumps in Cool/Beauty/Cute; two joined global chains in Smart/Tough and Sheen plus the Cool/Beauty/Cute ribbon tiers (contests are cut, D011/D027; contest and Pokéblock writes are off while the flag is on) | 14,160 | 2,544 | 24,504 | see note below |
+
+**F015 note.** A 0.1.0/0.2.0 save stays loadable, but a Pokémon fed Pokéblocks or holding contest ribbons would have those values read as talent data once the move library is on. Release builds keep it off, so this matters only for dev builds today. Before the overhaul ships, a one-time migration must clear those fields in old saves (a save-block flag marks it done). This is tracked in F015.
 
 `test/save.c` holds the current sizes and fails on any unintended change; update it together with this table.
 
