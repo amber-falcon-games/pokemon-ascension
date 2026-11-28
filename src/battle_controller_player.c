@@ -1836,8 +1836,8 @@ static void AscDexDraw(void)
 {
     u8 *end;
     Ascension_DexPageText(sAscDexTarget, sAscDexPage, gDisplayedStringBattle);
-    end = gDisplayedStringBattle + StringLength(gDisplayedStringBattle);
-    WrapFontIdToFit(gDisplayedStringBattle, end, FONT_NARROW, WindowWidthPx(B_WIN_ASC_DEX));
+    Ascension_WrapText(gDisplayedStringBattle, FONT_NARROW, WindowWidthPx(B_WIN_ASC_DEX) - 2);
+    (void)end;
     LoadMessageBoxAndBorderGfx();
     DrawStdWindowFrame(B_WIN_ASC_DEX, FALSE);
     FillWindowPixelBuffer(B_WIN_ASC_DEX, PIXEL_FILL(0xE));
@@ -1928,7 +1928,10 @@ static void TryMoveSelectionDisplayMoveDescription(enum BattlerId battler)
         return;
 
     if (gBattleStruct->descriptionSubmenu)
+    {
+        sAscTalentPage = FALSE;   // Pokémon Ascension F016: back on the info page for the new move
         MoveSelectionDisplayMoveDescription(battler);
+    }
 }
 
 static void MoveSelectionDisplayMoveDescription(enum BattlerId battler)
