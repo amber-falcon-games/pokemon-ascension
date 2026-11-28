@@ -56,7 +56,9 @@ struct LabRules
     u8 weather;
     u8 terrain;
     u8 ai;
-    bool8 fixedSeed;
+    u8 fixedSeed:1;
+    u8 talentMoves:1;   // F015: moves come from the talent tree (this byte was bool8 fixedSeed, so old records read as hand-set moves)
+    u8 unusedRules:6;
     // F017 spike (D023). This byte was padding, so old scenario records read as Classic x1/100%/100%.
     u8 combat:2;        // enum LabCombat
     u8 energyScale:2;   // enum LabEnergyScale: max energy x1, x1.5, x2, x3
@@ -114,6 +116,7 @@ void BattleLab_TrimToWildOpponent(void);
 // BattleLab_ShouldAutoOpen: the ROM carries injected scenarios asking to open the Lab (F011).
 #if ASCENSION_BATTLE_LAB
 bool32 BattleLab_IsLabBattle(void);
+bool32 BattleLab_TalentMoves(void);                   // F015: a Lab battle whose rules use talent-tree moves
 bool32 BattleLab_StaminaMode(void);                   // F017: a Lab battle with energy (Stamina or Dual)
 bool32 BattleLab_DualMode(void);                      // ... with separate health and energy bars
 bool32 BattleLab_DrawEnergyBar(u32 battler, u32 healthboxSpriteId);   // Dual: the player's EXP bar shows energy
@@ -162,6 +165,7 @@ static inline const u8 *BattleLab_UsedMoveText(u32 attacker, const u8 *defaultTe
 static inline void BattleLab_AiTimerStart(void) {}
 static inline void BattleLab_AiTimerStop(u32 battler) {}
 static inline bool32 BattleLab_IsLabBattle(void) { return FALSE; }
+static inline bool32 BattleLab_TalentMoves(void) { return FALSE; }
 static inline bool32 BattleLab_ShouldAutoOpen(void) { return FALSE; }
 static inline void BattleLab_LogTurnEnd(void) {}
 static inline void BattleLab_LogBattleEnd(void) {}

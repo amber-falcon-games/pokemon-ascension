@@ -113,6 +113,14 @@ class LabScenarioTool(unittest.TestCase):
         with self.assertRaises(ls.ScenarioError):
             ls.pack_combat({"damage": 60}, "t")
 
+    def test_moves_rule_packs_into_seed_mode_byte(self):
+        # struct LabRules: fixedSeed:1, talentMoves:1 share the old bool8 byte (F015)
+        for rules, expected in (({}, 0), ({"seed": 7}, 1), ({"moves": "tree"}, 2), ({"moves": "tree", "seed": 7}, 3)):
+            rec = ls.build_block([scenario(rules=rules)], 0, "gcc")[4:]
+            self.assertEqual(rec[36], expected, rules)
+        with self.assertRaises(ls.ScenarioError):
+            ls.build_block([scenario(rules={"moves": "library"})], 0, "gcc")
+
 
 if __name__ == "__main__":
     unittest.main()

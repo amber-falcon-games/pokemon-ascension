@@ -140,7 +140,8 @@ enum
     EDIT_ROW_ABILITY, EDIT_ROW_ITEM, EDIT_ROW_NATURE, EDIT_ROW_IVS, EDIT_ROW_HP, EDIT_ROW_STATUS,
     EDIT_ROW_RESET, EDIT_ROW_CLEAR, EDIT_ROW_COUNT
 };
-enum { RULES_ROW_FORMAT, RULES_ROW_COMBAT, RULES_ROW_ENERGY, RULES_ROW_DAMAGE, RULES_ROW_COST, RULES_ROW_WEATHER, RULES_ROW_TERRAIN, RULES_ROW_AI, RULES_ROW_SEED_MODE, RULES_ROW_SEED, RULES_ROW_COUNT };
+enum { RULES_ROW_FORMAT, RULES_ROW_COMBAT, RULES_ROW_ENERGY, RULES_ROW_DAMAGE, RULES_ROW_COST, RULES_ROW_MOVES, RULES_ROW_WEATHER, RULES_ROW_TERRAIN, RULES_ROW_AI, RULES_ROW_SEED_MODE, RULES_ROW_SEED, RULES_ROW_COUNT };
+#define RULES_VISIBLE_ROWS 10
 #define LAB_VISIBLE_ROWS 6
 static EWRAM_DATA u8 sLabMode = 0;
 static EWRAM_DATA u8 sLabSide = 0;
@@ -625,6 +626,11 @@ void BattleLab_TrimToWildOpponent(void)
 bool32 BattleLab_IsLabBattle(void)
 {
     return sLabInBattleFlag;
+}
+
+bool32 BattleLab_TalentMoves(void)
+{
+    return sLabInBattleFlag && gBattleLabRules.talentMoves;
 }
 
 const u8 *BattleLab_ValidateStart(void)
@@ -2679,6 +2685,7 @@ static const u8 *const sLabRulesLabels[RULES_ROW_COUNT] =
     [RULES_ROW_ENERGY]    = COMPOUND_STRING(" Energy"),
     [RULES_ROW_DAMAGE]    = COMPOUND_STRING(" Damage"),
     [RULES_ROW_COST]      = COMPOUND_STRING(" Cost"),
+    [RULES_ROW_MOVES]     = COMPOUND_STRING("Moves"),
     [RULES_ROW_WEATHER]   = COMPOUND_STRING("Weather"),
     [RULES_ROW_TERRAIN]   = COMPOUND_STRING("Terrain"),
     [RULES_ROW_AI]        = COMPOUND_STRING("Foe AI"),
@@ -2716,15 +2723,18 @@ static void BattleLab_DrawRules(void)
     u8 *buf = gStringVar4;
     u32 row;
 
+    // 10 rows fit the window: scroll to keep the cursor in view.
+    u32 first = sLabRulesRow >= RULES_VISIBLE_ROWS ? sLabRulesRow - RULES_VISIBLE_ROWS + 1 : 0;
+
     FillWindowPixelBuffer(WIN_MENU, PIXEL_FILL(1));
-    for (row = 0; row < RULES_ROW_COUNT; row++)
+    for (row = first; row < RULES_ROW_COUNT && row < first + RULES_VISIBLE_ROWS; row++)
     {
         u8 label[16];
         bool32 changed = FALSE;
         label[0] = (row == sLabRulesRow) ? CHAR_RIGHT_ARROW : CHAR_SPACE;
         label[1] = EOS;
         StringAppend(label, sLabRulesLabels[row]);
-        AddTextPrinterParameterized3(WIN_MENU, FONT_NARROW, 0, row * 12, sTextColorNormal, TEXT_SKIP_DRAW, label);
+        AddTextPrinterParameterized3(WIN_MENU, FONT_NARROW, 0, (row - first) * 12, sTextColorNormal, TEXT_SKIP_DRAW, label);
         buf[0] = EOS;
         switch (row)
         {
@@ -2732,6 +2742,7 @@ static void BattleLab_DrawRules(void)
         case RULES_ROW_ENERGY:    StringAppend(buf, sLabEnergyScaleNames[r->energyScale]); changed = r->energyScale != sLabCurrent.rules.energyScale; break;
         case RULES_ROW_DAMAGE:    StringAppend(buf, sLabDamageScaleNames[r->damageScale]); changed = r->damageScale != sLabCurrent.rules.damageScale; break;
         case RULES_ROW_COST:      StringAppend(buf, sLabCostScaleNames[r->costScale]);     changed = r->costScale != sLabCurrent.rules.costScale; break;
+        case RULES_ROW_MOVES:     StringAppend(buf, r->talentMoves ? COMPOUND_STRING("Tree") : COMPOUND_STRING("Set")); changed = r->talentMoves != sLabCurrent.rules.talentMoves; break;
         case RULES_ROW_FORMAT:    StringAppend(buf, sLabFormatNames[r->format]);   changed = r->format != sLabCurrent.rules.format; break;
         case RULES_ROW_WEATHER:   StringAppend(buf, sLabWeatherNames[r->weather]); changed = r->weather != sLabCurrent.rules.weather; break;
         case RULES_ROW_TERRAIN:   StringAppend(buf, sLabTerrainNames[r->terrain]); changed = r->terrain != sLabCurrent.rules.terrain; break;
@@ -2746,7 +2757,7 @@ static void BattleLab_DrawRules(void)
         }
         if (changed)
             StringAppend(buf, COMPOUND_STRING("!"));
-        AddTextPrinterParameterized3(WIN_MENU, FONT_NARROW, 50, row * 12, sTextColorNormal, TEXT_SKIP_DRAW, buf);
+        AddTextPrinterParameterized3(WIN_MENU, FONT_NARROW, 50, (row - first) * 12, sTextColorNormal, TEXT_SKIP_DRAW, buf);
     }
     CopyWindowToVram(WIN_MENU, COPYWIN_GFX);
     buf[0] = EOS;
@@ -2815,6 +2826,7 @@ static void BattleLab_HandleRulesInput(void)
     case RULES_ROW_ENERGY:    r->energyScale = (r->energyScale + LAB_ENERGY_COUNT + delta) % LAB_ENERGY_COUNT; break;
     case RULES_ROW_DAMAGE:    r->damageScale = (r->damageScale + LAB_DAMAGE_COUNT + delta) % LAB_DAMAGE_COUNT; break;
     case RULES_ROW_COST:      r->costScale   = (r->costScale   + LAB_COST_COUNT   + delta) % LAB_COST_COUNT;   break;
+    case RULES_ROW_MOVES:     if (delta != 0) r->talentMoves = !r->talentMoves; break;
     case RULES_ROW_WEATHER:   r->weather = (r->weather + LAB_WEATHER_COUNT + delta) % LAB_WEATHER_COUNT; break;
     case RULES_ROW_TERRAIN:   r->terrain = (r->terrain + LAB_TERRAIN_COUNT + delta) % LAB_TERRAIN_COUNT; break;
     case RULES_ROW_AI:        r->ai      = (r->ai      + LAB_AI_COUNT      + delta) % LAB_AI_COUNT;      break;

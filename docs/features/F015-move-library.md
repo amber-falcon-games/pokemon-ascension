@@ -1,5 +1,5 @@
 # F015 — Move library: talent trees, learning and saving
-Status: BUILT except the Lab integration (item 7); awaiting the combined owner playtest (D026)
+Status: BUILT; awaiting the combined owner playtest (D026)
 Dependencies: F014 (8-move battle list)
 Owner decision IDs: D015, D027 (2026-11-27)
 Branch / commit: `feature/F015-move-library` (stacked on `feature/F014-move-menu`)
@@ -29,7 +29,11 @@ Every Pokémon's battle moves come from a **talent tree** for its evolution line
    - This works in battle (experience) and with Rare Candy. A branch point says "X's talent can grow in more than one way!", then asks "Grow into A?" for each option in turn. NO moves on to the next option, wrapping round.
    - Upstream's "wants to learn / forget a move" flow is off for Pokémon with a tree. The daycare and evolution relearning refresh the moves silently.
    - Recorded battles (and the test runner's wild battles) cannot take input: a branch point keeps the saved choice there.
-7. **Lab.** The slot editor shows the battle list from the tree. Scenario files can name branch choices.
+7. **Lab.**
+   - Rules row **Moves: Set / Tree**, and scenario rule `"moves": "tree"`. Tree battles use each Pokémon's talent tree at its level; Set keeps the slot's hand-set moves.
+   - The flag takes a spare bit of the old `fixedSeed` byte, so older scenario records read as Set.
+   - The Rules list scrolls (11 rows, 10 visible).
+   - Not done, deferred until wanted: naming branch choices in scenario files (the slot record has no room) and showing the tree list in the slot editor. Tree battles use the default choices.
 
 ## Save model
 - **Stored per Pokémon:**
@@ -99,9 +103,11 @@ Every Pokémon's battle moves come from a **talent tree** for its evolution line
     - "Mudkip's Water Gun grew into Water Pulse!" (a Marshtomp run)
     - At 12: "Mudkip's talent can grow in more than one way!", then "Grow into Protect?" (yes/no), then "Mudkip's Growl grew into Protect!"
 - Not yet seen on screen: the in-battle branch-point prompt. It uses upstream's yes/no box, and the battle growth path is covered by the test above.
-- Still to do:
-  - **Lab (item 7):** Lab battles keep the scenario's hand-set moves.
-  - **Save migration** for old saves with contest data (SAVE_COMPATIBILITY.md).
+- Lab (item 7), headless in the Lab ROM:
+  - LAB-014 "Talent trees (8 moves)": Swampert's menu shows its tree list (Hydro Pump, Endeavor, Rock Slide, Hammer Arm / Mud Shot, Earthquake, Screech, Amnesia), not its four set moves.
+  - The Rules screen shows "Moves: Tree" and scrolls to "Seed no."
+  - Tests: Lab 22/22; Python scenario tool 6/6 (new: the moves rule packs into bit 1 of the seed byte).
+- Still to do before release: **save migration** for old saves with contest data (SAVE_COMPATIBILITY.md).
 - Generator: evolution slot order (1,333 species, checker 0 errors). Python tool tests 16/16.
 
 ## Rollback

@@ -237,7 +237,7 @@ enum TalentTeachResult Ascension_TeachMove(struct Pokemon *mon, u16 move, u32 re
 bool32 Ascension_UsesTalentTree(struct Pokemon *mon)
 {
     return ASCENSION_MOVE_LIST && Ascension_TalentBranchCount(GetMonData(mon, MON_DATA_SPECIES)) > 0
-        && !BattleLab_IsLabBattle();
+        && (!BattleLab_IsLabBattle() || BattleLab_TalentMoves());
 }
 
 bool32 Ascension_NextTalentGrowth(struct Pokemon *mon, u32 level, u32 *iter, struct TalentGrowth *out)
@@ -400,8 +400,9 @@ u32 Ascension_FillExtraBattleMoves(struct Pokemon *mon, enum Move moves[MAX_BATT
 
     species = GetMonData(mon, MON_DATA_SPECIES);
     level = GetMonData(mon, MON_DATA_LEVEL);
-    // Lab battles keep the scenario's hand-set moves (plus F014 extras) so scenarios test what they set.
-    if (Ascension_TalentBranchCount(species) > 0 && !BattleLab_IsLabBattle())
+    // Lab battles keep the scenario's hand-set moves (plus F014 extras) so scenarios test what they
+    // set, unless the Lab's Moves rule is "Tree".
+    if (Ascension_UsesTalentTree(mon))
     {
         u16 list[MAX_BATTLE_MOVES];
         count = Ascension_BuildTalentList(mon, list, NULL);

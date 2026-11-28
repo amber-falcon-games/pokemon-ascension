@@ -52,6 +52,13 @@ def pick_scale(value, table, default, what):
     return table[value]
 
 
+MOVE_SOURCES = ["set", "tree"]   # F015: hand-set moves, or the talent tree's battle list
+
+
+def pick_moves(value, where):
+    return pick(value, MOVE_SOURCES, where)
+
+
 def pack_combat(rules, where):
     """The combat byte: bits 0-1 Classic/Stamina/Dual, 2-3 energy, 4-5 damage, 6-7 cost."""
     return (pick(rules.get("combat"), COMBATS, f"{where} combat")
@@ -204,7 +211,7 @@ def pack_record(sc, consts, charmap):
                        pick(rules.get("weather"), WEATHERS, f"{where} weather"),
                        pick(rules.get("terrain"), TERRAINS, f"{where} terrain"),
                        pick(rules.get("ai"), AIS, f"{where} ai"),
-                       1 if seed is not None else 0,
+                       (1 if seed is not None else 0) | pick_moves(rules.get("moves"), f"{where} moves") << 1,
                        pack_combat(rules, where), int(seed or 0))
     for side in ("player", "opponent"):
         mons = sc[side] + [None] * (PARTY_SIZE - len(sc[side]))
