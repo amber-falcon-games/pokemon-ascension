@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-28 02:35 UTC (Claude session: F015 built, including the Lab Moves rule; next F016).
+Last updated: 2026-11-28 05:10 UTC (Claude session: F015 built, including the Lab Moves rule; F016 spec written, building on feature/F016-move-info).
 Current phase: Combat track (after the 0.2.0 Battle Lab foundation). D003 gate passed: the Lab is accepted.
 Current feature: F015 move library (`feature/F015-move-library`, PR #20, stacked on F014 PR #19). Done: generator, checker, ROM tables, battle list, choices, TM rules (D027), storage, party-menu TM flow with an 8-move replace picker, level-up growth and branch-point prompts (battle and Rare Candy), evolution keeps branch slots (generator plus runtime remap), docs. Lab rule Moves: Set/Tree (LAB-014). Left before release: the old-save migration for contest fields.
 Done: F000–F013, F007b and F017 (spike). Releases: v0.1.0 (c204b79399) and v0.2.0 (3faa92d298, Battle Lab foundation; player build unchanged from 0.1.0).

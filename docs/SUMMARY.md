@@ -183,3 +183,4 @@
         - [F017 Feasibility spike: timeline, energy, more moves](./features/F017-feasibility-spike.md)
         - [F014 Categorised move menu (8 moves in battle)](./features/F014-categorised-move-menu.md)
         - [F015 Move library: talent trees, learning and saving](./features/F015-move-library.md)
+        - [F016 Quick move info and in-battle Pokédex](./features/F016-move-info-and-battle-dex.md)
