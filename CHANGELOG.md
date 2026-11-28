@@ -13,6 +13,11 @@
   - Branch points ask which move to grow into.
   - TMs jump a branch ahead, are refused once a Pokémon has grown past the move, or start a new talent path on a global chain. With a full list, the player picks the move it replaces.
   - Evolving keeps every branch, choice and TM jump.
+- **Move info and battle Pokédex** (F016): L twice in the move menu shows the talent page. L in the action menu opens a panel on the opponent: types and moves seen, plus weaknesses, abilities and stats once caught.
+- **Initiative timeline** (F018): end-of-turn effects tick once per beat, a recharge waits for the battler's own action, and a "Next:" strip shows the next four actors. Dual-bars singles draw energy inside the healthbox like HP.
+- **Energy in the campaign** (F019): with `ASCENSION_COMBAT` (dev builds), energy replaces PP in campaign battles. It is kept between battles, recovers while walking and fully at Pokémon Centers, and Ethers and Elixirs restore it.
+- **Queue a follow-up** (F020, D028): SELECT in the move menu queues the next action. It cancels itself if the target leaves, your Pokémon is Exhausted, takes a big hit or gets a status; B clears it.
+- **Opponents use Boost** (F021): the AI boosts for a knock-out or to act before its target, and keeps an energy reserve.
 
 ## 0.2.0 — 2026-11-26 — Battle Lab foundation
 **For players:** no gameplay changes. The 0.2.0 patch plays exactly like 0.1.0. Everything below is in dev builds only: release builds contain none of the Lab or checkpoint code, and its few small hooks into the battle engine compile to nothing (checked by the nightly CI build).

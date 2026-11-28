@@ -152,6 +152,14 @@ struct AscQueueCheck
     u32 statusBefore, statusNow;
 };
 bool32 BattleLab_QueueStillValid(const struct AscQueueCheck *c);
+// F021: the AI's Boost decision (pure rule, tested) and its hook.
+struct AscAiBoostCheck
+{
+    bool8 damaging;
+    u32 energy, maxEnergy, cost, damage, targetHp, nextAct, nextActSpeed, targetNextAct;
+};
+u32 BattleLab_AiBoostChoice(const struct AscAiBoostCheck *c);   // enum LabBoost
+void BattleLab_AiChooseBoost(u32 battler);
 bool32 BattleLab_QueueToggle(u32 battler, u32 slot);
 bool32 BattleLab_QueuedSlot(u32 battler, u32 slot);
 void BattleLab_QueueArm(u32 battler);
@@ -189,6 +197,7 @@ static inline bool32 BattleLab_QueuedSlot(u32 battler, u32 slot) { return FALSE;
 static inline void BattleLab_QueueArm(u32 battler) {}
 static inline bool32 BattleLab_TakeQueuedMove(u32 battler, u32 *slot, u32 *target) { return FALSE; }
 static inline void BattleLab_ClearQueue(u32 battler) {}
+static inline void BattleLab_AiChooseBoost(u32 battler) {}
 static inline s32 BattleLab_ScaleDamage(s32 damage) { return damage; }
 static inline u32 BattleLab_BoostPower(u32 battler, u32 power) { return power; }
 static inline void BattleLab_CycleBoost(u32 battler) {}

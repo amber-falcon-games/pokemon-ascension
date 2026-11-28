@@ -4146,6 +4146,7 @@ static void HandleTurnActionSelectionState(void)
                             gChosenMoveByBattler[battler] = GetBattlerChosenMove(battler);
                             gBattleStruct->moveTarget[battler] = gBattleResources->bufferB[battler][3];
                             BattleLab_QueueArm(battler);   // Pokémon Ascension F020: a queued follow-up is now next
+                            BattleLab_AiChooseBoost(battler);   // Pokémon Ascension F021: the AI may Boost
                             if (IsBattleMoveStatus(gChosenMoveByBattler[battler]) && GetBattlerAbility(battler) == ABILITY_MYCELIUM_MIGHT)
                                 gProtectStructs[battler].myceliumMight = TRUE;
                             if (GetBattlerHoldEffect(battler) == HOLD_EFFECT_LAGGING_TAIL)

@@ -1473,6 +1473,47 @@ static bool32 LabActsAgain(u32 battler)
         && !((sLabPrevActors | sLabActors) & others);
 }
 
+// ---------------------------------------------------------------- F021 AI Boost
+// The AI boosts by the same rules and costs as the player. It keeps a reserve: a boost is only
+// worth it if half its energy is left after paying the boosted cost.
+// Power: when x1.3 power turns a hit that would not knock the target out into one that would.
+// Speed: when the faster step lets it act before its target's next action, and it would not otherwise.
+u32 BattleLab_AiBoostChoice(const struct AscAiBoostCheck *c)
+{
+    if (!c->damaging || c->energy < c->cost * 3 / 2 + c->maxEnergy / 2)
+        return LAB_BOOST_NONE;
+    if (c->damage < c->targetHp && c->damage * 13 / 10 >= c->targetHp)
+        return LAB_BOOST_POWER;
+    if (c->nextAct > c->targetNextAct && c->nextActSpeed <= c->targetNextAct)
+        return LAB_BOOST_SPEED;
+    return LAB_BOOST_NONE;
+}
+
+// Called once an AI battler's move is chosen (battle_main.c).
+void BattleLab_AiChooseBoost(u32 battler)
+{
+    u32 move = gChosenMoveByBattler[battler], pos = gBattleStruct->chosenMovePositions[battler];
+    u32 target = gBattleStruct->moveTarget[battler], step;
+    struct AscAiBoostCheck c = {0};
+    if (!BattleLab_StaminaMode() || IsOnPlayerSide(battler) || !BattlerHasAi(battler)
+     || target >= gBattlersCount || !IsOnPlayerSide(target) || pos >= MAX_BATTLE_MOVES)
+        return;
+    sLabBoost[battler] = LAB_BOOST_NONE;
+    step = LabActionDelay(battler, LabMoveWeight(move));
+    c.damaging = GetMoveCategory(move) != DAMAGE_CATEGORY_STATUS;
+    c.energy = *LabEnergyPtr(battler);
+    c.maxEnergy = LabEnergyMax(battler);
+    c.cost = BattleLab_BoostedCost(battler, move);
+    c.damage = gAiLogicData->simulatedDmg[battler][target][pos].median;
+    c.targetHp = gBattleMons[target].hp;
+    c.nextAct = sLabNow + step;
+    c.nextActSpeed = sLabNow + step * 6 / 10;
+    c.targetNextAct = sLabNextAct[target];
+    sLabBoost[battler] = BattleLab_AiBoostChoice(&c);
+    if (sLabBoost[battler] != LAB_BOOST_NONE)
+        DebugPrintf("LAB ai: %S boosts%s", GetSpeciesName(gBattleMons[battler].species), sLabBoostLog[sLabBoost[battler]]);
+}
+
 // ---------------------------------------------------------------- F020 queue (D028)
 // Up to 2 actions: the one you choose now, plus one queued with SELECT in the move menu. The queued
 // move runs at your Pokémon's next turn without the menu, unless it is cancelled first: its target

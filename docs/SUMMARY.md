@@ -187,3 +187,4 @@
         - [F018 Initiative timeline: who acts next, and when](./features/F018-initiative-timeline.md)
         - [F019 Energy replaces PP (the overhaul in the campaign)](./features/F019-energy-replaces-pp.md)
         - [F020 Queue, cancellation and manual intervention](./features/F020-queue-and-intervene.md)
+        - [F021 Scheduler-aware enemy AI and full battle regression](./features/F021-scheduler-aware-ai.md)
